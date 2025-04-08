@@ -9,7 +9,7 @@ on:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
-    
+
     services:
       mongodb:
         image: mongo:6.0
@@ -27,69 +27,69 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-    
+
     - name: Install frontend dependencies
       run: npm ci
-    
+
     - name: Install backend dependencies
       run: |
         cd backend
         npm ci
-    
+
     - name: Lint frontend
       run: npm run lint
-    
+
     - name: Lint backend
       run: |
         cd backend
         npm run lint
-    
+
     - name: Create frontend environment file
       run: |
         echo "NEXT_PUBLIC_API_URL=http://localhost:5000/api" > .env.local
-    
+
     - name: Create backend environment file
       run: |
         cd backend
         cp .env.example .env.test
         sed -i 's/your_jwt_secret_here/test_jwt_secret/g' .env.test
         sed -i 's/mongodb:\/\/localhost:27017\/trend2zero_test/mongodb:\/\/localhost:27017\/trend2zero_test/g' .env.test
-    
+
     - name: Run backend tests
       run: |
         cd backend
         npm run test:ci
-    
+
     - name: Run frontend Jest tests
       run: |
         npm test
-    
+
     - name: Install Playwright browsers
       run: npx playwright install --with-deps chromium
-    
+
     - name: Start backend server for E2E tests
       run: |
         cd backend
         npm run dev &
         sleep 10
-    
+
     - name: Start frontend server for E2E tests
       run: |
         npm run dev &
         sleep 10
-    
+
     - name: Run Playwright tests
       run: npx playwright test
-    
+
     - name: Upload test results
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v2
       with:
         name: test-results
         path: |
@@ -102,24 +102,24 @@ jobs:
     needs: lint-and-test
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
-    
+
     steps:
     - uses: actions/checkout@v3
-    
+
     - name: Use Node.js 18.x
       uses: actions/setup-node@v3
       with:
         node-version: 18.x
         cache: 'npm'
-    
+
     - name: Install dependencies
       run: npm ci
-    
+
     - name: Build
       run: npm run build
-    
+
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v2
       with:
         name: build-artifacts
         path: .next/
@@ -130,16 +130,16 @@ jobs:
   #   needs: build
   #   runs-on: ubuntu-latest
   #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-  #   
+  #
   #   steps:
   #   - uses: actions/checkout@v3
-  #   
+  #
   #   - name: Download build artifacts
-  #     uses: actions/download-artifact@v3
+  #     uses: actions/download-artifact@v2
   #     with:
   #       name: build-artifacts
   #       path: .next/
-  #   
+  #
   #   - name: Deploy to production
   #     run: |
   #       # Add deployment commands here
