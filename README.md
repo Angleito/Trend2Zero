@@ -19,11 +19,16 @@ A revolutionary platform demonstrating how global assets trend when priced in Bi
   - Interactive visualizations
 
 ### Technical Highlights
-- Next.js 14.2 with App Router
+- **MERN Stack Architecture**:
+  - MongoDB for database
+  - Express for backend API
+  - React (Next.js 14.2) for frontend
+  - Node.js for server runtime
 - CoinGecko and Alpha Vantage API Integration
 - Highcharts and Lightweight Charts for visualization
 - Responsive Dark Theme Design
 - Playwright for browser testing
+- JWT Authentication
 
 ## Getting Started
 
@@ -32,15 +37,40 @@ A revolutionary platform demonstrating how global assets trend when priced in Bi
 - npm or yarn
 
 ### Installation
+
+#### Backend Setup
 ```bash
 git clone https://github.com/yourusername/Trend2Zero.git
+cd Trend2Zero/backend
+npm install
+
+# Create .env file from example
+cp .env.example .env
+
+# Start the backend server
+npm run dev
+```
+
+#### Frontend Setup
+```bash
+# Open a new terminal
 cd Trend2Zero
 npm install
+
+# Create .env.local file from example
+cp .env.example .env.local
+
+# Start the frontend development server
 npm run dev
 ```
 
 ### Environment Variables
-Create a `.env.local` file based on `.env.example` to configure API keys and other settings. The application works with mock data by default, so API keys are optional.
+
+#### Backend Environment Variables
+Update the `.env` file in the backend directory with your MongoDB connection string and other settings. The application works with mock data by default, so API keys are optional.
+
+#### Frontend Environment Variables
+Update the `.env.local` file in the root directory to point to your backend API URL.
 
 ### Security Features
 - **Server-side API Proxies**: All external API calls are proxied through secure server-side routes

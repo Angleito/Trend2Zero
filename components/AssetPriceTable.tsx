@@ -7,8 +7,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { MarketDataService } from '../pricedinbitcoin21/lib/services/marketDataService';
-import type { MarketAsset, AssetData, AssetCategory } from '../pricedinbitcoin21/lib/types';
+import { MarketDataService } from '../lib/services/marketDataService';
+import type { MarketAsset, AssetData, AssetCategory } from '../lib/types';
 import Link from 'next/link';
 
 interface AssetPriceTableProps {
@@ -54,7 +54,7 @@ const AssetPriceTable: React.FC<AssetPriceTableProps> = ({
         const newAssetData: Record<string, AssetData> = {};
 
         results.forEach((result, index) => {
-          if (result.status === 'fulfilled') {
+          if (result.status === 'fulfilled' && result.value) {
             newAssetData[assetList[index].symbol] = result.value;
           }
         });

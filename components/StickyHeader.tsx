@@ -34,7 +34,7 @@ const StickyHeader: React.FC = () => {
           <div className="flex items-center">
             <Link href="/" className="flex items-center">
               <span className="text-2xl font-bold text-[#FF9500]">₿</span>
-              <span className="ml-2 text-xl font-semibold text-white">Trend2Zero</span>
+              <span className="ml-2 text-xl font-semibold text-white">₿PricedinBitcoin</span>
             </Link>
           </div>
 

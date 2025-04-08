@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { CoinGeckoService } from '../pricedinbitcoin21/lib/services/coinGeckoService';
+import { CoinGeckoService } from '../lib/services/coinGeckoService';
 
 interface TickerItem {
   label: string;

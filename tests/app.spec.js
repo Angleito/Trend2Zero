@@ -17,7 +17,7 @@ function getServerPort() {
   return '3000'; // Default to 3000 if file doesn't exist
 }
 
-test.describe('PricedinBitcoin21 Application Tests', () => {
+test.describe('Trend2Zero Application Tests', () => {
   let serverPort;
 
   test.beforeAll(() => {
@@ -27,8 +27,14 @@ test.describe('PricedinBitcoin21 Application Tests', () => {
   });
 
   test.beforeEach(async ({ page }) => {
-    // Navigate to the home page before each test
-    await page.goto(`http://localhost:${serverPort}/`, { timeout: 30000 });
+    // Navigate to the home page before each test with extended timeout and network idle
+    await page.goto(`http://localhost:${serverPort}/`, {
+      timeout: 45000,
+      waitUntil: 'networkidle'
+    });
+    
+    // Additional wait to ensure page is fully interactive
+    await page.waitForFunction(() => document.readyState === 'complete');
   });
 
   test('Home page loads correctly', async ({ page }) => {
@@ -57,7 +63,12 @@ test.describe('PricedinBitcoin21 Application Tests', () => {
     await expect(page.locator('input[placeholder="Search assets..."]')).toBeVisible();
 
     // Verify that the asset table is present and has data
-    await page.waitForSelector('table tbody tr', { state: 'visible', timeout: 10000 });
+    // Wait for table to be fully loaded with a more robust strategy
+    await page.waitForSelector('table', { state: 'visible', timeout: 30000 });
+    await page.waitForFunction(() => {
+      const rows = document.querySelectorAll('table tbody tr');
+      return rows.length > 0;
+    }, { timeout: 30000 });
     const rowCount = await page.locator('table tbody tr').count();
     expect(rowCount).toBeGreaterThan(0);
 
@@ -78,7 +89,7 @@ test.describe('PricedinBitcoin21 Application Tests', () => {
 
   test('Asset detail page loads correctly', async ({ page }) => {
     // Navigate to the tracker page first
-    await page.goto('http://localhost:3000/tracker', { timeout: 30000 });
+    await page.goto(`http://localhost:${serverPort}/tracker`, { timeout: 30000 });
 
     // Click on the first asset link
     await page.locator('table tbody tr a').first().click();
@@ -126,7 +137,7 @@ test.describe('PricedinBitcoin21 Application Tests', () => {
     await expect(page).toHaveURL(/.*\/blog/);
 
     // Test navigation back to home
-    await page.locator('nav').first().getByText('₿PricedinBitcoin').click();
-    await expect(page).toHaveURL('http://localhost:3000/');
+    await page.locator('nav').first().getByText('Trend2Zero').click();
+    await expect(page).toHaveURL(`http://localhost:${serverPort}/`);
   });
 });

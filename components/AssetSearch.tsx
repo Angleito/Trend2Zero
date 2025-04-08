@@ -1,16 +1,11 @@
 'use client';
 
-/**
- * NOTE: For testing and debugging this component, use Playwright only.
- * Do not use manual browser testing or other testing frameworks.
- * See tests/browser-test.js for examples.
- */
-
 import React, { useState, useEffect, useRef } from 'react';
-import { MarketDataService } from '../pricedinbitcoin21/lib/services/marketDataService';
-import type { MarketAsset } from '../pricedinbitcoin21/lib/types';
+import { MarketDataService } from '../lib/services/marketDataService';
+import type { MarketAsset } from '../lib/types';
 import Link from 'next/link';
 
+interface AssetSearchProps {
   onAssetSelect?: (asset: MarketAsset) => void;
 }
 
@@ -49,7 +44,6 @@ const AssetSearch: React.FC<AssetSearchProps> = ({ onAssetSelect }) => {
           keywords: searchTerm
         });
 
-        // Filter results that match the search term
         const filteredResults = assets.filter(asset =>
           asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           asset.symbol.toLowerCase().includes(searchTerm.toLowerCase())
@@ -98,35 +92,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({ onAssetSelect }) => {
           <svg
             className="h-5 w-5 text-gray-400"
             xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20""
             viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              fillRule=evenodd"
-              d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </div>
-        {loading && (
-          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-[#FF9500]"></div>
-          </div>
-        )}
-      </div>
-
-      {showResults && searchResults.length > 0 && (
-        <div className="absolute z-10 mt-2 w-full bg-gray-800 border border-gray-700 rounded-md shadow-lg max-h-60 overflow-y-auto">
-          <ul className="py-1">
-            {searchResults.map((asset) => (
-              <li key={asset.symbol}>
-                <Link
-                  href={`/asset/${asset.symbol}`}
-                  className="flex items-center px-4 py-2 hover:bg-gray-700 transition-colors"
-                  onClick={() => handleAssetClick(asset)}
-                >
             fill="currentColor"
             aria-hidden="true"
           >
