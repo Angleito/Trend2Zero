@@ -39,7 +39,7 @@ test.describe('Trend2Zero Application Tests', () => {
 
   test('Home page loads correctly', async ({ page }) => {
     // Verify the page title
-    await expect(page).toHaveTitle(/PricedinBitcoin21/);
+    await expect(page).toHaveTitle(/Trend2Zero/);
 
     // Verify navigation links
     await expect(page.locator('nav').first()).toContainText('Asset Tracker');
@@ -64,12 +64,25 @@ test.describe('Trend2Zero Application Tests', () => {
 
     // Verify that the asset table is present and has data
     // Wait for table to be fully loaded with a more robust strategy
+    // Wait for table to be fully loaded with a more robust strategy
     await page.waitForSelector('table', { state: 'visible', timeout: 30000 });
-    await page.waitForFunction(() => {
-      const rows = document.querySelectorAll('table tbody tr');
-      return rows.length > 0;
-    }, { timeout: 30000 });
-    const rowCount = await page.locator('table tbody tr').count();
+    
+    // Retry mechanism for table rows
+    let retries = 3;
+    let rowCount = 0;
+    while (retries > 0) {
+      rowCount = await page.locator('table tbody tr').count();
+      if (rowCount > 0) break;
+      await page.waitForTimeout(2000);
+      retries--;
+    }
+    
+    // If no rows found after retries, log the page content for debugging
+    if (rowCount === 0) {
+      const pageContent = await page.content();
+      console.error('Page content when no rows found:', pageContent);
+    }
+    
     expect(rowCount).toBeGreaterThan(0);
 
     // Test category filtering

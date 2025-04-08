@@ -86,6 +86,59 @@ Update the `.env.local` file in the root directory to point to your backend API 
 - `design-principles.md`: UI/UX design guidelines
 - `architectural-specification.md`: Detailed system specifications
 
+## Testing and CI/CD
+
+### Running Tests
+
+#### Frontend Tests
+```bash
+# Run Jest tests
+npm test
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run tests in watch mode
+npm run test:watch
+```
+
+#### Backend Tests
+```bash
+# Navigate to backend directory
+cd backend
+
+# Run Jest tests
+npm test
+
+# Run tests with coverage
+npm run test:coverage
+```
+
+#### End-to-End Tests
+```bash
+# Run Playwright tests
+npm run test:e2e
+
+# Run all tests (unit, integration, and e2e)
+npm run test:all
+```
+
+### CI/CD Pipeline
+
+This project uses GitHub Actions for continuous integration and deployment. The workflow includes:
+
+1. **Linting**: Ensures code quality and consistency
+2. **Unit and Integration Tests**: Runs Jest tests for both frontend and backend
+3. **End-to-End Tests**: Runs Playwright tests to verify application functionality
+4. **Build**: Creates production-ready builds
+5. **Deployment**: Automatically deploys to staging/production environments (when configured)
+
+The CI/CD pipeline runs on:
+- Every push to `main` and `develop` branches
+- Every pull request to these branches
+
+View the workflow configuration in `.github/workflows/main.yml`.
+
 ## Contributing
 We welcome contributions! Please see `CONTRIBUTING.md`
 

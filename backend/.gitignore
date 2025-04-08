@@ -38,6 +38,23 @@ yarn-error.log*
 *.crt
 *.csr
 *.key.pub
+*.jks
+*.keystore
+*.p7b
+*.der
+*.cer
+*.priv
+
+# Authentication files
+.htpasswd
+.htaccess
+.netrc
+_netrc
+.ssh/
+auth.json
+auth.js
+auth.config.js
+auth.config.ts
 
 # logs
 logs
@@ -60,3 +77,24 @@ logs
 .npmrc
 .yarnrc
 .nvmrc
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+*.sql
+dump.rdb
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+.eslintcache
+.node_repl_history
+.yarn-integrity
+
+# Test reports
+/test-report.xml
+/.nyc_output
+/junit.xml

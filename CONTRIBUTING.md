@@ -45,15 +45,54 @@ We welcome suggestions for enhancements! Please create an issue with:
 
 ## Testing
 
-Please ensure your changes pass all tests:
+We follow a comprehensive testing approach with unit, integration, and end-to-end tests. Please ensure your changes pass all tests before submitting a pull request.
+
+### Frontend Testing
 
 ```bash
-# Run all tests
-npx playwright test
+# Run Jest unit/integration tests
+npm test
+
+# Run tests with coverage report
+npm run test:coverage
+
+# Run tests in watch mode during development
+npm run test:watch
+```
+
+### Backend Testing
+
+```bash
+# Navigate to backend directory
+cd backend
+
+# Run Jest tests
+npm test
+
+# Run tests with coverage
+npm run test:coverage
+```
+
+### End-to-End Testing
+
+```bash
+# Run Playwright tests
+npm run test:e2e
 
 # Run specific test file
 npx playwright test tests/example.spec.js
+
+# Run tests with UI mode for debugging
+npx playwright test --ui
 ```
+
+### Testing Guidelines
+
+1. **Write tests first**: Follow Test-Driven Development (TDD) principles when possible
+2. **Maintain coverage**: Aim for at least 70% code coverage for new features
+3. **Test edge cases**: Include tests for error conditions and edge cases
+4. **Keep tests fast**: Unit tests should be quick to run
+5. **Isolate tests**: Tests should not depend on each other
 
 ## Coding Standards
 

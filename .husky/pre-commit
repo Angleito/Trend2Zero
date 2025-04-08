@@ -1,0 +1,16 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+# Run linting
+echo "🔍 Running linting..."
+npm run lint
+
+# Run frontend tests
+echo "🧪 Running frontend tests..."
+npm test
+
+# Check if there are any changes in the backend directory
+if git diff --cached --name-only | grep -q "^backend/"; then
+  echo "🧪 Running backend tests..."
+  cd backend && npm test
+fi

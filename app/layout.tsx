@@ -24,7 +24,7 @@ export default function RootLayout({
       translate="no"
     >
       <head>
-        <title>PricedinBitcoin21 - Global Assets Priced in Bitcoin</title>
+        <title>Trend2Zero - Global Assets Priced in Bitcoin</title>
         <meta name="description" content="Visualize how every asset trends to zero in Bitcoin terms" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
         <link rel="icon" href="/favicon.ico" />
