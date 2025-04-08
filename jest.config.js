@@ -18,7 +18,8 @@ const customJestConfig = {
   testPathIgnorePatterns: [
     '<rootDir>/node_modules/',
     '<rootDir>/.next/',
-    '<rootDir>/backend/'
+    '<rootDir>/backend/',
+    '<rootDir>/tests/.*\\.spec\\.js$'
   ],
   collectCoverage: true,
   collectCoverageFrom: [

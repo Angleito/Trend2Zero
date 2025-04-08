@@ -9,9 +9,12 @@ jest.mock('next/navigation', () => ({
 }));
 
 describe('Home Page', () => {
-  it('renders without crashing', () => {
+  it('renders main heading without crashing', () => {
     render(<Home />);
-    // This is a basic test - update with actual content from your Home page
-    expect(screen.getByRole('heading')).toBeInTheDocument();
+    // Look for the specific main page heading
+    const mainHeading = screen.getByRole('heading', {
+      name: /Everything Trends to Zero in Bitcoin Terms/i
+    });
+    expect(mainHeading).toBeInTheDocument();
   });
 });
