@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-rgb: 0, 0, 0;
+  --bitcoin-orange: 255, 149, 0;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background-color: rgb(var(--background-rgb));
+}
+
+/* Bitcoin-themed components */
+@layer components {
+  .bitcoin-btn {
+    @apply bg-[#FF9500] text-white px-4 py-2 rounded-md hover:opacity-90 transition-opacity;
+  }
+
+  .bitcoin-card {
+    @apply bg-gray-900 border border-gray-800 rounded-lg p-6 hover:shadow-lg transition-shadow;
+  }
+
+  .bitcoin-ticker {
+    @apply bg-black border-b border-gray-800 py-2 px-4 text-sm flex items-center space-x-4 overflow-x-auto whitespace-nowrap;
+  }
+
+  .bitcoin-ticker-item {
+    @apply flex items-center space-x-2;
+  }
+
+  .bitcoin-ticker-label {
+    @apply text-gray-400;
+  }
+
+  .bitcoin-ticker-value {
+    @apply text-white font-medium;
+  }
+
+  .bitcoin-ticker-value-up {
+    @apply text-[#00C853];
+  }
+
+  .bitcoin-ticker-value-down {
+    @apply text-[#FF3D00];
+  }
+
+  .asset-category-btn {
+    @apply px-4 py-2 rounded-md border border-gray-800 text-white transition-colors;
+  }
+
+  .asset-category-btn-active {
+    @apply bg-[#FF9500] border-[#FF9500];
+  }
+}
+
+/* Custom dark theme scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #111111;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333333;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #FF9500;
+}
