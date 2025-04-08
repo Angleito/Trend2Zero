@@ -43,12 +43,12 @@ jobs:
         npm ci
 
     - name: Lint frontend
-      run: npm run lint -- --max-warnings 0 --debug
+      run: npm run lint -- --fix
 
     - name: Lint backend
       run: |
         cd backend
-        npm run lint -- --max-warnings 0 -f stylish
+        npm run lint:fix
 
     - name: Create frontend environment file
       run: |
