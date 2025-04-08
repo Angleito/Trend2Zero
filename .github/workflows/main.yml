@@ -95,6 +95,15 @@ jobs:
         sed -i 's/your_jwt_secret_here/test_jwt_secret/g' .env.test
         sed -i 's/mongodb:\/\/localhost:27017\/trend2zero_test/mongodb:\/\/localhost:27017\/trend2zero_test/g' .env.test
 
+    - name: Run Jest tests
+      run: npm test
+
+    - name: Install Playwright browsers
+      run: npx playwright install
+
+    - name: Run Playwright tests
+      run: npx playwright test
+
   build:
     needs: lint-and-test
     runs-on: ubuntu-latest

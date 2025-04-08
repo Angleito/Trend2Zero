@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react';
-import Home from '../pages/index';
+import Home from '../app/page';
 
 // Mock any components or hooks used in the Home component
-jest.mock('next/router', () => ({
+jest.mock('next/navigation', () => ({
   useRouter: () => ({
     pathname: '/',
   }),
