@@ -93,7 +93,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: test-results
-        path: playwright-report
+        path: playwright-report/
 
   build:
     needs: lint-and-test
@@ -120,7 +120,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: build-artifacts
-        path: .next/
+        path: .next
 
   # Deployment job - uncomment and configure when ready to deploy
   # deploy:
