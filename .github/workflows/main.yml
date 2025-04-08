@@ -87,13 +87,13 @@ jobs:
     - name: Run Playwright tests
       run: npx playwright test
 
-    # Temporarily removed artifact upload due to GitHub Actions issues
-    # - name: Upload test results
-    #   if: always()
-    #   uses: actions/upload-artifact@v1
-    #   with:
-    #     name: test-results
-    #     path: playwright-report
+    # Upload test results
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: playwright-report
 
   build:
     needs: lint-and-test
@@ -115,12 +115,12 @@ jobs:
     - name: Build
       run: npm run build
 
-    # Temporarily removed artifact upload due to GitHub Actions issues
-    # - name: Upload build artifacts
-    #   uses: actions/upload-artifact@v1
-    #   with:
-    #     name: build-artifacts
-    #     path: .next/
+    # Upload build artifacts
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-artifacts
+        path: .next/
 
   # Deployment job - uncomment and configure when ready to deploy
   # deploy:
@@ -132,7 +132,7 @@ jobs:
   #   - uses: actions/checkout@v3
   #
   #   - name: Download build artifacts
-  #     uses: actions/download-artifact@v1
+  #     uses: actions/download-artifact@v3
   #     with:
   #       name: build-artifacts
   #       path: .next/
