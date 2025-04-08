@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MarketDataService } from '../lib/services/marketDataService';
 import type { MarketAsset } from '../lib/types';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface AssetSearchProps {
   onAssetSelect?: (asset: MarketAsset) => void;
@@ -122,7 +123,13 @@ const AssetSearch: React.FC<AssetSearchProps> = ({ onAssetSelect }) => {
                 >
                   <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-gray-700 rounded-full mr-3">
                     {asset.image ? (
-                      <img src={asset.image} alt={asset.name} className="w-6 h-6" />
+                      <Image
+                        src={asset.image}
+                        alt={asset.name}
+                        width={24}
+                        height={24}
+                        className="w-6 h-6"
+                      />
                     ) : (
                       <span className="text-sm font-medium text-gray-300">
                         {asset.symbol.substring(0, 2)}

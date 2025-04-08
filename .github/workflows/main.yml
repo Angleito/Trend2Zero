@@ -39,12 +39,17 @@ jobs:
         cache: 'npm'
 
     - name: Install frontend dependencies
-      run: npm ci
+      run: |
+        npm install
+        npm list || true
+        cat package-lock.json
 
     - name: Install backend dependencies
       run: |
         cd backend
-        npm ci
+        npm install
+        npm list || true
+        cat package-lock.json
 
     - name: Lint frontend
       id: lint-frontend
