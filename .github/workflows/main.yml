@@ -50,16 +50,24 @@ jobs:
       id: lint-frontend
       continue-on-error: true
       run: |
-        npm run lint:fix
-        echo "LINT_FRONTEND_STATUS=$?" >> $GITHUB_OUTPUT
+        echo "Running frontend linting..."
+        npm run lint -- --max-warnings 0 --debug
+        LINT_STATUS=$?
+        echo "Frontend linting status: $LINT_STATUS"
+        echo "LINT_FRONTEND_STATUS=$LINT_STATUS" >> $GITHUB_OUTPUT
+        exit $LINT_STATUS
 
     - name: Lint backend
       id: lint-backend
       continue-on-error: true
       run: |
+        echo "Running backend linting..."
         cd backend
-        npm run lint:fix
-        echo "LINT_BACKEND_STATUS=$?" >> $GITHUB_OUTPUT
+        npm run lint -- --max-warnings 0 -f stylish
+        LINT_STATUS=$?
+        echo "Backend linting status: $LINT_STATUS"
+        echo "LINT_BACKEND_STATUS=$LINT_STATUS" >> $GITHUB_OUTPUT
+        exit $LINT_STATUS
 
     - name: Check linting status
       if: steps.lint-frontend.outcome == 'failure' || steps.lint-backend.outcome == 'failure'
