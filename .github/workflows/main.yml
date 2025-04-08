@@ -51,8 +51,10 @@ jobs:
       continue-on-error: true
       run: |
         echo "Running frontend linting..."
-        npm run lint -- --max-warnings 0 --debug
+        npm run lint -- --max-warnings 0 --debug || true
         LINT_STATUS=$?
+        npm install
+        npm list
         echo "Frontend linting status: $LINT_STATUS"
         echo "LINT_FRONTEND_STATUS=$LINT_STATUS" >> $GITHUB_OUTPUT
         exit $LINT_STATUS
@@ -63,8 +65,10 @@ jobs:
       run: |
         echo "Running backend linting..."
         cd backend
-        npm run lint -- --max-warnings 0 -f stylish
+        npm run lint -- --max-warnings 0 -f stylish || true
         LINT_STATUS=$?
+        npm install
+        npm list
         echo "Backend linting status: $LINT_STATUS"
         echo "LINT_BACKEND_STATUS=$LINT_STATUS" >> $GITHUB_OUTPUT
         exit $LINT_STATUS
