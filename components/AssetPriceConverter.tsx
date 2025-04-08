@@ -7,8 +7,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { MarketDataService } from '../pricedinbitcoin21/lib/services/marketDataService';
-import type { AssetData } from '../pricedinbitcoin21/lib/types';
+import { MarketDataService } from '../lib/services/marketDataService';
+import type { AssetData } from '../lib/types';
 
 interface AssetPriceConverterProps {
   assetSymbol: string;

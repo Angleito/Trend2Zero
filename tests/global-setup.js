@@ -48,6 +48,8 @@ module.exports = async function globalSetup() {
     shell: true,
     stdio: 'pipe', // Capture output
     cwd: process.cwd(),
+    detached: true,
+    env: { ...process.env, NODE_OPTIONS: '--max_old_space_size=4096' }
   });
 
   // Log server output
@@ -61,7 +63,9 @@ module.exports = async function globalSetup() {
 
   // Save the server PID to a file for teardown
   const pidFile = path.join(process.cwd(), '.server-pid');
-  fs.writeFileSync(pidFile, server.pid.toString());
+  if (server && server.pid) {
+    fs.writeFileSync(pidFile, server.pid.toString());
+  }
 
   // Wait for the server to be ready
   const browser = await chromium.launch();
@@ -120,4 +124,4 @@ module.exports = async function globalSetup() {
   }
 };
 
-module.exports.server = server;
+// Removed server export

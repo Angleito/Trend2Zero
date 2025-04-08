@@ -6,10 +6,10 @@ import { MarketDataService } from '../../../lib/services/marketDataService';
 import type { AssetData } from '../../../lib/types';
 
 // Import client components directly
-import AssetPriceConverter from '../../components/AssetPriceConverter';
-import ChartContainer from '../../components/ChartContainer';
-import StickyHeader from '../../components/StickyHeader';
-import BitcoinTicker from '../../components/BitcoinTicker';
+import AssetPriceConverter from '../../../components/AssetPriceConverter';
+import ChartContainer from '../../../components/ChartContainer';
+import StickyHeader from '../../../components/StickyHeader';
+import BitcoinTicker from '../../../components/BitcoinTicker';
 
 const AssetDetailPage: React.FC = () => {
   const params = useParams();

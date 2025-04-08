@@ -9,8 +9,8 @@
 import React, { useEffect, useState } from 'react';
 import Highcharts from 'highcharts/highstock';
 import HighchartsReact from 'highcharts-react-official';
-import { MarketDataService } from '../pricedinbitcoin21/lib/services/marketDataService';
-import type { HistoricalDataPoint } from '../pricedinbitcoin21/lib/types';
+import { MarketDataService } from '../lib/services/marketDataService';
+import type { HistoricalDataPoint } from '../lib/types';
 
 // Load Highcharts modules
 // Using dynamic imports for client-side only modules

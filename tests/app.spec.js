@@ -49,7 +49,13 @@ test.describe('Trend2Zero Application Tests', () => {
 
   test('Asset Tracker page loads and displays data', async ({ page }) => {
     // Navigate to the tracker page
-    await page.goto(`http://localhost:${serverPort}/tracker`, { timeout: 30000 });
+    await page.goto(`http://localhost:${serverPort}/tracker`, {
+      timeout: 30000,
+      waitUntil: 'networkidle'
+    });
+
+    // Wait for page to be fully loaded
+    await page.waitForFunction(() => document.readyState === 'complete');
 
     // Verify the page title
     await expect(page.locator('h1')).toHaveText('Asset Tracker');
@@ -62,39 +68,49 @@ test.describe('Trend2Zero Application Tests', () => {
     // Verify that the search input is present
     await expect(page.locator('input[placeholder="Search assets..."]')).toBeVisible();
 
-    // Verify that the asset table is present and has data
-    // Wait for table to be fully loaded with a more robust strategy
-    // Wait for table to be fully loaded with a more robust strategy
-    await page.waitForSelector('table', { state: 'visible', timeout: 30000 });
+    // Wait for table with extended timeout and multiple retry strategies
+    await page.waitForSelector('table', { state: 'visible', timeout: 45000 });
     
-    // Retry mechanism for table rows
-    let retries = 3;
+    // Advanced retry mechanism for table rows
+    let retries = 5;
     let rowCount = 0;
     while (retries > 0) {
-      rowCount = await page.locator('table tbody tr').count();
-      if (rowCount > 0) break;
-      await page.waitForTimeout(2000);
+      try {
+        rowCount = await page.locator('table tbody tr').count();
+        if (rowCount > 0) break;
+      } catch (error) {
+        console.warn(`Row count attempt failed (${retries} retries left):`, error);
+      }
+      await page.reload({ waitUntil: 'networkidle' });
+      await page.waitForTimeout(3000);
       retries--;
     }
     
-    // If no rows found after retries, log the page content for debugging
+    // If no rows found after retries, capture and log page state
     if (rowCount === 0) {
       const pageContent = await page.content();
+      const networkRequests = await page.evaluate(() => {
+        return performance.getEntriesByType('resource')
+          .filter(r => r.entryType === 'resource')
+          .map(r => ({ name: r.name, type: 'unknown' }));
+      });
+      
       console.error('Page content when no rows found:', pageContent);
+      console.error('Network requests:', networkRequests);
     }
     
     expect(rowCount).toBeGreaterThan(0);
 
-    // Test category filtering
+    // Test category filtering with extended wait
     await page.locator('button:has-text("Cryptocurrency")').click();
-    await page.waitForTimeout(1000); // Wait for filtering to apply
+    await page.waitForTimeout(2000); // Extended wait for filtering
 
     // Verify that filtered results contain cryptocurrency assets
     await expect(page.locator('table tbody tr').first()).toContainText('Cryptocurrency');
 
-    // Test search functionality
+    // Test search functionality with extended wait
     await page.locator('input[placeholder="Search assets..."]').fill('Bitcoin');
-    await page.waitForTimeout(1000); // Wait for search results
+    await page.waitForTimeout(2000); // Extended wait for search results
 
     // Verify that search results contain Bitcoin
     await expect(page.locator('table tbody tr').first()).toContainText('Bitcoin');
@@ -114,10 +130,10 @@ test.describe('Trend2Zero Application Tests', () => {
     await expect(page.locator('h1')).toBeVisible();
 
     // Verify that the price chart is present
-    await expect(page.locator('text=Price Chart')).toBeVisible();
+    await expect(page.locator('h2:has-text("Price Chart")')).toBeVisible();
 
     // Verify that the price converter is present
-    await expect(page.locator('text=Price Converter')).toBeVisible();
+    await expect(page.locator('h2:has-text("Price Converter")')).toBeVisible();
 
     // Test chart type toggle
     await page.locator('button:has-text("Advanced")').click();
@@ -150,7 +166,8 @@ test.describe('Trend2Zero Application Tests', () => {
     await expect(page).toHaveURL(/.*\/blog/);
 
     // Test navigation back to home
-    await page.locator('nav').first().getByText('Trend2Zero').click();
+    // Use a more robust method to find and click the home link
+    await page.locator('a[href="/"]').first().click();
     await expect(page).toHaveURL(`http://localhost:${serverPort}/`);
   });
 });

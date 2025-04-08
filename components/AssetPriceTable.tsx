@@ -38,32 +38,63 @@ const AssetPriceTable: React.FC<AssetPriceTableProps> = ({
     const fetchAssets = async () => {
       try {
         setLoading(true);
+        setError(null);
         const marketService = new MarketDataService();
-        const assetList = await marketService.listAvailableAssets({
-          category,
-          pageSize: limit
-        });
+        
+        // Retry mechanism for fetching assets
+        let retries = 3;
+        let assetList: MarketAsset[] = [];
+        while (retries > 0) {
+          try {
+            assetList = await marketService.listAvailableAssets({
+              category,
+              pageSize: limit
+            });
+            if (assetList.length > 0) break;
+          } catch (fetchError) {
+            console.warn(`Asset fetch attempt failed (${retries} retries left):`, fetchError);
+          }
+          retries--;
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        if (assetList.length === 0) {
+          throw new Error('No assets could be fetched');
+        }
+
         setAssets(assetList);
 
-        // Fetch price data for each asset
-        const dataPromises = assetList.map(asset =>
-          marketService.getAssetPriceInBTC(asset.symbol)
-        );
+        // Fetch price data for each asset with retry
+        const dataPromises = assetList.map(async (asset) => {
+          let retries = 3;
+          while (retries > 0) {
+            try {
+              const priceData = await marketService.getAssetPriceInBTC(asset.symbol);
+              return { symbol: asset.symbol, data: priceData };
+            } catch (priceError) {
+              console.warn(`Price fetch failed for ${asset.symbol} (${retries} retries left):`, priceError);
+            }
+            retries--;
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+          return null;
+        });
 
         const results = await Promise.allSettled(dataPromises);
         const newAssetData: Record<string, AssetData> = {};
 
-        results.forEach((result, index) => {
-          if (result.status === 'fulfilled' && result.value) {
-            newAssetData[assetList[index].symbol] = result.value;
+        results.forEach(result => {
+          if (result.status === 'fulfilled' && result.value && result.value.data) {
+            newAssetData[result.value.symbol] = result.value.data;
           }
         });
 
         setAssetData(newAssetData);
-        setError(null);
       } catch (err) {
         console.error('Error fetching assets:', err);
         setError('Failed to load assets. Please try again later.');
+        setAssets([]);
+        setAssetData({});
       } finally {
         setLoading(false);
       }
