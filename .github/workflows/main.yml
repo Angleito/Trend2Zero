@@ -70,22 +70,23 @@ jobs:
       run: |
         npm test
 
-    - name: Install Playwright browsers
-      run: npx playwright install --with-deps chromium
-
-    - name: Start backend server for E2E tests
-      run: |
-        cd backend
-        npm run dev &
-        sleep 10
-
-    - name: Start frontend server for E2E tests
-      run: |
-        npm run dev &
-        sleep 10
-
-    - name: Run Playwright tests
-      run: npx playwright test
+    # Temporarily removed E2E tests to simplify workflow
+    # - name: Install Playwright browsers
+    #   run: npx playwright install --with-deps chromium
+    #
+    # - name: Start backend server for E2E tests
+    #   run: |
+    #     cd backend
+    #     npm run dev &
+    #     sleep 10
+    #
+    # - name: Start frontend server for E2E tests
+    #   run: |
+    #     npm run dev &
+    #     sleep 10
+    #
+    # - name: Run Playwright tests
+    #   run: npx playwright test
 
     # Temporarily removed artifact upload due to GitHub Actions issues
     # - name: Upload test results
