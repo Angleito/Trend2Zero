@@ -4,133 +4,78 @@ const path = require('path');
 module.exports = defineConfig({
   // Test directory
   testDir: './tests',
-  
+
   // Global setup and teardown
   globalSetup: require.resolve('./tests/global-setup.js'),
   globalTeardown: require.resolve('./tests/global-teardown.js'),
 
   // Timeout configurations
-  timeout: 120000, // 2 minutes total test timeout
+  timeout: 60000, // 1 minute total test timeout (reduced from 3 minutes)
   expect: {
-    timeout: 30000 // 30 seconds for assertions
+    timeout: 10000 // 10 seconds for assertions
   },
 
-  // Parallel test execution
-  fullyParallel: true,
-  workers: process.env.CI ? 1 : undefined,
+  // Parallel test execution - limit to reduce memory usage
+  fullyParallel: false, // Changed to false to reduce memory usage
+  workers: 1, // Limit to 1 worker to prevent memory issues
 
   // Retry strategy
-  retries: process.env.CI ? 2 : 1,
+  retries: 0, // Disable retries to reduce memory usage
   forbidOnly: !!process.env.CI,
 
-  // Reporting configuration
-  reporter: process.env.CI 
-    ? [
-        ['github'], 
-        ['list'], 
-        ['html', { 
-          open: 'never', 
-          outputFolder: 'test-results/html-report' 
-        }],
-        ['json', { 
-          outputFile: 'test-results/test-results.json' 
-        }]
-      ]
-    : [
-        ['list'], 
-        ['html', { 
-          open: 'on-failure', 
-          outputFolder: 'test-results/html-report' 
-        }],
-        ['json', { 
-          outputFile: 'test-results/test-results.json' 
-        }]
-      ],
+  // Reporting configuration - simplified
+  reporter: [
+    ['list'],
+    ['html', {
+      open: 'never',
+      outputFolder: 'playwright-report'
+    }]
+  ],
 
   // Default test configuration
   use: {
+    // Add baseURL to fix the invalid URL errors
+    baseURL: 'http://localhost:3000',
+
     // Browser settings
-    headless: true, // Run in headless mode
-    viewport: { width: 1920, height: 1080 },
+    headless: true,
+    viewport: { width: 1280, height: 720 }, // Reduced size to save memory
     ignoreHTTPSErrors: true,
-    
-    // Debugging and tracing
-    screenshot: 'only-on-failure', // Only capture screenshots for failed tests
-    video: 'retain-on-failure', // Only keep videos for failed tests
-    trace: 'retain-on-failure', // Only keep traces for failed tests
-    
+
+    // Debugging and tracing - minimize to reduce memory usage
+    screenshot: 'only-on-failure',
+    video: 'off', // Disable video to save memory
+    trace: 'off', // Disable trace to save memory
+
     // Action timeouts
-    actionTimeout: 45000, // 45 seconds for individual actions
-    navigationTimeout: 90000, // 90 seconds for page navigation
-    
-    // Browser launch options
+    actionTimeout: 15000, // Reduced from 45s to 15s
+    navigationTimeout: 30000, // Reduced from 90s to 30s
+
+    // Browser launch options - optimized for memory efficiency
     launchOptions: {
-      slowMo: 0, // Remove delay between actions
       args: [
-        '--headless', // Ensure headless mode
+        '--headless',
         '--no-sandbox',
         '--disable-setuid-sandbox',
-        '--disable-gpu', // Disable GPU hardware acceleration
-        '--disable-dev-shm-usage', // Overcome limited resource problems
-        '--remote-debugging-port=9222', // Allow remote debugging without opening browser
-        '--disable-web-security', // Disable web security for testing
-        '--disable-site-isolation-trials', // Reduce resource usage
-        '--disable-background-networking', // Minimize network activity
-        '--disable-default-apps', // Disable default apps
-        '--disable-extensions', // Disable browser extensions
-        '--disable-sync' // Disable browser sync
-      ],
-      
-      // Environment variables for minimal interaction
-      env: {
-        DISPLAY: ':99', // Use virtual display
-        PLAYWRIGHT_HEADLESS: '1',
-        NODE_ENV: 'test'
-      }
-    },
-    
-    // Context options for minimal resource usage
-    contextOptions: {
-      recordVideo: {
-        dir: 'test-results/videos',
-        size: { width: 1920, height: 1080 }
-      },
-      tracing: {
-        screenshots: false, // Disable screenshots to reduce resource usage
-        snapshots: false,
-        sources: false
-      }
+        '--disable-gpu',
+        '--disable-dev-shm-usage',
+        '--disable-extensions',
+        '--mute-audio',
+        '--disable-web-security',
+        '--disable-background-networking',
+        '--disable-default-apps',
+        '--disable-sync'
+      ]
     }
   },
 
-  // Browser-specific configurations
+  // Browser-specific configurations - only use chromium to save resources
   projects: [
     {
-      name: 'chromium-headless',
-      use: { 
+      name: 'chromium',
+      use: {
         browserName: 'chromium',
-        headless: true,
-        launchOptions: {
-          args: [
-            '--headless', 
-            '--no-sandbox', 
-            '--disable-gpu',
-            '--disable-dev-shm-usage',
-            '--disable-background-networking'
-          ]
-        }
-      }
-    },
-    {
-      name: 'firefox-headless',
-      use: { 
-        browserName: 'firefox',
-        headless: true,
-        launchOptions: {
-          args: [
-            '--headless'
-          ]
-        }
+        headless: true
       }
     }
   ]

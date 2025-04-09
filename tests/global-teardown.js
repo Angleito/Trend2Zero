@@ -2,13 +2,13 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
-async function globalTeardown(config) {
+async function globalTeardown() {
   // Logging function
   const log = (message, level = 'info') => {
     const logPath = path.join(__dirname, '..', 'test-results', 'logs', 'global-teardown.log');
     const timestamp = new Date().toISOString();
     const logMessage = `[${level.toUpperCase()}] ${timestamp}: ${message}\n`;
-    
+
     fs.appendFileSync(logPath, logMessage);
     console.log(logMessage.trim());
   };
@@ -54,7 +54,7 @@ async function globalTeardown(config) {
     const analyzeTestResults = () => {
       try {
         const resultsPath = path.join(resultsDir, 'test-results.json');
-        
+
         // Create a basic results file if it doesn't exist
         if (!fs.existsSync(resultsPath)) {
           const defaultResults = {
@@ -69,7 +69,7 @@ async function globalTeardown(config) {
 
         const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
         const summaryPath = path.join(resultsDir, 'logs', 'test-summary.txt');
-        
+
         fs.writeFileSync(summaryPath, JSON.stringify(results, null, 2));
         log('Test summary generated');
       } catch (resultError) {
@@ -80,18 +80,16 @@ async function globalTeardown(config) {
     // Clean up browser and test-related processes
     const cleanupProcesses = () => {
       try {
-        // Attempt to kill any lingering browser or test-related processes
+        // Only kill browser processes related to testing
         const processesToKill = [
-          'chromium',
-          'firefox',
-          'webkit',
-          'node',
-          'npx',
-          'playwright'
+          'chromium.*playwright',
+          'firefox.*playwright',
+          'webkit.*playwright'
         ];
 
         processesToKill.forEach(process => {
           try {
+            // Use a more specific pattern to avoid killing unrelated processes
             execSync(`pkill -f "${process}"`);
           } catch (killError) {
             // Ignore errors if process is not found
@@ -99,7 +97,7 @@ async function globalTeardown(config) {
           }
         });
 
-        log('Cleanup of test-related processes completed');
+        log('Cleanup of test-related browser processes completed');
       } catch (cleanupError) {
         log(`Process cleanup failed: ${cleanupError.message}`, 'error');
       }
