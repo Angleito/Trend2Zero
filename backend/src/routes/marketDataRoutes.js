@@ -1,21 +1,23 @@
 const express = require('express');
-const marketDataController = require('../controllers/marketDataController');
-const authController = require('../controllers/authController');
-
 const router = express.Router();
+const marketDataController = require('../controllers/marketDataController');
+const auth = require('../middleware/authMiddleware');
 
-// Public routes
-router.get('/assets', marketDataController.getAllAssets);
-router.get('/assets/popular', marketDataController.getPopularAssets);
 router.get('/assets/search', marketDataController.searchAssets);
-router.get('/assets/type/:type', marketDataController.getAssetsByType);
-router.get('/assets/:symbol', marketDataController.getAsset);
-router.get('/price/:symbol', marketDataController.getAssetPriceInBTC);
-router.get('/historical/:symbol', marketDataController.getHistoricalData);
+router.get('/assets/popular', marketDataController.getPopularAssets);
+router.get('/assets/:symbol/price', marketDataController.getAssetPrice);
+router.get('/assets/:symbol/history', marketDataController.getHistoricalPrices);
+router.get('/assets/:symbol/stats', marketDataController.getAssetStats);
+router.get('/markets/overview', marketDataController.getMarketOverview);
+router.get('/markets/trending', marketDataController.getTrendingAssets);
 
 // Protected routes
-router.use(authController.protect);
-
-// No protected routes yet, but can be added here
+router.use(auth);
+router.post('/watchlist', marketDataController.addToWatchlist);
+router.delete('/watchlist/:symbol', marketDataController.removeFromWatchlist);
+router.get('/watchlist', marketDataController.getWatchlist);
+router.post('/alerts', marketDataController.createPriceAlert);
+router.get('/alerts', marketDataController.getPriceAlerts);
+router.delete('/alerts/:id', marketDataController.deletePriceAlert);
 
 module.exports = router;

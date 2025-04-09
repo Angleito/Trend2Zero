@@ -1,137 +1,138 @@
 const mongoose = require('mongoose');
 
-const historicalDataPointSchema = new mongoose.Schema(
-  {
-    date: {
-      type: Date,
-      required: true
-    },
-    price: {
-      type: Number,
-      required: true
-    },
-    priceInBTC: {
-      type: Number
-    },
-    open: Number,
-    high: Number,
-    low: Number,
-    volume: Number
-  },
-  { _id: false }
-);
-
-const historicalDataSchema = new mongoose.Schema(
-  {
+const historicalDataSchema = new mongoose.Schema({
     assetSymbol: {
-      type: String,
-      required: [true, 'Historical data must be linked to an asset symbol'],
-      trim: true,
-      uppercase: true
+        type: String,
+        required: [true, 'Historical data must have an asset symbol'],
+        trim: true,
+        uppercase: true
     },
     timeframe: {
-      type: String,
-      required: [true, 'Historical data must have a timeframe'],
-      enum: {
-        values: ['daily', 'weekly', 'monthly', 'yearly'],
-        message: 'Timeframe must be either: daily, weekly, monthly, or yearly'
-      }
+        type: String,
+        required: [true, 'Historical data must have a timeframe'],
+        enum: ['1m', '5m', '15m', '30m', '1h', '4h', '1d', '1w', '1M'],
+        default: '1d'
     },
     currency: {
-      type: String,
-      required: [true, 'Historical data must have a currency'],
-      enum: {
-        values: ['USD', 'BTC'],
-        message: 'Currency must be either: USD or BTC'
-      },
-      default: 'USD'
+        type: String,
+        required: [true, 'Historical data must have a currency'],
+        uppercase: true,
+        default: 'USD'
     },
-    dataPoints: [historicalDataPointSchema],
-    startDate: {
-      type: Date,
-      required: [true, 'Historical data must have a start date']
-    },
-    endDate: {
-      type: Date,
-      required: [true, 'Historical data must have an end date']
-    },
-    lastUpdated: {
-      type: Date,
-      default: Date.now
+    data: [{
+        timestamp: {
+            type: Date,
+            required: [true, 'Data point must have a timestamp']
+        },
+        open: {
+            type: Number,
+            required: [true, 'Data point must have an open price']
+        },
+        high: {
+            type: Number,
+            required: [true, 'Data point must have a high price']
+        },
+        low: {
+            type: Number,
+            required: [true, 'Data point must have a low price']
+        },
+        close: {
+            type: Number,
+            required: [true, 'Data point must have a close price']
+        },
+        volume: {
+            type: Number,
+            default: 0
+        },
+        adjustedClose: Number,
+        splitFactor: Number,
+        dividend: Number
+    }],
+    metadata: {
+        source: String,
+        lastUpdated: {
+            type: Date,
+            default: Date.now
+        },
+        isAdjusted: {
+            type: Boolean,
+            default: false
+        },
+        dataQuality: {
+            gaps: [Date],
+            suspicious: [Date],
+            corrected: [Date]
+        }
     }
-  },
-  {
-    timestamps: true
-  }
+}, {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+});
+
+// Compound index for unique asset-timeframe-currency combination
+historicalDataSchema.index(
+    { assetSymbol: 1, timeframe: 1, currency: 1 },
+    { unique: true }
 );
 
-// Compound index for faster queries
-historicalDataSchema.index({ assetSymbol: 1, timeframe: 1, currency: 1 });
+// Index for efficient timestamp-based queries
+historicalDataSchema.index({ 'data.timestamp': 1 });
 
-// Static method to find historical data for an asset
-historicalDataSchema.statics.findForAsset = function(assetSymbol, timeframe = 'daily', currency = 'USD') {
-  return this.findOne({
-    assetSymbol,
-    timeframe,
-    currency
-  });
+// Virtual properties
+historicalDataSchema.virtual('latestPrice').get(function() {
+    if (!this.data || this.data.length === 0) return null;
+    return this.data[this.data.length - 1].close;
+});
+
+historicalDataSchema.virtual('priceChange24h').get(function() {
+    if (!this.data || this.data.length < 2) return null;
+    const latest = this.data[this.data.length - 1].close;
+    const previous = this.data[this.data.length - 2].close;
+    return {
+        absolute: latest - previous,
+        percentage: ((latest - previous) / previous) * 100
+    };
+});
+
+// Methods
+historicalDataSchema.methods.addDataPoint = async function(dataPoint) {
+    this.data.push(dataPoint);
+    this.metadata.lastUpdated = Date.now();
+    await this.save();
 };
 
-// Static method to find or create historical data
-historicalDataSchema.statics.findOrCreate = async function(assetSymbol, timeframe = 'daily', currency = 'USD') {
-  let historicalData = await this.findOne({
-    assetSymbol,
-    timeframe,
-    currency
-  });
-  
-  if (!historicalData) {
-    historicalData = await this.create({
-      assetSymbol,
-      timeframe,
-      currency,
-      dataPoints: [],
-      startDate: new Date(),
-      endDate: new Date()
-    });
-  }
-  
-  return historicalData;
-};
-
-// Instance method to update data points
-historicalDataSchema.methods.updateDataPoints = function(newDataPoints) {
-  // Merge new data points with existing ones
-  const existingDates = new Set(this.dataPoints.map(dp => dp.date.toISOString().split('T')[0]));
-  
-  // Add new data points that don't exist yet
-  newDataPoints.forEach(newPoint => {
-    const dateStr = new Date(newPoint.date).toISOString().split('T')[0];
-    if (!existingDates.has(dateStr)) {
-      this.dataPoints.push(newPoint);
+historicalDataSchema.methods.updateDataPoint = async function(timestamp, updates) {
+    const point = this.data.find(p => p.timestamp.getTime() === timestamp.getTime());
+    if (point) {
+        Object.assign(point, updates);
+        this.metadata.lastUpdated = Date.now();
+        await this.save();
     }
-  });
-  
-  // Sort data points by date
-  this.dataPoints.sort((a, b) => new Date(a.date) - new Date(b.date));
-  
-  // Update start and end dates
-  if (this.dataPoints.length > 0) {
-    this.startDate = this.dataPoints[0].date;
-    this.endDate = this.dataPoints[this.dataPoints.length - 1].date;
-  }
-  
-  this.lastUpdated = Date.now();
-  
-  return this.save();
 };
 
-// Instance method to get data points for a specific date range
-historicalDataSchema.methods.getDataPointsInRange = function(startDate, endDate) {
-  return this.dataPoints.filter(point => {
-    const pointDate = new Date(point.date);
-    return pointDate >= startDate && pointDate <= endDate;
-  });
+historicalDataSchema.methods.removeDataPoint = async function(timestamp) {
+    this.data = this.data.filter(p => p.timestamp.getTime() !== timestamp.getTime());
+    this.metadata.lastUpdated = Date.now();
+    await this.save();
+};
+
+// Static methods
+historicalDataSchema.statics.findBySymbolAndTimeframe = async function(symbol, timeframe) {
+    return this.findOne({ assetSymbol: symbol, timeframe });
+};
+
+historicalDataSchema.statics.getLatestPrices = async function(symbols) {
+    const results = await this.find({
+        assetSymbol: { $in: symbols },
+        timeframe: '1d'
+    });
+    
+    return results.map(doc => ({
+        symbol: doc.assetSymbol,
+        price: doc.latestPrice,
+        change24h: doc.priceChange24h
+    }));
 };
 
 const HistoricalData = mongoose.model('HistoricalData', historicalDataSchema);

@@ -1,37 +1,24 @@
 const express = require('express');
-const stocksController = require('../controllers/stocksController');
-const authController = require('../controllers/authController');
-
 const router = express.Router();
+const stocksController = require('../controllers/stocksController');
+const auth = require('../middleware/authMiddleware');
 
-// We'll implement the controller later, but define the routes now
 // Public routes
-router.get('/search', (req, res) => {
-  res.status(501).json({
-    status: 'error',
-    message: 'This route is not yet implemented'
-  });
-});
+router.get('/search', stocksController.searchStocks);
+router.get('/:symbol/quote', stocksController.getQuote);
+router.get('/:symbol/history', stocksController.getStockHistory);
+router.get('/market/indices', stocksController.getMarketIndices);
+router.get('/market/sectors', stocksController.getSectorPerformance);
+router.get('/gainers', stocksController.getTopGainers);
+router.get('/losers', stocksController.getTopLosers);
 
-router.get('/quote/:symbol', (req, res) => {
-  res.status(501).json({
-    status: 'error',
-    message: 'This route is not yet implemented'
-  });
-});
-
-router.get('/time-series/:symbol', (req, res) => {
-  res.status(501).json({
-    status: 'error',
-    message: 'This route is not yet implemented'
-  });
-});
-
-router.get('/overview/:symbol', (req, res) => {
-  res.status(501).json({
-    status: 'error',
-    message: 'This route is not yet implemented'
-  });
-});
+// Protected routes
+router.use(auth);
+router.post('/portfolio', stocksController.addToPortfolio);
+router.get('/portfolio', stocksController.getPortfolio);
+router.delete('/portfolio/:symbol', stocksController.removeFromPortfolio);
+router.post('/orders', stocksController.placeOrder);
+router.get('/orders', stocksController.getOrders);
+router.get('/positions', stocksController.getPositions);
 
 module.exports = router;

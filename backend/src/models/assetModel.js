@@ -1,119 +1,121 @@
 const mongoose = require('mongoose');
 
-const assetSchema = new mongoose.Schema(
-  {
+const assetSchema = new mongoose.Schema({
     symbol: {
-      type: String,
-      required: [true, 'An asset must have a symbol'],
-      unique: true,
-      trim: true,
-      uppercase: true
+        type: String,
+        required: [true, 'Asset must have a symbol'],
+        unique: true,
+        trim: true,
+        uppercase: true
     },
     name: {
-      type: String,
-      required: [true, 'An asset must have a name'],
-      trim: true
+        type: String,
+        required: [true, 'Asset must have a name'],
+        trim: true
     },
     type: {
-      type: String,
-      required: [true, 'An asset must have a type'],
-      enum: {
-        values: ['Cryptocurrency', 'Stocks', 'Commodities', 'Indices', 'Unknown'],
-        message: 'Type must be either: Cryptocurrency, Stocks, Commodities, Indices, or Unknown'
-      }
+        type: String,
+        required: [true, 'Asset must have a type'],
+        enum: ['stock', 'crypto', 'commodity', 'forex'],
+        default: 'stock'
     },
     description: {
-      type: String,
-      trim: true
+        type: String,
+        trim: true
     },
-    image: String,
-    currentData: {
-      priceInUSD: {
+    currentPrice: {
         type: Number,
-        default: 0
-      },
-      priceInBTC: {
-        type: Number,
-        default: 0
-      },
-      marketCap: Number,
-      volume24h: Number,
-      change24h: Number,
-      lastUpdated: {
+        required: [true, 'Asset must have a current price']
+    },
+    marketCap: {
+        type: Number
+    },
+    volume24h: {
+        type: Number
+    },
+    change24h: {
+        type: Number
+    },
+    high24h: {
+        type: Number
+    },
+    low24h: {
+        type: Number
+    },
+    lastUpdated: {
         type: Date,
         default: Date.now
-      }
-    },
-    returns: {
-      ytd: Number,
-      oneYear: Number,
-      threeYear: Number,
-      fiveYear: Number,
-      max: Number
     },
     metadata: {
-      coingeckoId: String,
-      alphaVantageSymbol: String,
-      sector: String,
-      industry: String,
-      country: String,
-      exchange: String
-    },
-    popularity: {
-      type: Number,
-      default: 0
+        exchange: String,
+        sector: String,
+        industry: String,
+        website: String,
+        logo: String
     }
-  },
-  {
+}, {
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true }
-  }
-);
-
-// Index for faster queries
-assetSchema.index({ symbol: 1 });
-assetSchema.index({ type: 1 });
-assetSchema.index({ popularity: -1 });
-
-// Virtual property for price change percentage
-assetSchema.virtual('priceChangePercentage').get(function() {
-  return this.currentData.change24h;
 });
 
-// Static method to find popular assets
-assetSchema.statics.findPopular = function(limit = 10) {
-  return this.find()
-    .sort({ popularity: -1 })
-    .limit(limit);
+// Indexes
+assetSchema.index({ symbol: 1 });
+assetSchema.index({ type: 1 });
+assetSchema.index({ marketCap: -1 });
+assetSchema.index({ volume24h: -1 });
+
+// Virtual properties
+assetSchema.virtual('priceChange').get(function() {
+    return {
+        absolute: this.change24h,
+        percentage: (this.change24h / (this.currentPrice - this.change24h)) * 100
+    };
+});
+
+assetSchema.virtual('volatility24h').get(function() {
+    if (!this.high24h || !this.low24h) return null;
+    return ((this.high24h - this.low24h) / this.low24h) * 100;
+});
+
+// Methods
+assetSchema.methods.updatePrice = async function(newPrice) {
+    const oldPrice = this.currentPrice;
+    this.currentPrice = newPrice;
+    this.change24h = newPrice - oldPrice;
+    this.lastUpdated = Date.now();
+    await this.save();
 };
 
-// Static method to find assets by type
-assetSchema.statics.findByType = function(type, limit = 20) {
-  return this.find({ type })
-    .sort({ popularity: -1 })
-    .limit(limit);
+assetSchema.methods.updateStats = async function(stats) {
+    Object.assign(this, stats);
+    this.lastUpdated = Date.now();
+    await this.save();
 };
 
-// Static method to search assets
-assetSchema.statics.search = function(query, limit = 20) {
-  return this.find({
-    $or: [
-      { symbol: { $regex: query, $options: 'i' } },
-      { name: { $regex: query, $options: 'i' } }
-    ]
-  }).limit(limit);
+// Static methods
+assetSchema.statics.getTopByMarketCap = async function(limit = 10) {
+    return this.find()
+        .sort({ marketCap: -1 })
+        .limit(limit);
 };
 
-// Instance method to update price data
-assetSchema.methods.updatePriceData = function(priceData) {
-  this.currentData = {
-    ...this.currentData,
-    ...priceData,
-    lastUpdated: Date.now()
-  };
-  
-  return this.save();
+assetSchema.statics.getTopByVolume = async function(limit = 10) {
+    return this.find()
+        .sort({ volume24h: -1 })
+        .limit(limit);
+};
+
+assetSchema.statics.getTopGainers = async function(limit = 10) {
+    return this.find()
+        .sort({ change24h: -1 })
+        .limit(limit);
+};
+
+assetSchema.statics.getTopLosers = async function(limit = 10) {
+    return this.find()
+        .sort({ change24h: 1 })
+        .limit(limit);
 };
 
 const Asset = mongoose.model('Asset', assetSchema);

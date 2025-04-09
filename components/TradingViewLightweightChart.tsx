@@ -8,8 +8,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, IChartApi, ISeriesApi, LineData } from 'lightweight-charts';
-import { MarketDataService } from '../pricedinbitcoin21/lib/services/marketDataService';
-import type { HistoricalDataPoint } from '../pricedinbitcoin21/lib/types';
+import { MarketDataService } from '../lib/services/marketDataService';
+import type { HistoricalDataPoint } from '../lib/types';
 
 interface TradingViewLightweightChartProps {
   symbol: string;

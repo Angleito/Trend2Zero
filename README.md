@@ -29,6 +29,8 @@ A revolutionary platform demonstrating how global assets trend when priced in Bi
 - Responsive Dark Theme Design
 - Playwright for browser testing
 - JWT Authentication
+- **Model Context Protocol (MCP) Integration**
+  - Brave Search MCP for advanced search capabilities
 
 ## Getting Started
 
@@ -72,6 +74,32 @@ Update the `.env` file in the backend directory with your MongoDB connection str
 #### Frontend Environment Variables
 Update the `.env.local` file in the root directory to point to your backend API URL.
 
+#### MCP Search Environment Variables
+Configure the Brave Search MCP client by setting the following environment variables in `.env.local`:
+- `BRAVE_API_KEY`: Your Brave Search API key
+- `SMITHERY_API_KEY`: Your Smithery SDK API key (optional)
+- `BRAVE_SEARCH_ENDPOINT`: Custom MCP server endpoint (optional)
+
+Example:
+```
+BRAVE_API_KEY=your_brave_api_key_here
+SMITHERY_API_KEY=your_smithery_api_key_here
+```
+
+### Using the Brave Search MCP Client
+```typescript
+import { performBraveSearch } from './lib/services/braveSearchMcp'
+
+async function searchExample() {
+  try {
+    const searchResults = await performBraveSearch("Bitcoin trends 2025")
+    console.log(searchResults)
+  } catch (error) {
+    console.error("Search failed:", error)
+  }
+}
+```
+
 ### Security Features
 - **Server-side API Proxies**: All external API calls are proxied through secure server-side routes
 - **API Key Protection**: API keys are stored server-side only and never exposed to clients
@@ -86,35 +114,6 @@ Update the `.env.local` file in the root directory to point to your backend API 
 - `design-principles.md`: UI/UX design guidelines
 - `architectural-specification.md`: Detailed system specifications
 
-## Testing and CI/CD
-
-### Running Tests
-
-#### Frontend Tests
-```bash
-# Run Jest tests
-npm test
-
-# Run tests with coverage
-npm run test:coverage
-
-# Run tests in watch mode
-npm run test:watch
-```
-
-#### Backend Tests
-```bash
-# Navigate to backend directory
-cd backend
-
-# Run Jest tests
-npm test
-
-# Run tests with coverage
-npm run test:coverage
-```
-
-#### End-to-End Tests
 ```bash
 # Run Playwright tests
 npm run test:e2e

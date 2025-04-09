@@ -1,30 +1,23 @@
 const express = require('express');
-const cryptoController = require('../controllers/cryptoController');
-const authController = require('../controllers/authController');
-
 const router = express.Router();
+const cryptoController = require('../controllers/cryptoController');
+const auth = require('../middleware/authMiddleware');
 
-// We'll implement the controller later, but define the routes now
 // Public routes
-router.get('/markets', (req, res) => {
-  res.status(501).json({
-    status: 'error',
-    message: 'This route is not yet implemented'
-  });
-});
+router.get('/list', cryptoController.getCryptoList);
+router.get('/:symbol/price', cryptoController.getCryptoPrice);
+router.get('/:symbol/history', cryptoController.getCryptoHistory);
+router.get('/market-cap', cryptoController.getMarketCap);
+router.get('/volume', cryptoController.getVolume);
+router.get('/trending', cryptoController.getTrending);
 
-router.get('/coins/:id', (req, res) => {
-  res.status(501).json({
-    status: 'error',
-    message: 'This route is not yet implemented'
-  });
-});
-
-router.get('/simple/price', (req, res) => {
-  res.status(501).json({
-    status: 'error',
-    message: 'This route is not yet implemented'
-  });
-});
+// Protected routes
+router.use(auth);
+router.post('/portfolio', cryptoController.addToPortfolio);
+router.get('/portfolio', cryptoController.getPortfolio);
+router.delete('/portfolio/:symbol', cryptoController.removeFromPortfolio);
+router.post('/transactions', cryptoController.recordTransaction);
+router.get('/transactions', cryptoController.getTransactions);
+router.get('/performance', cryptoController.getPortfolioPerformance);
 
 module.exports = router;

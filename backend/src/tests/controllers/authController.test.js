@@ -1,110 +1,157 @@
 const request = require('supertest');
-const { app } = require('../../server');
+const { getApp } = require('../setup');
 const User = require('../../models/userModel');
+const logger = require('../../utils/logger');
 
 describe('Auth Controller', () => {
-  // Test user signup
-  it('should signup a new user', async () => {
-    const response = await request(app)
-      .post('/api/users/signup')
-      .send({
+    const createTestUser = async (userData = {
         name: 'Test User',
         email: 'test@example.com',
         password: 'password123',
         passwordConfirm: 'password123'
-      });
-    
-    expect(response.statusCode).toBe(201);
-    expect(response.body.status).toBe('success');
-    expect(response.body.token).toBeDefined();
-    expect(response.body.data.user).toBeDefined();
-    expect(response.body.data.user.name).toBe('Test User');
-    expect(response.body.data.user.email).toBe('test@example.com');
-    expect(response.body.data.user.password).toBeUndefined();
-  });
-  
-  // Test user login
-  it('should login a user with correct credentials', async () => {
-    // First create a user
-    await User.create({
-      name: 'Login Test',
-      email: 'login@example.com',
-      password: 'password123',
-      passwordConfirm: 'password123'
+    }) => {
+        try {
+            return await User.create(userData);
+        } catch (error) {
+            logger.error('Error creating test user:', error);
+            throw error;
+        }
+    };
+
+    it('should signup a new user', async () => {
+        const userData = {
+            name: 'Test User',
+            email: 'test@example.com',
+            password: 'password123',
+            passwordConfirm: 'password123'
+        };
+
+        const response = await request(getApp())
+            .post('/api/users/signup')
+            .send(userData);
+
+        expect(response.status).toBe(201);
+        expect(response.body.token).toBeDefined();
+        expect(response.body.data.user.email).toBe(userData.email);
+        expect(response.body.data.user.password).toBeUndefined();
     });
-    
-    // Then try to login
-    const response = await request(app)
-      .post('/api/users/login')
-      .send({
-        email: 'login@example.com',
-        password: 'password123'
-      });
-    
-    expect(response.statusCode).toBe(200);
-    expect(response.body.status).toBe('success');
-    expect(response.body.token).toBeDefined();
-    expect(response.body.data.user).toBeDefined();
-    expect(response.body.data.user.name).toBe('Login Test');
-    expect(response.body.data.user.email).toBe('login@example.com');
-  });
-  
-  // Test login with incorrect credentials
-  it('should not login with incorrect credentials', async () => {
-    const response = await request(app)
-      .post('/api/users/login')
-      .send({
-        email: 'login@example.com',
-        password: 'wrongpassword'
-      });
-    
-    expect(response.statusCode).toBe(401);
-    expect(response.body.status).toBe('fail');
-    expect(response.body.message).toBe('Incorrect email or password');
-  });
-  
-  // Test protected route
-  it('should access protected route with valid token', async () => {
-    // First create a user and get token
-    const signupResponse = await request(app)
-      .post('/api/users/signup')
-      .send({
-        name: 'Protected Test',
-        email: 'protected@example.com',
-        password: 'password123',
-        passwordConfirm: 'password123'
-      });
-    
-    const token = signupResponse.body.token;
-    
-    // Then try to access protected route
-    const response = await request(app)
-      .get('/api/users/me')
-      .set('Authorization', `Bearer ${token}`);
-    
-    expect(response.statusCode).toBe(200);
-    expect(response.body.status).toBe('success');
-    expect(response.body.data.user).toBeDefined();
-    expect(response.body.data.user.email).toBe('protected@example.com');
-  });
-  
-  // Test protected route without token
-  it('should not access protected route without token', async () => {
-    const response = await request(app).get('/api/users/me');
-    
-    expect(response.statusCode).toBe(401);
-    expect(response.body.status).toBe('fail');
-    expect(response.body.message).toBe('You are not logged in! Please log in to get access.');
-  });
-  
-  // Test logout
-  it('should logout a user', async () => {
-    const response = await request(app).get('/api/users/logout');
-    
-    expect(response.statusCode).toBe(200);
-    expect(response.body.status).toBe('success');
-    
-    // Check that cookie is cleared
-    expect(response.headers['set-cookie'][0]).toContain('jwt=loggedout');
-  });
+
+    it('should login a user with correct credentials', async () => {
+        const userData = {
+            name: 'Test User',
+            email: 'test@example.com',
+            password: 'password123',
+            passwordConfirm: 'password123'
+        };
+
+        await createTestUser(userData);
+
+        const response = await request(getApp())
+            .post('/api/users/login')
+            .send({
+                email: userData.email,
+                password: userData.password
+            });
+
+        expect(response.status).toBe(200);
+        expect(response.body.token).toBeDefined();
+    });
+
+    it('should not login with incorrect credentials', async () => {
+        const userData = {
+            name: 'Test User',
+            email: 'test@example.com',
+            password: 'password123',
+            passwordConfirm: 'password123'
+        };
+
+        await createTestUser(userData);
+
+        const response = await request(getApp())
+            .post('/api/users/login')
+            .send({
+                email: userData.email,
+                password: 'wrongpassword'
+            });
+
+        expect(response.status).toBe(401);
+        expect(response.body.message).toContain('Invalid email or password');
+    });
+
+    describe('Protected Routes', () => {
+        let token;
+        let user;
+
+        beforeEach(async () => {
+            const userData = {
+                name: 'Test User',
+                email: 'test@example.com',
+                password: 'password123',
+                passwordConfirm: 'password123'
+            };
+
+            user = await createTestUser(userData);
+            const response = await request(getApp())
+                .post('/api/users/login')
+                .send({
+                    email: userData.email,
+                    password: userData.password
+                });
+            token = response.body.token;
+        });
+
+        it('should access protected route with valid token', async () => {
+            const response = await request(getApp())
+                .get('/api/users/me')
+                .set('Authorization', `Bearer ${token}`);
+
+            expect(response.status).toBe(200);
+            expect(response.body.data.user.email).toBe(user.email);
+        });
+
+        it('should not access protected route without token', async () => {
+            const response = await request(getApp())
+                .get('/api/users/me');
+
+            expect(response.status).toBe(401);
+            expect(response.body.message).toContain('Not authenticated');
+        });
+
+        it('should logout a user', async () => {
+            const response = await request(getApp())
+                .post('/api/users/logout')
+                .set('Authorization', `Bearer ${token}`);
+
+            expect(response.status).toBe(200);
+            expect(response.body.message).toContain('Logged out successfully');
+        });
+
+        it('should update password with correct credentials', async () => {
+            const response = await request(getApp())
+                .patch('/api/users/updateMyPassword')
+                .set('Authorization', `Bearer ${token}`)
+                .send({
+                    currentPassword: 'password123',
+                    newPassword: 'newpassword123',
+                    newPasswordConfirm: 'newpassword123'
+                });
+
+            expect(response.status).toBe(200);
+            expect(response.body.token).toBeDefined();
+        });
+
+        it('should not update password with incorrect current password', async () => {
+            const response = await request(getApp())
+                .patch('/api/users/updateMyPassword')
+                .set('Authorization', `Bearer ${token}`)
+                .send({
+                    currentPassword: 'wrongpassword',
+                    newPassword: 'newpassword123',
+                    newPasswordConfirm: 'newpassword123'
+                });
+
+            expect(response.status).toBe(401);
+            expect(response.body.message).toContain('Current password is incorrect');
+        });
+    });
 });

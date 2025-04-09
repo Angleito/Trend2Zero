@@ -11,10 +11,13 @@
     "test:watch": "jest __tests__ --watch",
     "test:coverage": "jest __tests__ --coverage",
     "test:ci": "jest __tests__ --ci --coverage",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --config=playwright.config.js",
+    "test:e2e:debug": "playwright test --config=playwright.config.js --debug",
     "test:all": "npm run test:ci && npm run test:e2e",
     "prepare": "husky install",
-    "run-all-tests": "bash scripts/run-all-tests.sh"
+    "run-all-tests": "bash scripts/run-all-tests.sh",
+    "test:comprehensive": "bash scripts/run-tests.sh",
+    "test:mcp:logs": "node scripts/analyze-mcp-logs.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.51.1",
@@ -30,12 +33,18 @@
     "husky": "^9.0.11",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
+    "log4js": "^6.9.1",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5.4.2"
+    "typescript": "^5.4.2",
+    "winston": "^3.17.0"
   },
   "dependencies": {
+    "@agentdeskai/browser-tools-mcp": "^1.2.0",
+    "@modelcontextprotocol/sdk": "^1.9.0",
+    "@smithery/sdk": "^1.0.4",
     "axios": "^1.6.7",
+    "child_process": "^1.0.2",
     "highcharts": "^11.4.0",
     "highcharts-react-official": "^3.2.1",
     "lightweight-charts": "^4.1.2",
@@ -44,5 +53,9 @@
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "zustand": "^5.0.3"
+  },
+  "playwright": {
+    "globalSetup": "tests/global-setup.js",
+    "globalTeardown": "tests/global-teardown.js"
   }
 }

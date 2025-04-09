@@ -1,4 +1,4 @@
-# dependencies
+no# dependencies
 /node_modules
 /.pnp
 .pnp.js
@@ -128,3 +128,12 @@ pids
 .eslintcache
 .node_repl_history
 .yarn-integrity
+
+# MCP Server Configuration
+mcp_settings.json
+.mcp/
+*.mcp
+mcp_config.json
+mcp_credentials.json
+.smithery/
+.modelcontextprotocol/

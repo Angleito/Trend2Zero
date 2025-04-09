@@ -1,5 +1,4 @@
 const express = require('express');
-const userController = require('../controllers/userController');
 const authController = require('../controllers/authController');
 
 const router = express.Router();
@@ -7,34 +6,12 @@ const router = express.Router();
 // Public routes
 router.post('/signup', authController.signup);
 router.post('/login', authController.login);
-router.get('/logout', authController.logout);
+router.post('/logout', authController.logout);
 
-// Protect all routes after this middleware
-router.use(authController.protect);
+// Protected routes
+router.use(authController.protect); // All routes after this middleware are protected
 
-// User routes
-router.get('/me', userController.getMe, userController.getUser);
-router.patch('/updateMe', userController.updateMe);
-router.delete('/deleteMe', userController.deleteMe);
+router.get('/me', authController.getMe);
 router.patch('/updateMyPassword', authController.updatePassword);
-
-// Watchlist routes
-router.get('/watchlist', userController.getWatchlist);
-router.post('/watchlist', userController.addToWatchlist);
-router.delete('/watchlist/:assetSymbol', userController.removeFromWatchlist);
-
-// Admin routes - restrict to admin only
-router.use(authController.restrictTo('admin'));
-
-router
-  .route('/')
-  .get(userController.getAllUsers)
-  .post(userController.createUser);
-
-router
-  .route('/:id')
-  .get(userController.getUser)
-  .patch(userController.updateUser)
-  .delete(userController.deleteUser);
 
 module.exports = router;

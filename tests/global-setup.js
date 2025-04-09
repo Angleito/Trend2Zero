@@ -1,127 +1,101 @@
-// @ts-check
 const { chromium } = require('@playwright/test');
-const { spawn } = require('child_process');
-const path = require('path');
 const fs = require('fs');
-let server;
+const path = require('path');
 
-/**
- * @type {import('@playwright/test').FullConfig}
- */
-module.exports = async function globalSetup() {
-  console.log('Starting development server...');
+async function globalSetup(config) {
+  // Create logging directories
+  const logDirs = [
+    'test-results/logs',
+    'test-results/traces',
+    'test-results/screenshots'
+  ];
+  
+  logDirs.forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  });
 
-  // Check if server is already running on port 3000 or 3001
-  let serverPort = 3000;
+  // Initialize MCP server logging
+  const mcpLogFile = path.join(__dirname, '..', 'test-results', 'logs', 'mcp-server.log');
+  const mcpErrorLogFile = path.join(__dirname, '..', 'test-results', 'logs', 'mcp-server-errors.log');
+  
+  // Write initial log headers
+  fs.writeFileSync(mcpLogFile, `MCP Server Logs - ${new Date().toISOString()}\n\n`);
+  fs.writeFileSync(mcpErrorLogFile, `MCP Server Error Logs - ${new Date().toISOString()}\n\n`);
+
+  // Optional: Start MCP server logging process
   try {
-    const browser = await chromium.launch();
-    const page = await browser.newPage();
+    const { spawn } = require('child_process');
+    const mcpServerProcess = spawn('npx', [
+      '@agentdeskai/browser-tools-mcp@1.2.0', 
+      '--log-file', mcpLogFile, 
+      '--error-log-file', mcpErrorLogFile
+    ]);
 
-    // Try port 3000 first
-    try {
-      await page.goto('http://localhost:3000', { timeout: 3000 });
-      serverPort = 3000;
-      await browser.close();
-      console.log('Server is already running on port 3000, skipping server start');
-      return;
-    } catch (error) {
-      // If port 3000 fails, try port 3001
-      try {
-        await page.goto('http://localhost:3001', { timeout: 3000 });
-        serverPort = 3001;
-        await browser.close();
-        console.log('Server is already running on port 3001, skipping server start');
-        return;
-      } catch (error) {
-        console.log('Server is not running on either port, starting it now');
-      }
-    }
+    mcpServerProcess.stdout.on('data', (data) => {
+      fs.appendFileSync(mcpLogFile, data);
+    });
 
-    await browser.close();
+    mcpServerProcess.stderr.on('data', (data) => {
+      fs.appendFileSync(mcpErrorLogFile, data);
+    });
+
+    // Store process reference for potential later use
+    global.mcpServerProcess = mcpServerProcess;
   } catch (error) {
-    console.log('Error checking server status:', error);
-    console.log('Starting server anyway');
+    console.error('Failed to start MCP server logging:', error);
   }
 
-  // Start the development server
-  server = spawn('npm', ['run', 'dev'], {
-    shell: true,
-    stdio: 'pipe', // Capture output
-    cwd: process.cwd(),
-    detached: true,
-    env: { ...process.env, NODE_OPTIONS: '--max_old_space_size=4096' }
+  // Launch browser for initial diagnostics
+  const browser = await chromium.launch({
+    headless: false,
+    args: [
+      '--enable-logging',
+      '--v=1',
+      '--no-sandbox',
+      '--disable-web-security'
+    ]
   });
 
-  // Log server output
-  server.stdout.on('data', (data) => {
-    console.log(`Server stdout: ${data}`);
-  });
-
-  server.stderr.on('data', (data) => {
-    console.error(`Server stderr: ${data}`);
-  });
-
-  // Save the server PID to a file for teardown
-  const pidFile = path.join(process.cwd(), '.server-pid');
-  if (server && server.pid) {
-    fs.writeFileSync(pidFile, server.pid.toString());
-  }
-
-  // Wait for the server to be ready
-  const browser = await chromium.launch();
-  const page = await browser.newPage();
-
-  // Try to connect to the server with retries
-  let isServerReady = false;
-  let detectedPort = null;
-
-  for (let i = 0; i < 30; i++) { // Increased retries to 30 with 1-second intervals
-    try {
-      console.log(`Attempt ${i + 1} to connect to server...`);
-
-      // Try port 3000 first
-      try {
-        await page.goto('http://localhost:3000', { timeout: 3000 });
-        detectedPort = 3000;
-        isServerReady = true;
-        console.log('Server is ready on port 3000!');
-        break;
-      } catch (error3000) {
-        // If port 3000 fails, try port 3001
-        try {
-          await page.goto('http://localhost:3001', { timeout: 3000 });
-          detectedPort = 3001;
-          isServerReady = true;
-          console.log('Server is ready on port 3001!');
-          break;
-        } catch (error3001) {
-          throw new Error(`Both ports failed: 3000 (${error3000.message}) and 3001 (${error3001.message})`);
-        }
-      }
-    } catch (error) {
-      console.log(`Server not ready yet, retrying in 1 second... (${error.message})`);
-      // Wait 1 second before retrying
-      await new Promise(resolve => setTimeout(resolve, 1000));
+  // Create a context for initial diagnostics
+  const context = await browser.newContext({
+    recordVideo: {
+      dir: 'test-results/videos/diagnostics',
+      size: { width: 1920, height: 1080 }
     }
+  });
+
+  // Create a page for initial diagnostics
+  const page = await context.newPage();
+  
+  // Capture initial browser console logs
+  page.on('console', msg => {
+    const logFile = path.join(__dirname, '..', 'test-results', 'logs', 'browser-console.log');
+    fs.appendFileSync(logFile, `${new Date().toISOString()} - ${msg.type()}: ${msg.text()}\n`);
+  });
+
+  // Optional: Navigate to a diagnostic page or perform initial checks
+  try {
+    await page.goto('about:blank');
+  } catch (error) {
+    console.error('Initial page navigation error:', error);
   }
 
-  // Save the detected port to a file for tests to use
-  if (detectedPort) {
-    const portFile = path.join(process.cwd(), '.server-port');
-    fs.writeFileSync(portFile, detectedPort.toString());
-    console.log(`Saved detected port ${detectedPort} to .server-port file`);
-  } else {
-    // If no port was detected, default to 3001
-    const portFile = path.join(process.cwd(), '.server-port');
-    fs.writeFileSync(portFile, '3001');
-    console.log('No port detected, defaulting to 3001');
-  }
+  // Store browser and context for potential use in tests
+  global.diagnosticBrowser = browser;
+  global.diagnosticContext = context;
+  global.diagnosticPage = page;
 
-  await browser.close();
-
-  if (!isServerReady) {
-    throw new Error('Failed to start development server after 30 attempts');
-  }
-};
-
-// Removed server export
+  return async () => {
+    // Cleanup function
+    if (global.diagnosticPage) await global.diagnosticPage.close();
+    if (global.diagnosticContext) await global.diagnosticContext.close();
+    if (global.diagnosticBrowser) await global.diagnosticBrowser.close();
+    
+    // Stop MCP server process if running
+    if (global.mcpServerProcess) {
+      global.mcpServerProcess.kill();
+    }
+  };
+}
