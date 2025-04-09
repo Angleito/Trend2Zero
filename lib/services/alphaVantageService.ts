@@ -58,17 +58,23 @@ export class AlphaVantageService {
     if (cachedData) return cachedData;
 
     try {
-      const response = await this.makeRequest({
+      // Fetch stock data
+      const stockResponse = await this.makeRequest({
         function: 'GLOBAL_QUOTE',
         symbol: symbol
       }) as AlphaVantageStockResponse;
 
-      const data = response['Global Quote'];
+      // Fetch BTC exchange rate
+      const btcRate = await this.getCurrencyExchangeRate(symbol, 'BTC');
+
+      const data = stockResponse['Global Quote'];
       const stockData = {
         symbol: data['01. symbol'],
         price: parseFloat(data['05. price']),
         change: parseFloat(data['09. change']),
-        changePercent: parseFloat(data['10. change percent'].replace('%', ''))
+        changePercent: parseFloat(data['10. change percent'].replace('%', '')),
+        priceInBTC: parseFloat(data['05. price']) / btcRate.exchangeRate,
+        priceInUSD: parseFloat(data['05. price'])
       };
 
       this.setCachedData(cacheKey, stockData);
@@ -146,20 +152,27 @@ export class AlphaVantageService {
     if (cachedData) return cachedData;
 
     try {
+      // Fetch crypto data
       const response = await this.makeRequest({
         function: 'DIGITAL_CURRENCY_DAILY',
         symbol: symbol,
         market: 'USD'
       }) as AlphaVantageCryptoResponse;
 
+      // Fetch BTC exchange rate
+      const btcRate = await this.getCurrencyExchangeRate(symbol, 'BTC');
+
       const timeSeries = response['Time Series (Digital Currency Daily)'];
       const latestData = Object.entries(timeSeries)[0][1];
+      const usdPrice = parseFloat(latestData['4b. close (USD)']);
 
       const cryptoData = {
         symbol: symbol,
-        price: parseFloat(latestData['4b. close (USD)']),
+        price: usdPrice,
         change: parseFloat(latestData['5. volume']),
-        changePercent: 0 // Alpha Vantage doesn't provide direct percentage change
+        changePercent: 0, // Alpha Vantage doesn't provide direct percentage change
+        priceInBTC: usdPrice / btcRate.exchangeRate,
+        priceInUSD: usdPrice
       };
 
       this.setCachedData(cacheKey, cryptoData);

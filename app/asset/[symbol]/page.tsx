@@ -13,7 +13,7 @@ import BitcoinTicker from '../../../components/BitcoinTicker';
 
 const AssetDetailPage: React.FC = () => {
   const params = useParams();
-  const symbol = params.symbol as string;
+  const symbol = params?.symbol as string | undefined;
 
   const [assetData, setAssetData] = useState<AssetData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -21,7 +21,11 @@ const AssetDetailPage: React.FC = () => {
 
   useEffect(() => {
     const fetchAssetData = async () => {
-      if (!symbol) return;
+      if (!symbol) {
+        setError('No symbol provided');
+        setLoading(false);
+        return;
+      }
 
       try {
         setLoading(true);
@@ -79,14 +83,14 @@ const AssetDetailPage: React.FC = () => {
 
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">{assetData.name}</h1>
-          <p className="text-gray-400">Symbol: {assetData.symbol} • Category: {assetData.type}</p>
+          <h1 className="text-3xl font-bold text-white mb-2">{symbol}</h1>
+          <p className="text-gray-400">Symbol: {symbol}</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           <div className="lg:col-span-2">
             <ChartContainer
-              symbol={symbol}
+              symbol={symbol || ''}
               height={400}
               theme="dark"
               interval="1d"
@@ -94,100 +98,46 @@ const AssetDetailPage: React.FC = () => {
           </div>
 
           <div>
-            <AssetPriceConverter assetSymbol={symbol} />
+            <AssetPriceConverter assetSymbol={symbol || ''} />
           </div>
         </div>
 
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-white mb-4">Performance in Bitcoin Terms</h2>
+          <h2 className="text-xl font-bold text-white mb-4">Asset Performance</h2>
 
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-800">
               <thead className="bg-black">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Period
+                    Price
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Return
+                    Change
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    vs. Bitcoin
+                    Change %
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800">
                 <tr>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    Year to Date
+                    {assetData.price.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={assetData.returns.ytd >= 0 ? 'text-green-500' : 'text-red-500'}>
-                      {assetData.returns.ytd >= 0 ? '+' : ''}{assetData.returns.ytd.toFixed(2)}%
+                    <span className={assetData.change >= 0 ? 'text-green-500' : 'text-red-500'}>
+                      {assetData.change >= 0 ? '+' : ''}{assetData.change.toFixed(2)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={assetData.returns.ytd >= 20 ? 'text-green-500' : 'text-red-500'}>
-                      {assetData.returns.ytd >= 20 ? `+${(assetData.returns.ytd - 20).toFixed(2)}%` :
-                       `${Math.max(-100, ((assetData.returns.ytd - 20) / (100 + 20) * 100)).toFixed(2)}%`}
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    1 Year
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={assetData.returns.oneYear >= 0 ? 'text-green-500' : 'text-red-500'}>
-                      {assetData.returns.oneYear >= 0 ? '+' : ''}{assetData.returns.oneYear.toFixed(2)}%
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={assetData.returns.oneYear >= 50 ? 'text-green-500' : 'text-red-500'}>
-                      {assetData.returns.oneYear >= 50 ? `+${(assetData.returns.oneYear - 50).toFixed(2)}%` :
-                       `${Math.max(-100, ((assetData.returns.oneYear - 50) / (100 + 50) * 100)).toFixed(2)}%`}
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    3 Years
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={assetData.returns.threeYear >= 0 ? 'text-green-500' : 'text-red-500'}>
-                      {assetData.returns.threeYear >= 0 ? '+' : ''}{assetData.returns.threeYear.toFixed(2)}%
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={assetData.returns.threeYear >= 150 ? 'text-green-500' : 'text-red-500'}>
-                      {assetData.returns.threeYear >= 150 ? `+${(assetData.returns.threeYear - 150).toFixed(2)}%` :
-                       `${Math.max(-100, ((assetData.returns.threeYear - 150) / (100 + 150) * 100)).toFixed(2)}%`}
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    5 Years
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={assetData.returns.fiveYear >= 0 ? 'text-green-500' : 'text-red-500'}>
-                      {assetData.returns.fiveYear >= 0 ? '+' : ''}{assetData.returns.fiveYear.toFixed(2)}%
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={assetData.returns.fiveYear >= 500 ? 'text-green-500' : 'text-red-500'}>
-                      {assetData.returns.fiveYear >= 500 ? `+${(assetData.returns.fiveYear - 500).toFixed(2)}%` :
-                       `${Math.max(-100, ((assetData.returns.fiveYear - 500) / (100 + 500) * 100)).toFixed(2)}%`}
+                    <span className={assetData.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}>
+                      {assetData.changePercent >= 0 ? '+' : ''}{assetData.changePercent.toFixed(2)}%
                     </span>
                   </td>
                 </tr>
               </tbody>
             </table>
-          </div>
-
-          <div className="mt-4 text-xs text-gray-500">
-            * Bitcoin comparison assumes Bitcoin returns of: YTD +20%, 1Y +50%, 3Y +150%, 5Y +500%<br/>
-            * Negative values are capped at -100% (complete loss relative to Bitcoin)
           </div>
         </div>
       </div>

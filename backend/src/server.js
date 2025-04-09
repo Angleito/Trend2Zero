@@ -1,7 +1,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
-const { logger } = require('./tests/setup');
+const logger = require('./utils/logger');
 
 // Load env vars
 dotenv.config();

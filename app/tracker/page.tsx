@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { AssetCategory } from '../../pricedinbitcoin21/lib/types';
+import type { AssetCategory } from '../../lib/types';
 
 // Import client components directly
 import StickyHeader from '../../components/StickyHeader';

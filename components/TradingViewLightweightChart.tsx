@@ -40,7 +40,7 @@ const TradingViewLightweightChart: React.FC<TradingViewLightweightChartProps> = 
 
         // Format data for the chart
         const chartData: LineData[] = historicalData.map((dataPoint: HistoricalDataPoint) => ({
-          time: dataPoint.date,
+          time: Math.floor(dataPoint.date.getTime() / 1000) as any,
           value: dataPoint.price,
         }));
 

@@ -28,8 +28,21 @@ Trend2Zero is a comprehensive financial tracking and analysis application that p
 ### Installation
 1. Clone the repository
 2. Install dependencies: `npm install`
-3. Copy `.env.example` to `.env` and fill in your API keys
-4. Run the development server: `npm run dev`
+3. Environment Configuration
+   - For development: Copy `.env.example` to `.env` and fill in your API keys
+   - For production: Create `.env.production` with production-specific configurations
+4. Development Server: `npm run dev`
+
+### Production Build
+1. Set up environment variables in `.env.production`
+2. Build the application: `npm run build`
+3. Start the production server: `npm run start`
+
+#### Environment Variable Management
+- Use `.env.example` as a template for local development
+- Create `.env.production` for production-specific settings
+- Prefix client-side variables with `NEXT_PUBLIC_`
+- Never commit sensitive API keys to version control
 
 ## API Integrations
 - Stocks and ETFs (via Alpha Vantage API)

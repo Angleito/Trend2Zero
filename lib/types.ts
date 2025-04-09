@@ -3,6 +3,8 @@ export interface AssetData {
   price: number;
   change: number;
   changePercent: number;
+  priceInBTC: number;
+  priceInUSD: number;
 }
 
 export interface HistoricalDataPoint {
@@ -59,4 +61,13 @@ export interface AlphaVantageExchangeRateResponse {
     '5. Exchange Rate': string;
     '6. Last Refreshed': string;
   };
+}
+
+export type AssetCategory = 'Stocks' | 'Commodities' | 'Indices' | 'Cryptocurrency';
+
+export interface MarketAsset {
+  symbol: string;
+  name: string;
+  type: AssetCategory;
+  image?: string;
 }

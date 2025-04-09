@@ -18,7 +18,12 @@ export const SERVER_CONFIG = {
       STYLE_SRC: "'self' 'unsafe-inline'",
       IMG_SRC: "'self' data:",
       CONNECT_SRC: "'self' https://www.alphavantage.co"
-    }
+    },
+    RATE_LIMIT: {
+      WINDOW_MS: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+      MAX_REQUESTS: Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 100
+    },
+    ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000']
   },
 
   FEATURE_FLAGS: {
@@ -31,4 +36,11 @@ export const SERVER_CONFIG = {
     LEVEL: process.env.LOG_LEVEL || 'info',
     ERROR_REPORTING: process.env.ERROR_REPORTING_ENABLED === 'true'
   }
+};
+
+export const SECURITY = SERVER_CONFIG.SECURITY;
+
+export const API_KEYS = {
+  ALPHA_VANTAGE: process.env.NEXT_PUBLIC_ALPHA_VANTAGE_API_KEY || '',
+  COINMARKETCAP: process.env.NEXT_PUBLIC_COINMARKETCAP_API_KEY || ''
 };
