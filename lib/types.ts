@@ -1,36 +1,62 @@
-// Asset types
-export type AssetCategory = 'Cryptocurrency' | 'Stocks' | 'Commodities' | 'Indices' | 'Unknown';
-
-export interface MarketAsset {
-  symbol: string;
-  name: string;
-  type: AssetCategory;
-  description?: string;
-  image?: string;
-}
-
 export interface AssetData {
-  name: string;
   symbol: string;
-  type: AssetCategory;
-  priceInBTC: number;
-  priceInUSD: number;
-  returns: {
-    ytd: number;
-    oneYear: number;
-    threeYear: number;
-    fiveYear: number;
-    max: number;
-  };
-  lastUpdated: Date;
-  image?: string;
+  price: number;
+  change: number;
+  changePercent: number;
 }
 
 export interface HistoricalDataPoint {
-  date: string;
+  date: Date;
   price: number;
-  open?: number;
-  high?: number;
-  low?: number;
-  volume?: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface CurrencyExchangeRate {
+  fromCurrency: string;
+  toCurrency: string;
+  exchangeRate: number;
+  lastRefreshed: Date;
+}
+
+export interface AlphaVantageStockResponse {
+  'Global Quote': {
+    '01. symbol': string;
+    '05. price': string;
+    '09. change': string;
+    '10. change percent': string;
+  };
+}
+
+export interface AlphaVantageHistoricalResponse {
+  'Time Series (Daily)': {
+    [date: string]: {
+      '1. open': string;
+      '2. high': string;
+      '3. low': string;
+      '4. close': string;
+      '5. volume': string;
+    };
+  };
+}
+
+export interface AlphaVantageCryptoResponse {
+  'Time Series (Digital Currency Daily)': {
+    [date: string]: {
+      '4b. close (USD)': string;
+      '5. volume': string;
+    };
+  };
+}
+
+export interface AlphaVantageExchangeRateResponse {
+  'Realtime Currency Exchange Rate': {
+    '1. From_Currency Code': string;
+    '3. To_Currency Code': string;
+    '5. Exchange Rate': string;
+    '6. Last Refreshed': string;
+  };
 }

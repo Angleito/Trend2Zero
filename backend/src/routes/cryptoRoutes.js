@@ -1,23 +1,60 @@
-const express = require('express');
+? const express = require('express');
 const router = express.Router();
-const cryptoController = require('../controllers/cryptoController');
-const auth = require('../middleware/authMiddleware');
+const coinMarketCapService = require('../services/coinMarketCapService');
+const catchAsync = require('../utils/catchAsync');
 
-// Public routes
-router.get('/list', cryptoController.getCryptoList);
-router.get('/:symbol/price', cryptoController.getCryptoPrice);
-router.get('/:symbol/history', cryptoController.getCryptoHistory);
-router.get('/market-cap', cryptoController.getMarketCap);
-router.get('/volume', cryptoController.getVolume);
-router.get('/trending', cryptoController.getTrending);
+router.get('/cryptocurrency', catchAsync(async (req, res) => {
+  const { symbol } = req.query;
+  
+  if (!symbol) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Cryptocurrency symbol is required'
+    });
+  }
 
-// Protected routes
-router.use(auth);
-router.post('/portfolio', cryptoController.addToPortfolio);
-router.get('/portfolio', cryptoController.getPortfolio);
-router.delete('/portfolio/:symbol', cryptoController.removeFromPortfolio);
-router.post('/transactions', cryptoController.recordTransaction);
-router.get('/transactions', cryptoController.getTransactions);
-router.get('/performance', cryptoController.getPortfolioPerformance);
+  const cryptoData = await coinMarketCapService.getCryptoCurrencyData(symbol);
+  
+  res.status(200).json({
+    status: 'success',
+    data: cryptoData,
+    timestamp: new Date().toISOString()
+  });
+}));
+
+router.get('/top-cryptocurrencies', catchAsync(async (req, res) => {
+  const limit = parseInt(req.query.limit) || 10;
+  
+  const topCryptos = await coinMarketCapService.getTopCryptocurrencies(limit);
+  
+  res.status(200).json({
+    status: 'success',
+    data: topCryptos,
+    timestamp: new Date().toISOString()
+  });
+}));
+
+router.get('/historical-prices', catchAsync(async (req, res) => {
+  const { symbol, timeStart, timeEnd } = req.query;
+  
+  if (!symbol || !timeStart || !timeEnd) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Symbol, timeStart, and timeEnd are required parameters'
+    });
+  }
+
+  const historicalPrices = await coinMarketCapService.getHistoricalCryptoPrices(
+    symbol, 
+    timeStart, 
+    timeEnd
+  );
+  
+  res.status(200).json({
+    status: 'success',
+    data: historicalPrices,
+    timestamp: new Date().toISOString()
+  });
+}));
 
 module.exports = router;

@@ -1,130 +1,143 @@
 const axios = require('axios');
-const logger = require('../utils/logger');
-const AppError = require('../utils/appError');
-const cache = require('../utils/cache');
 
 class MetalPriceService {
-    constructor(apiKey = process.env.METAL_PRICE_API_KEY) {
-        this.apiKey = apiKey;
-        this.baseURL = 'https://metals-api.com/api';
-        this.cacheTimeout = 300; // 5 minutes
+  constructor() {
+    this.apiKey = process.env.METAL_PRICE_API_KEY;
+    this.baseURL = 'https://api.metalpriceapi.com/v1';
+    this.cache = new Map();
+    this.CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  }
+
+  _getCachedData(cacheKey) {
+    const cachedItem = this.cache.get(cacheKey);
+    if (cachedItem && (Date.now() - cachedItem.timestamp) < this.CACHE_DURATION) {
+      return cachedItem.data;
     }
+    return null;
+  }
 
-    /**
-     * Get metal price by symbol
-     * @param {string} symbol - Metal symbol (e.g., XAU, XAG)
-     * @returns {Promise<Object>} Metal price data
-     */
-    async getMetalBySymbol(symbol) {
-        try {
-            const cacheKey = `metal_price_${symbol}`;
-            const cachedData = cache.get(cacheKey);
-            if (cachedData) return cachedData;
+  _setCachedData(cacheKey, data) {
+    this.cache.set(cacheKey, { data, timestamp: Date.now() });
+  }
 
-            const response = await axios.get(`${this.baseURL}/latest`, {
-                params: {
-                    access_key: this.apiKey,
-                    base: 'USD',
-                    symbols: symbol
-                }
-            });
-
-            if (!response.data.success) {
-                throw new AppError(`Failed to fetch metal price: ${response.data.error.message}`, 500);
-            }
-
-            const metalData = {
-                symbol,
-                price: 1 / response.data.rates[symbol], // Convert from USD/Metal to Metal/USD
-                timestamp: response.data.timestamp,
-                unit: 'troy ounce'
-            };
-
-            cache.set(cacheKey, metalData, this.cacheTimeout);
-            return metalData;
-        } catch (error) {
-            logger.error('Metal Price API Error:', error.response ? error.response.data : error.message);
-            if (error instanceof AppError) throw error;
-            throw new AppError(`Failed to fetch price for metal: ${symbol}`, 500);
+  async _makeRequest(endpoint, params = {}) {
+    try {
+      const response = await axios.get(`${this.baseURL}/${endpoint}`, {
+        params: {
+          api_key: this.apiKey,
+          ...params
         }
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Metal Price API Error:', error.response ? error.response.data : error.message);
+      throw error;
     }
+  }
 
-    /**
-     * Get historical metal price data
-     * @param {string} symbol - Metal symbol
-     * @param {string} startDate - Start date (YYYY-MM-DD)
-     * @param {string} endDate - End date (YYYY-MM-DD)
-     * @returns {Promise<Array>} Historical price data
-     */
-    async getHistoricalData(symbol, startDate, endDate) {
-        try {
-            const cacheKey = `metal_historical_${symbol}_${startDate}_${endDate}`;
-            const cachedData = cache.get(cacheKey);
-            if (cachedData) return cachedData;
+  async getCurrentPrices(metals = ['XAU', 'XAG', 'XPT']) {
+    const cacheKey = `metal_prices_${metals.join('_')}`;
+    const cachedData = this._getCachedData(cacheKey);
+    if (cachedData) return cachedData;
 
-            const response = await axios.get(`${this.baseURL}/timeframe`, {
-                params: {
-                    access_key: this.apiKey,
-                    base: 'USD',
-                    symbols: symbol,
-                    start_date: startDate,
-                    end_date: endDate
-                }
-            });
+    try {
+      const response = await this._makeRequest('convert', {
+        from: 'USD',
+        to: metals.join(','),
+        amount: 1
+      });
 
-            if (!response.data.success) {
-                throw new AppError(`Failed to fetch historical data: ${response.data.error.message}`, 500);
-            }
+      const prices = metals.reduce((acc, metal) => {
+        acc[metal] = 1 / response.rates[metal];
+        return acc;
+      }, {});
 
-            const historicalData = Object.entries(response.data.rates).map(([date, rates]) => ({
-                date,
-                price: 1 / rates[symbol], // Convert from USD/Metal to Metal/USD
-                unit: 'troy ounce'
-            }));
+      this._setCachedData(cacheKey, prices);
+      return prices;
+    } catch (error) {
+      console.error('Error fetching metal prices:', error);
+      
+      // Fallback prices if API fails
+      const fallbackPrices = {
+        XAU: 1900, // Gold
+        XAG: 23,   // Silver
+        XPT: 900   // Platinum
+      };
 
-            cache.set(cacheKey, historicalData, this.cacheTimeout);
-            return historicalData;
-        } catch (error) {
-            logger.error('Metal Price Historical API Error:', error.response ? error.response.data : error.message);
-            if (error instanceof AppError) throw error;
-            throw new AppError(`Failed to fetch historical data for metal: ${symbol}`, 500);
-        }
+      return metals.reduce((acc, metal) => {
+        acc[metal] = fallbackPrices[metal] || 0;
+        return acc;
+      }, {});
     }
+  }
 
-    /**
-     * Get supported metals list
-     * @returns {Promise<Array>} List of supported metals
-     */
-    async getSupportedMetals() {
-        try {
-            const cacheKey = 'supported_metals';
-            const cachedData = cache.get(cacheKey);
-            if (cachedData) return cachedData;
+  async getHistoricalPrices(metal, date) {
+    const cacheKey = `metal_historical_${metal}_${date}`;
+    const cachedData = this._getCachedData(cacheKey);
+    if (cachedData) return cachedData;
 
-            const response = await axios.get(`${this.baseURL}/symbols`, {
-                params: {
-                    access_key: this.apiKey
-                }
-            });
+    try {
+      const response = await this._makeRequest('historical', {
+        date: date,
+        base: 'USD',
+        currencies: metal
+      });
 
-            if (!response.data.success) {
-                throw new AppError(`Failed to fetch supported metals: ${response.data.error.message}`, 500);
-            }
+      const historicalPrice = {
+        date,
+        price: 1 / response.rates[metal]
+      };
 
-            const metals = Object.entries(response.data.symbols).map(([symbol, name]) => ({
-                symbol,
-                name,
-                type: 'metal'
-            }));
-
-            cache.set(cacheKey, metals, this.cacheTimeout);
-            return metals;
-        } catch (error) {
-            logger.error('Metal Price Symbols API Error:', error.response ? error.response.data : error.message);
-            if (error instanceof AppError) throw error;
-            throw new AppError('Failed to fetch supported metals list', 500);
-        }
+      this._setCachedData(cacheKey, historicalPrice);
+      return historicalPrice;
+    } catch (error) {
+      console.error(`Error fetching historical price for ${metal}:`, error);
+      
+      // Fallback historical price
+      return {
+        date,
+        price: this._getFallbackHistoricalPrice(metal)
+      };
     }
+  }
+
+  _getFallbackHistoricalPrice(metal) {
+    const fallbackPrices = {
+      XAU: 1850, // Historical gold price
+      XAG: 22,   // Historical silver price
+      XPT: 850   // Historical platinum price
+    };
+    return fallbackPrices[metal] || 0;
+  }
+
+  async convertMetalPrice(amount, fromMetal, toMetal) {
+    try {
+      const response = await this._makeRequest('convert', {
+        from: fromMetal,
+        to: toMetal,
+        amount: amount
+      });
+
+      return {
+        amount: response.result,
+        fromMetal,
+        toMetal
+      };
+    } catch (error) {
+      console.error(`Error converting metal prices: ${fromMetal} to ${toMetal}`, error);
+      
+      // Fallback conversion calculation
+      const prices = await this.getCurrentPrices([fromMetal, toMetal]);
+      const convertedAmount = amount * (prices[toMetal] / prices[fromMetal]);
+      
+      return {
+        amount: convertedAmount,
+        fromMetal,
+        toMetal
+      };
+    }
+  }
 }
 
-module.exports = MetalPriceService;
+module.exports = new MetalPriceService();

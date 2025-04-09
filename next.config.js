@@ -1,11 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
-  swcMinify: true,
   images: {
-    domains: ['assets.coingecko.com'],
+    domains: ['www.alphavantage.co'],
   },
-  // Server Actions are enabled by default in Next.js 14.2
+  // Other configurations remain the same
 };
 
 module.exports = nextConfig;

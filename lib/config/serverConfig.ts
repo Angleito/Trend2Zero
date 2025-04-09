@@ -1,48 +1,34 @@
-/**
- * Server-side configuration
- * 
- * This file contains configuration that should only be accessible on the server.
- * Never import this file in client-side code.
- */
-
-// API Keys
-export const API_KEYS = {
-  ALPHA_VANTAGE: process.env.ALPHA_VANTAGE_API_KEY || '',
-  COIN_GECKO: process.env.COIN_GECKO_API_KEY || ''
-};
-
-// Security settings
-export const SECURITY = {
-  // CSRF protection
-  ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS 
-    ? process.env.ALLOWED_ORIGINS.split(',') 
-    : ['localhost:3000', 'trend2zero.com'],
+export const SERVER_CONFIG = {
+  PORT: process.env.PORT || 3000,
+  DATABASE_URL: process.env.MONGODB_URI || 'mongodb://localhost:27017/trend2zero',
+  JWT_SECRET: process.env.JWT_SECRET || 'default_secret',
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
   
-  // Rate limiting
+  ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+  
   RATE_LIMIT: {
-    WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000'), // 1 minute
-    MAX_REQUESTS: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '20')
+    WINDOW_MS: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+    MAX_REQUESTS: Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 100
   },
-  
-  // Content Security Policy
-  CSP: {
-    DEFAULT_SRC: process.env.CSP_DEFAULT_SRC || "'self'",
-    SCRIPT_SRC: process.env.CSP_SCRIPT_SRC || "'self' 'unsafe-inline' 'unsafe-eval'",
-    STYLE_SRC: process.env.CSP_STYLE_SRC || "'self' 'unsafe-inline'",
-    IMG_SRC: process.env.CSP_IMG_SRC || "'self' data: https://assets.coingecko.com",
-    CONNECT_SRC: process.env.CSP_CONNECT_SRC || "'self' https://api.coingecko.com https://www.alphavantage.co"
+
+  SECURITY: {
+    CSP: {
+      DEFAULT_SRC: "'self'",
+      SCRIPT_SRC: "'self' 'unsafe-inline'",
+      STYLE_SRC: "'self' 'unsafe-inline'",
+      IMG_SRC: "'self' data:",
+      CONNECT_SRC: "'self' https://www.alphavantage.co"
+    }
+  },
+
+  FEATURE_FLAGS: {
+    CRYPTO_TRADING: process.env.ENABLE_CRYPTO_TRADING === 'true',
+    STOCK_TRADING: process.env.ENABLE_STOCK_TRADING === 'true',
+    PRICE_ALERTS: process.env.ENABLE_PRICE_ALERTS === 'true'
+  },
+
+  LOGGING: {
+    LEVEL: process.env.LOG_LEVEL || 'info',
+    ERROR_REPORTING: process.env.ERROR_REPORTING_ENABLED === 'true'
   }
-};
-
-// Feature flags
-export const FEATURES = {
-  USE_MOCK_DATA: process.env.USE_MOCK_DATA === 'true',
-  ENABLE_CACHING: process.env.ENABLE_CACHING !== 'false',
-  ENABLE_RATE_LIMITING: process.env.ENABLE_RATE_LIMITING !== 'false'
-};
-
-// Cache settings
-export const CACHE = {
-  TTL: parseInt(process.env.CACHE_TTL || '300000'), // 5 minutes
-  MAX_ITEMS: parseInt(process.env.CACHE_MAX_ITEMS || '500')
 };
