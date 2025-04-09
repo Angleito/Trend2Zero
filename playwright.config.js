@@ -1,123 +1,137 @@
 const { defineConfig } = require('@playwright/test');
-const fs = require('fs');
 const path = require('path');
 
-// Ensure test results directories exist
-const ensureDirectories = () => {
-  const dirs = [
-    'test-results/videos', 
-    'test-results/traces', 
-    'test-results/logs', 
-    'test-results/screenshots'
-  ];
-  dirs.forEach(dir => {
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-  });
-};
-
-ensureDirectories();
-
 module.exports = defineConfig({
+  // Test directory
   testDir: './tests',
-  timeout: 120000, // Increased timeout for complex tests
+  
+  // Global setup and teardown
+  globalSetup: require.resolve('./tests/global-setup.js'),
+  globalTeardown: require.resolve('./tests/global-teardown.js'),
+
+  // Timeout configurations
+  timeout: 120000, // 2 minutes total test timeout
   expect: {
-    timeout: 30000 // More time for assertions
+    timeout: 30000 // 30 seconds for assertions
   },
+
+  // Parallel test execution
   fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 3 : 2,
   workers: process.env.CI ? 1 : undefined,
+
+  // Retry strategy
+  retries: process.env.CI ? 2 : 1,
+  forbidOnly: !!process.env.CI,
+
+  // Reporting configuration
   reporter: process.env.CI 
     ? [
         ['github'], 
         ['list'], 
-        ['html', { outputFolder: 'test-results/html-report' }],
-        ['json', { outputFile: 'test-results/test-results.json' }]
+        ['html', { 
+          open: 'never', 
+          outputFolder: 'test-results/html-report' 
+        }],
+        ['json', { 
+          outputFile: 'test-results/test-results.json' 
+        }]
       ]
     : [
         ['list'], 
-        ['html', { outputFolder: 'test-results/html-report' }],
-        ['json', { outputFile: 'test-results/test-results.json' }]
+        ['html', { 
+          open: 'on-failure', 
+          outputFolder: 'test-results/html-report' 
+        }],
+        ['json', { 
+          outputFile: 'test-results/test-results.json' 
+        }]
       ],
+
+  // Default test configuration
   use: {
-    actionTimeout: 45000,
-    navigationTimeout: 90000,
-    headless: false, // Keep browser visible for debugging
+    // Browser settings
+    headless: true, // Run in headless mode
     viewport: { width: 1920, height: 1080 },
     ignoreHTTPSErrors: true,
-    screenshot: 'on', // Capture screenshots for all tests
-    video: 'on', // Record video for all tests
-    trace: 'on', // Capture full trace for all tests
+    
+    // Debugging and tracing
+    screenshot: 'only-on-failure', // Only capture screenshots for failed tests
+    video: 'retain-on-failure', // Only keep videos for failed tests
+    trace: 'retain-on-failure', // Only keep traces for failed tests
+    
+    // Action timeouts
+    actionTimeout: 45000, // 45 seconds for individual actions
+    navigationTimeout: 90000, // 90 seconds for page navigation
+    
+    // Browser launch options
     launchOptions: {
-      slowMo: 500, // Reduced delay between actions
+      slowMo: 0, // Remove delay between actions
       args: [
-        '--start-maximized',
-        '--disable-web-security',
+        '--headless', // Ensure headless mode
         '--no-sandbox',
         '--disable-setuid-sandbox',
-        '--enable-logging', // Enable browser logging
-        '--v=1' // Verbose logging level
-      ]
+        '--disable-gpu', // Disable GPU hardware acceleration
+        '--disable-dev-shm-usage', // Overcome limited resource problems
+        '--remote-debugging-port=9222', // Allow remote debugging without opening browser
+        '--disable-web-security', // Disable web security for testing
+        '--disable-site-isolation-trials', // Reduce resource usage
+        '--disable-background-networking', // Minimize network activity
+        '--disable-default-apps', // Disable default apps
+        '--disable-extensions', // Disable browser extensions
+        '--disable-sync' // Disable browser sync
+      ],
+      
+      // Environment variables for minimal interaction
+      env: {
+        DISPLAY: ':99', // Use virtual display
+        PLAYWRIGHT_HEADLESS: '1',
+        NODE_ENV: 'test'
+      }
     },
+    
+    // Context options for minimal resource usage
     contextOptions: {
       recordVideo: {
         dir: 'test-results/videos',
         size: { width: 1920, height: 1080 }
       },
-      // Enhanced tracing for debugging
       tracing: {
-        screenshots: true,
-        snapshots: true,
-        sources: true
+        screenshots: false, // Disable screenshots to reduce resource usage
+        snapshots: false,
+        sources: false
       }
     }
   },
+
+  // Browser-specific configurations
   projects: [
     {
-      name: 'chromium-debug',
+      name: 'chromium-headless',
       use: { 
         browserName: 'chromium',
+        headless: true,
         launchOptions: {
           args: [
+            '--headless', 
             '--no-sandbox', 
-            '--disable-setuid-sandbox',
-            '--disable-web-security',
-            '--disable-features=IsolateOrigins',
-            '--flag-switches-begin --disable-site-isolation-trials --flag-switches-end',
-            '--enable-logging', // Detailed browser logging
-            '--v=1' // Verbose logging
-          ],
-          // Enable more detailed console logging
-          env: {
-            BROWSER_LOGGING: 'true',
-            MCP_DEBUG: 'true'
-          }
-        },
-        // Additional debugging configurations
-        contextOptions: {
-          recordVideo: {
-            dir: 'test-results/videos/chromium'
-          }
+            '--disable-gpu',
+            '--disable-dev-shm-usage',
+            '--disable-background-networking'
+          ]
         }
-      },
+      }
     },
-    // Optional: Add more browser configurations for comprehensive testing
     {
-      name: 'firefox-debug',
+      name: 'firefox-headless',
       use: { 
         browserName: 'firefox',
+        headless: true,
         launchOptions: {
-          // Firefox-specific debug options
-          log: {
-            level: 'debug'
-          }
+          args: [
+            '--headless'
+          ]
         }
       }
     }
-  ],
-  // Global setup and teardown for enhanced debugging
-  globalSetup: require.resolve('./tests/global-setup.js'),
-  globalTeardown: require.resolve('./tests/global-teardown.js')
+  ]
 });

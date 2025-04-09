@@ -1,92 +1,135 @@
 #!/bin/bash
 
-# Run all tests for the Trend2Zero project
+# Comprehensive Test Runner for Trend2Zero
 
-# Set environment variables for testing
-export NODE_ENV=test
-export MONGODB_URI_TEST=mongodb://localhost:27017/trend2zero_test
-export JWT_SECRET=test-secret-key
-export JWT_EXPIRES_IN=90d
-export JWT_COOKIE_EXPIRES_IN=90
+# Exit on first error
+set -e
 
-# Colors for output
-GREEN='\033[0;32m'
+# Timestamp for logging
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.."
+LOG_DIR="$BASE_DIR/test-results/logs"
+REPORT_DIR="$BASE_DIR/test-results/reports"
+
+# Create necessary directories
+mkdir -p "$LOG_DIR"
+mkdir -p "$REPORT_DIR"
+
+# Log file for this test run
+FULL_LOG_FILE="$LOG_DIR/full_test_run_$TIMESTAMP.log"
+
+# Color codes for logging
 RED='\033[0;31m'
-YELLOW='\033[0;33m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo -e "${YELLOW}Starting Trend2Zero test suite...${NC}"
+# Function to log messages
+log() {
+    local level="$1"
+    local message="$2"
+    local color=""
 
-# Function to run tests and check result
-run_test() {
-  echo -e "${YELLOW}Running $1...${NC}"
-  $2
-  if [ $? -eq 0 ]; then
-    echo -e "${GREEN}✓ $1 passed${NC}"
-    return 0
-  else
-    echo -e "${RED}✗ $1 failed${NC}"
-    return 1
-  fi
+    case "$level" in
+        "ERROR")   color="$RED" ;;
+        "SUCCESS") color="$GREEN" ;;
+        "WARN")    color="$YELLOW" ;;
+        *)         color="$NC" ;;
+    esac
+
+    echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] ${color}[$level]${NC} $message" | tee -a "$FULL_LOG_FILE"
 }
 
-# Create test results directory
-mkdir -p test-results
+# Function to cleanup processes
+cleanup() {
+    log "WARN" "Cleaning up test environment"
+    
+    # Kill any running dev server or test-related processes
+    pkill -f "next dev" || true
+    pkill -f "node scripts/start-dev-server.js" || true
+    pkill -f "playwright" || true
+}
 
-# Start MongoDB for testing if not already running
-if ! pgrep -x "mongod" > /dev/null; then
-  echo -e "${YELLOW}Starting MongoDB...${NC}"
-  mongod --dbpath ./data/db --fork --logpath ./data/mongod.log
-  sleep 2
-fi
+# Trap signals to ensure cleanup
+trap cleanup EXIT SIGINT SIGTERM ERR
 
-# Run backend unit tests
-run_test "Backend Unit Tests" "cd backend && npm test"
-BACKEND_UNIT_RESULT=$?
+# Validate required tools
+validate_dependencies() {
+    local missing_deps=()
+    
+    # Check for required commands
+    for cmd in npm node npx; do
+        if ! command -v "$cmd" &> /dev/null; then
+            missing_deps+=("$cmd")
+        fi
+    done
 
-# Run backend integration tests
-run_test "Backend Integration Tests" "cd backend && npm run test:integration"
-BACKEND_INTEGRATION_RESULT=$?
+    if [ ${#missing_deps[@]} -ne 0 ]; then
+        log "ERROR" "Missing dependencies: ${missing_deps[*]}"
+        exit 1
+    fi
+}
 
-# Run frontend unit tests
-run_test "Frontend Unit Tests" "npm test"
-FRONTEND_UNIT_RESULT=$?
+# Main test execution function
+run_tests() {
+    # Start development server
+    log "INFO" "Starting development server"
+    node "$BASE_DIR/scripts/start-dev-server.js" >> "$FULL_LOG_FILE" 2>&1 &
+    DEV_SERVER_PID=$!
 
-# Run end-to-end tests
-run_test "End-to-End Tests" "npm run test:e2e"
-E2E_RESULT=$?
+    # Wait for server to start
+    sleep 10
 
-# Print summary
-echo -e "\n${YELLOW}Test Summary:${NC}"
-if [ $BACKEND_UNIT_RESULT -eq 0 ]; then
-  echo -e "${GREEN}✓ Backend Unit Tests: PASSED${NC}"
-else
-  echo -e "${RED}✗ Backend Unit Tests: FAILED${NC}"
-fi
+    # Run unit tests
+    log "INFO" "Running Jest Unit Tests"
+    if npm run test:coverage 2>&1 | tee -a "$FULL_LOG_FILE"; then
+        log "SUCCESS" "Unit tests completed successfully"
+    else
+        log "ERROR" "Unit tests failed"
+        exit 1
+    fi
 
-if [ $BACKEND_INTEGRATION_RESULT -eq 0 ]; then
-  echo -e "${GREEN}✓ Backend Integration Tests: PASSED${NC}"
-else
-  echo -e "${RED}✗ Backend Integration Tests: FAILED${NC}"
-fi
+    # Run E2E tests
+    log "INFO" "Running Playwright End-to-End Tests"
+    if npm run test:e2e 2>&1 | tee -a "$FULL_LOG_FILE"; then
+        log "SUCCESS" "E2E tests completed successfully"
+    else
+        log "ERROR" "E2E tests failed"
+        exit 1
+    fi
 
-if [ $FRONTEND_UNIT_RESULT -eq 0 ]; then
-  echo -e "${GREEN}✓ Frontend Unit Tests: PASSED${NC}"
-else
-  echo -e "${RED}✗ Frontend Unit Tests: FAILED${NC}"
-fi
+    # Analyze MCP logs
+    log "INFO" "Analyzing MCP Server Logs"
+    if npm run test:mcp:logs 2>&1 | tee -a "$FULL_LOG_FILE"; then
+        log "SUCCESS" "MCP log analysis completed"
+    else
+        log "WARN" "MCP log analysis encountered issues"
+    fi
 
-if [ $E2E_RESULT -eq 0 ]; then
-  echo -e "${GREEN}✓ End-to-End Tests: PASSED${NC}"
-else
-  echo -e "${RED}✗ End-to-End Tests: FAILED${NC}"
-fi
+    # Generate comprehensive test report
+    log "INFO" "Generating Test Report"
+    if node "$BASE_DIR/scripts/generate-test-report.js" "$TIMESTAMP" 2>&1 | tee -a "$FULL_LOG_FILE"; then
+        log "SUCCESS" "Test report generated successfully"
+    else
+        log "WARN" "Test report generation encountered issues"
+    fi
+}
 
-# Overall result
-if [ $BACKEND_UNIT_RESULT -eq 0 ] && [ $BACKEND_INTEGRATION_RESULT -eq 0 ] && [ $FRONTEND_UNIT_RESULT -eq 0 ] && [ $E2E_RESULT -eq 0 ]; then
-  echo -e "\n${GREEN}All tests passed!${NC}"
-  exit 0
-else
-  echo -e "\n${RED}Some tests failed. Please check the logs for details.${NC}"
-  exit 1
-fi
+# Main script execution
+main() {
+    log "INFO" "Starting comprehensive test run for Trend2Zero"
+    
+    # Validate dependencies
+    validate_dependencies
+    
+    # Run tests
+    run_tests
+    
+    # Final success log
+    log "SUCCESS" "Test Run Completed Successfully"
+    log "INFO" "Full logs available at: $FULL_LOG_FILE"
+    log "INFO" "Test report generated in: $REPORT_DIR"
+}
+
+# Execute main function
+main

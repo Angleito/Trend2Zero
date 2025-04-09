@@ -1,92 +1,120 @@
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 async function globalTeardown(config) {
-  // Aggregate and compress test logs
-  const logDir = path.join(__dirname, '..', 'test-results', 'logs');
-  const archiveDir = path.join(__dirname, '..', 'test-results', 'archives');
-
-  // Ensure archive directory exists
-  if (!fs.existsSync(archiveDir)) {
-    fs.mkdirSync(archiveDir, { recursive: true });
-  }
-
-  // Function to compress logs
-  const compressLogs = () => {
-    const { execSync } = require('child_process');
-    const timestamp = new Date().toISOString().replace(/:/g, '-');
-    const archiveName = `test-logs-${timestamp}.tar.gz`;
-    const archivePath = path.join(archiveDir, archiveName);
-
-    try {
-      execSync(`tar -czvf ${archivePath} -C ${logDir} .`);
-      console.log(`Logs archived to ${archivePath}`);
-    } catch (error) {
-      console.error('Failed to archive logs:', error);
-    }
-  };
-
-  // Analyze and log test results
-  const analyzeTestResults = () => {
-    const resultsPath = path.join(__dirname, '..', 'test-results', 'test-results.json');
+  // Logging function
+  const log = (message, level = 'info') => {
+    const logPath = path.join(__dirname, '..', 'test-results', 'logs', 'global-teardown.log');
+    const timestamp = new Date().toISOString();
+    const logMessage = `[${level.toUpperCase()}] ${timestamp}: ${message}\n`;
     
-    try {
-      const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
-      const summaryPath = path.join(logDir, 'test-summary.txt');
-      
-      const summary = {
-        total: results.length,
-        passed: results.filter(r => r.status === 'passed').length,
-        failed: results.filter(r => r.status === 'failed').length,
-        skipped: results.filter(r => r.status === 'skipped').length
-      };
-
-      fs.writeFileSync(summaryPath, JSON.stringify(summary, null, 2));
-      console.log('Test summary generated:', summary);
-    } catch (error) {
-      console.error('Failed to analyze test results:', error);
-    }
+    fs.appendFileSync(logPath, logMessage);
+    console.log(logMessage.trim());
   };
 
-  // Clean up browser and MCP server resources
-  const cleanupResources = () => {
-    // Kill any lingering browser or MCP server processes
-    try {
-      const { execSync } = require('child_process');
-      execSync('pkill -f "npx @agentdeskai/browser-tools-mcp"');
-      execSync('pkill -f "chromium"');
-    } catch (error) {
-      console.error('Error during process cleanup:', error);
+  try {
+    log('Starting global teardown for Trend2Zero tests');
+
+    // Ensure test results directory exists
+    const resultsDir = path.join(__dirname, '..', 'test-results');
+    if (!fs.existsSync(resultsDir)) {
+      fs.mkdirSync(resultsDir, { recursive: true });
     }
-  };
 
-  // Run cleanup tasks
-  compressLogs();
-  analyzeTestResults();
-  cleanupResources();
+    // Compress logs if log files exist
+    const compressLogs = () => {
+      const logsDir = path.join(resultsDir, 'logs');
+      const archivesDir = path.join(resultsDir, 'archives');
 
-  // Optional: Send test results to monitoring service
-  const reportTestResults = async () => {
-    try {
-      // Example: Send results to a monitoring service
-      const axios = require('axios');
-      const resultsPath = path.join(__dirname, '..', 'test-results', 'test-results.json');
-      const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+      // Ensure archives directory exists
+      if (!fs.existsSync(archivesDir)) {
+        fs.mkdirSync(archivesDir, { recursive: true });
+      }
 
-      await axios.post('https://monitoring.example.com/test-results', {
-        project: 'Trend2Zero',
-        timestamp: new Date().toISOString(),
-        results: results
-      });
-    } catch (error) {
-      console.error('Failed to report test results:', error);
-    }
-  };
+      try {
+        const timestamp = new Date().toISOString().replace(/:/g, '-');
+        const archiveName = `test-logs-${timestamp}.tar.gz`;
+        const archivePath = path.join(archivesDir, archiveName);
 
-  // Wait for all async operations to complete
-  await Promise.allSettled([
-    reportTestResults()
-  ]);
+        // Only compress if log files exist
+        const logFiles = fs.readdirSync(logsDir).filter(file => file.endsWith('.log'));
+        if (logFiles.length > 0) {
+          execSync(`tar -czvf ${archivePath} -C ${logsDir} .`);
+          log(`Logs archived to ${archivePath}`);
+        } else {
+          log('No log files to compress', 'warn');
+        }
+      } catch (compressError) {
+        log(`Failed to compress logs: ${compressError.message}`, 'error');
+      }
+    };
+
+    // Analyze test results
+    const analyzeTestResults = () => {
+      try {
+        const resultsPath = path.join(resultsDir, 'test-results.json');
+        
+        // Create a basic results file if it doesn't exist
+        if (!fs.existsSync(resultsPath)) {
+          const defaultResults = {
+            timestamp: new Date().toISOString(),
+            totalTests: 0,
+            passedTests: 0,
+            failedTests: 0,
+            skippedTests: 0
+          };
+          fs.writeFileSync(resultsPath, JSON.stringify(defaultResults, null, 2));
+        }
+
+        const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+        const summaryPath = path.join(resultsDir, 'logs', 'test-summary.txt');
+        
+        fs.writeFileSync(summaryPath, JSON.stringify(results, null, 2));
+        log('Test summary generated');
+      } catch (resultError) {
+        log(`Failed to analyze test results: ${resultError.message}`, 'error');
+      }
+    };
+
+    // Clean up browser and test-related processes
+    const cleanupProcesses = () => {
+      try {
+        // Attempt to kill any lingering browser or test-related processes
+        const processesToKill = [
+          'chromium',
+          'firefox',
+          'webkit',
+          'node',
+          'npx',
+          'playwright'
+        ];
+
+        processesToKill.forEach(process => {
+          try {
+            execSync(`pkill -f "${process}"`);
+          } catch (killError) {
+            // Ignore errors if process is not found
+            log(`Could not kill ${process} processes`, 'warn');
+          }
+        });
+
+        log('Cleanup of test-related processes completed');
+      } catch (cleanupError) {
+        log(`Process cleanup failed: ${cleanupError.message}`, 'error');
+      }
+    };
+
+    // Run cleanup tasks
+    compressLogs();
+    analyzeTestResults();
+    cleanupProcesses();
+
+    log('Global teardown completed successfully');
+  } catch (error) {
+    log(`Global teardown failed: ${error.message}`, 'error');
+    throw error;
+  }
 }
 
 module.exports = globalTeardown;

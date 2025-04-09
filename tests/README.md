@@ -1,87 +1,87 @@
-# Browser Debugging and MCP Server Testing Infrastructure
+# Trend2Zero Testing Infrastructure
 
 ## Overview
-This directory contains advanced testing and debugging configurations for the Trend2Zero project, leveraging Playwright, MCP (Model Context Protocol) servers, and comprehensive logging mechanisms.
+This directory contains a comprehensive, low-disruption testing infrastructure for the Trend2Zero project, designed to minimize browser interaction and system resource usage.
 
-## Key Components
+## Testing Frameworks
+- **Jest**: Unit and integration testing
+- **Playwright**: End-to-end (E2E) and browser testing
+- **MCP (Model Context Protocol)**: Advanced debugging and logging
 
-### 1. Global Setup and Teardown
-- `global-setup.js`: Initializes testing environment
-  - Creates logging directories
-  - Starts MCP server logging
-  - Launches diagnostic browser
-  - Captures initial console logs
+## Testing Modes
 
-- `global-teardown.js`: Handles post-test cleanup and analysis
-  - Compresses test logs
-  - Generates test result summaries
-  - Cleans up browser and MCP server processes
-  - Optional: Sends test results to monitoring service
-
-### 2. Debugging Configuration
-The testing infrastructure provides multiple debugging capabilities:
-
-#### Browser Debugging
-- Headless mode disabled for visual inspection
-- Detailed console and network logging
-- Screenshot and video capture for all tests
-- Trace capturing for comprehensive debugging
-
-#### MCP Server Logging
-- Separate log files for MCP server operations
-- Error tracking and critical issue identification
-- Performance and connectivity monitoring
-
-## Running Tests
-
-### Standard E2E Tests
+### 1. Minimal Disruption (Recommended)
 ```bash
+# Run E2E tests in background
 npm run test:e2e
 ```
+- Headless browser testing
+- No visual browser windows
+- Minimal system resource consumption
 
-### Debug Mode Tests
+### 2. Verbose Debugging
 ```bash
-npm run test:e2e:debug
+# Detailed test output
+npm run test:e2e:verbose
 ```
+- Provides comprehensive test logs
+- Useful for detailed troubleshooting
 
-### Analyze MCP Logs
+### 3. Generate Test Report
 ```bash
-npm run test:mcp:logs
+# View generated test report
+npm run test:e2e:report
 ```
+- Opens HTML test report
+- Detailed test result visualization
 
-## Log Locations
-- Test Results: `test-results/`
-  - `logs/`: Detailed log files
-  - `videos/`: Test execution videos
-  - `traces/`: Playwright execution traces
-  - `screenshots/`: Captured screenshots
-  - `archives/`: Compressed log archives
+## Test Result Locations
+- **Unit Test Coverage**: `test-results/coverage/`
+- **E2E Test Videos**: `test-results/videos/`
+- **Screenshots**: `test-results/screenshots/`
+- **Logs**: `test-results/logs/`
+- **Test Reports**: `test-results/reports/`
 
-## Debugging Best Practices
-1. Always run tests in debug mode when investigating issues
-2. Review log files in `test-results/logs/`
-3. Check video recordings for visual debugging
-4. Use trace files for detailed step-by-step analysis
+## Key Features
+- Headless browser testing
+- Minimal visual interference
+- Comprehensive logging
+- Performance-optimized test execution
+- Automatic server management
+- Cross-browser compatibility
+
+## Logging and Diagnostics
+- Detailed console and network logging
+- Performance metric tracking
+- Automated test report generation
+- Error screenshot capture
+
+## Performance Optimization
+- Headless browser mode
+- Minimal resource usage
+- Background test execution
+- Configurable test parallelization
 
 ## Troubleshooting
-- Ensure all MCP server dependencies are installed
-- Check network connectivity
-- Verify API keys and authentication
-- Review `mcp-log-summary.json` for potential issues
-
-## Configuration Files
-- `playwright.config.js`: Comprehensive test configuration
-- `global-setup.js`: Test environment initialization
-- `global-teardown.js`: Post-test cleanup and analysis
-- `analyze-mcp-logs.js`: Log analysis script
+1. Check `test-results/logs/` for detailed error information
+2. Review generated HTML reports in `test-results/reports/`
+3. Examine screenshots for visual debugging
 
 ## Contributing
-When adding new tests or debugging features:
-- Update logging mechanisms
-- Add detailed error handling
-- Ensure comprehensive log capture
-- Document any new debugging techniques
+- Write tests in `tests/` directory
+- Follow existing test structure
+- Add meaningful logging
+- Ensure cross-browser compatibility
 
-## Security
-- API keys and sensitive information are not committed to version control
-- Logs are stored locally and can be configured for secure transmission
+## Best Practices
+- Keep tests independent and atomic
+- Use descriptive test names
+- Add comprehensive error logging
+- Test both happy paths and edge cases
+
+## Advanced Configuration
+Modify `playwright.config.js` to:
+- Adjust browser settings
+- Configure test timeouts
+- Customize test reporting
+- Fine-tune performance parameters
