@@ -34,7 +34,7 @@ test('Comprehensive Bitcoin Price Diagnostics', async ({ page }) => {
   // Manually trigger the API call
   await page.evaluate(() => {
     console.log('Manually triggering Bitcoin API call');
-    fetch('/api/crypto/bitcoin-price')
+    fetch('/api/crypto?endpoint=bitcoin-price')
       .then(response => response.json())
       .then(data => console.log('Bitcoin API response:', data))
       .catch(error => console.error('Bitcoin API error:', error));

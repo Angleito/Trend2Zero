@@ -2,13 +2,14 @@
 
 import React, { useState } from 'react';
 import type { AssetCategory } from '../../lib/types';
+import Link from 'next/link';
 
 // Import client components directly
 import StickyHeader from '../../components/StickyHeader';
 import AssetPriceTable from '../../components/AssetPriceTable';
 import AssetSearch from '../../components/AssetSearch';
 
-export default function TrackerDashboard() {
+export default function TrackerPage() {
   const [selectedCategory, setSelectedCategory] = useState<AssetCategory | 'All'>('All');
 
   const categories: (AssetCategory | 'All')[] = ['All', 'Stocks', 'Commodities', 'Indices', 'Cryptocurrency'];
@@ -47,6 +48,12 @@ export default function TrackerDashboard() {
             limit={50}
             showCategory={true}
           />
+
+          <div className="mt-8 text-center">
+            <Link href="/" className="text-[#FF9500] hover:underline">
+              Back to Home
+            </Link>
+          </div>
         </div>
       </main>
     </div>

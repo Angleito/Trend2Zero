@@ -53,14 +53,14 @@ function validateAndSanitizeParams(params: any): { valid: boolean; sanitized?: a
   if (!params) {
     return { valid: false, error: 'No parameters provided' };
   }
-  
+
   // Sanitize and validate specific parameters
   const sanitized: any = {};
-  
+
   // Validate endpoint
   if (params.endpoint) {
     // Only allow specific endpoints
-    const allowedEndpoints = ['crypto', 'stocks', 'asset', 'historical'];
+    const allowedEndpoints = ['crypto', 'stocks', 'commodities', 'indices', 'asset', 'historical'];
     if (!allowedEndpoints.includes(params.endpoint)) {
       return { valid: false, error: 'Invalid endpoint' };
     }
@@ -68,7 +68,7 @@ function validateAndSanitizeParams(params: any): { valid: boolean; sanitized?: a
   } else {
     return { valid: false, error: 'Endpoint is required' };
   }
-  
+
   // Validate symbol if provided
   if (params.symbol) {
     // Only allow alphanumeric symbols with limited special chars
@@ -77,7 +77,7 @@ function validateAndSanitizeParams(params: any): { valid: boolean; sanitized?: a
     }
     sanitized.symbol = params.symbol;
   }
-  
+
   // Validate page and pageSize if provided
   if (params.page) {
     const page = parseInt(params.page);
@@ -86,7 +86,7 @@ function validateAndSanitizeParams(params: any): { valid: boolean; sanitized?: a
     }
     sanitized.page = page;
   }
-  
+
   if (params.pageSize) {
     const pageSize = parseInt(params.pageSize);
     if (isNaN(pageSize) || pageSize < 1 || pageSize > 100) {
@@ -94,7 +94,7 @@ function validateAndSanitizeParams(params: any): { valid: boolean; sanitized?: a
     }
     sanitized.pageSize = pageSize;
   }
-  
+
   return { valid: true, sanitized };
 }
 
@@ -104,7 +104,7 @@ function validateAndSanitizeParams(params: any): { valid: boolean; sanitized?: a
 export async function GET(request: NextRequest) {
   // Get client IP for rate limiting
   const ip = request.headers.get('x-forwarded-for') || 'unknown';
-  
+
   // Apply rate limiting
   const rateLimitResult = rateLimit(ip);
   if (rateLimitResult.limited) {
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
       { status: 429 }
     );
   }
-  
+
   // Validate origin to prevent CSRF
   if (!validateOrigin(request)) {
     return NextResponse.json(
@@ -121,33 +121,39 @@ export async function GET(request: NextRequest) {
       { status: 403 }
     );
   }
-  
+
   // Parse and validate query parameters
   const url = new URL(request.url);
   const params = Object.fromEntries(url.searchParams);
   const validation = validateAndSanitizeParams(params);
-  
+
   if (!validation.valid) {
     return NextResponse.json(
       { error: validation.error },
       { status: 400 }
     );
   }
-  
+
   try {
     // Handle different endpoints
     const { endpoint, symbol, page, pageSize } = validation.sanitized;
-    
+
     // In a real implementation, you would call your services here
     // For now, we'll return mock data
     let responseData;
-    
+
     switch (endpoint) {
       case 'crypto':
         responseData = getMockCryptoList(page || 1, pageSize || 20);
         break;
       case 'stocks':
         responseData = getMockStockList(page || 1, pageSize || 20);
+        break;
+      case 'commodities':
+        responseData = getMockCommoditiesList(page || 1, pageSize || 20);
+        break;
+      case 'indices':
+        responseData = getMockIndicesList(page || 1, pageSize || 20);
         break;
       case 'asset':
         if (!symbol) {
@@ -173,11 +179,11 @@ export async function GET(request: NextRequest) {
           { status: 501 }
         );
     }
-    
+
     return NextResponse.json(responseData);
   } catch (error) {
     console.error('API error:', error);
-    
+
     // Return a generic error message to avoid leaking implementation details
     return NextResponse.json(
       { error: 'An error occurred while processing your request' },
@@ -198,9 +204,14 @@ function getMockCryptoList(page: number, pageSize: number) {
     { symbol: 'DOGE', name: 'Dogecoin', type: 'Cryptocurrency', description: 'Meme coin' },
     { symbol: 'DOT', name: 'Polkadot', type: 'Cryptocurrency', description: 'Interoperability protocol' },
     { symbol: 'AVAX', name: 'Avalanche', type: 'Cryptocurrency', description: 'Smart contract platform' },
-    { symbol: 'MATIC', name: 'Polygon', type: 'Cryptocurrency', description: 'Ethereum scaling solution' }
+    { symbol: 'MATIC', name: 'Polygon', type: 'Cryptocurrency', description: 'Ethereum scaling solution' },
+    { symbol: 'LINK', name: 'Chainlink', type: 'Cryptocurrency', description: 'Decentralized oracle network' },
+    { symbol: 'UNI', name: 'Uniswap', type: 'Cryptocurrency', description: 'Decentralized exchange' },
+    { symbol: 'AAVE', name: 'Aave', type: 'Cryptocurrency', description: 'Lending protocol' },
+    { symbol: 'ATOM', name: 'Cosmos', type: 'Cryptocurrency', description: 'Interoperability protocol' },
+    { symbol: 'LTC', name: 'Litecoin', type: 'Cryptocurrency', description: 'Digital silver' }
   ];
-  
+
   const start = (page - 1) * pageSize;
   const end = Math.min(start + pageSize, allCryptos.length);
   return {
@@ -225,9 +236,14 @@ function getMockStockList(page: number, pageSize: number) {
     { symbol: 'NVDA', name: 'NVIDIA Corporation', type: 'Stocks', description: 'Semiconductor company' },
     { symbol: 'JPM', name: 'JPMorgan Chase & Co', type: 'Stocks', description: 'Banking company' },
     { symbol: 'V', name: 'Visa Inc', type: 'Stocks', description: 'Financial services' },
-    { symbol: 'JNJ', name: 'Johnson & Johnson', type: 'Stocks', description: 'Healthcare company' }
+    { symbol: 'JNJ', name: 'Johnson & Johnson', type: 'Stocks', description: 'Healthcare company' },
+    { symbol: 'WMT', name: 'Walmart Inc', type: 'Stocks', description: 'Retail company' },
+    { symbol: 'PG', name: 'Procter & Gamble', type: 'Stocks', description: 'Consumer goods' },
+    { symbol: 'MA', name: 'Mastercard Inc', type: 'Stocks', description: 'Financial services' },
+    { symbol: 'UNH', name: 'UnitedHealth Group', type: 'Stocks', description: 'Healthcare company' },
+    { symbol: 'HD', name: 'Home Depot Inc', type: 'Stocks', description: 'Retail company' }
   ];
-  
+
   const start = (page - 1) * pageSize;
   const end = Math.min(start + pageSize, allStocks.length);
   return {
@@ -274,7 +290,7 @@ function getMockAssetData(symbol: string) {
       lastUpdated: new Date().toISOString()
     }
   };
-  
+
   // Default to Bitcoin if the requested symbol is not in our mock data
   return { data: mockData[symbol] || mockData['BTC'] };
 }
@@ -282,28 +298,82 @@ function getMockAssetData(symbol: string) {
 function getMockHistoricalData(symbol: string) {
   const result = [];
   const today = new Date();
-  
+
   // Base values for different symbols
   let baseValue = symbol.toUpperCase() === 'BTC' ? 28000 : 100;
-  
+
   // Generate data points for each day (30 days)
   for (let i = 30; i >= 0; i--) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
-    
+
     // Add some random variation
     const randomFactor = 0.02; // 2% max variation
     const dailyVariation = baseValue * randomFactor * (Math.random() * 2 - 1);
     const price = baseValue + dailyVariation;
-    
+
     // Update base value for next day
     baseValue = price;
-    
+
     result.push({
       date: date.toISOString().split('T')[0],
       price: parseFloat(price.toFixed(2))
     });
   }
-  
+
   return { data: result };
+}
+
+function getMockCommoditiesList(page: number, pageSize: number) {
+  const allCommodities = [
+    { symbol: 'GC', name: 'Gold', type: 'Commodities', description: 'Precious metal' },
+    { symbol: 'SI', name: 'Silver', type: 'Commodities', description: 'Precious metal' },
+    { symbol: 'PL', name: 'Platinum', type: 'Commodities', description: 'Precious metal' },
+    { symbol: 'PA', name: 'Palladium', type: 'Commodities', description: 'Precious metal' },
+    { symbol: 'HG', name: 'Copper', type: 'Commodities', description: 'Industrial metal' },
+    { symbol: 'CL', name: 'Crude Oil', type: 'Commodities', description: 'Energy' },
+    { symbol: 'NG', name: 'Natural Gas', type: 'Commodities', description: 'Energy' },
+    { symbol: 'ZC', name: 'Corn', type: 'Commodities', description: 'Agriculture' },
+    { symbol: 'ZW', name: 'Wheat', type: 'Commodities', description: 'Agriculture' },
+    { symbol: 'ZS', name: 'Soybeans', type: 'Commodities', description: 'Agriculture' }
+  ];
+
+  const start = (page - 1) * pageSize;
+  const end = Math.min(start + pageSize, allCommodities.length);
+  return {
+    data: allCommodities.slice(start, end),
+    pagination: {
+      page,
+      pageSize,
+      totalItems: allCommodities.length,
+      totalPages: Math.ceil(allCommodities.length / pageSize)
+    }
+  };
+}
+
+function getMockIndicesList(page: number, pageSize: number) {
+  const allIndices = [
+    { symbol: 'SPX', name: 'S&P 500', type: 'Indices', description: 'US large-cap stocks' },
+    { symbol: 'DJI', name: 'Dow Jones Industrial Average', type: 'Indices', description: 'US blue-chip stocks' },
+    { symbol: 'IXIC', name: 'NASDAQ Composite', type: 'Indices', description: 'US technology stocks' },
+    { symbol: 'RUT', name: 'Russell 2000', type: 'Indices', description: 'US small-cap stocks' },
+    { symbol: 'FTSE', name: 'FTSE 100', type: 'Indices', description: 'UK large-cap stocks' },
+    { symbol: 'DAX', name: 'DAX', type: 'Indices', description: 'German stocks' },
+    { symbol: 'CAC', name: 'CAC 40', type: 'Indices', description: 'French stocks' },
+    { symbol: 'N225', name: 'Nikkei 225', type: 'Indices', description: 'Japanese stocks' },
+    { symbol: 'HSI', name: 'Hang Seng', type: 'Indices', description: 'Hong Kong stocks' },
+    { symbol: 'SSEC', name: 'Shanghai Composite', type: 'Indices', description: 'Chinese stocks' }
+  ];
+
+  const start = (page - 1) * pageSize;
+  const end = Math.min(start + pageSize, allIndices.length);
+  return {
+    data: allIndices.slice(start, end),
+    pagination: {
+      page,
+      pageSize,
+      totalItems: allIndices.length,
+      totalPages: Math.ceil(allIndices.length / pageSize)
+    }
+  };
 }

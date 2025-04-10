@@ -17,7 +17,9 @@ const BitcoinTicker: React.FC = () => {
     const fetchBitcoinPrice = async () => {
       try {
         console.log('Fetching Bitcoin price...');
-        const response = await axios.get('/api/crypto/bitcoin-price');
+        const response = await axios.get('/api/crypto', {
+          params: { endpoint: 'bitcoin-price' }
+        });
 
         console.log('Bitcoin API response:', response.data);
 

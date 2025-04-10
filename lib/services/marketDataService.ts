@@ -11,7 +11,7 @@ import type { AssetCategory, AssetData, HistoricalDataPoint, MarketAsset } from 
 export class MarketDataService {
   private secureService: SecureMarketDataService;
 
-  constructor(useMockData: boolean = false) {
+  constructor(useMockData: boolean = true) {
     console.log(`[MarketDataService] Initializing service (Mock Data: ${useMockData})`);
     this.secureService = new SecureMarketDataService(useMockData);
   }

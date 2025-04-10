@@ -16,15 +16,15 @@ export async function GET() {
     // This is because the API key is invalid
     console.log('Using mock Bitcoin price data for testing');
 
-    // Mock data that mimics the CoinMarketCap API response
+    // Mock data that mimics the expected format from the SecureMarketDataService
     return NextResponse.json({
+      symbol: 'BTC',
       price: 67890.12,
-      last_updated: new Date().toISOString(),
-      raw_data: {
-        symbol: 'BTC',
-        market_cap: 1234567890123,
-        percent_change_24h: 2.34
-      }
+      change: 1234.56,
+      changePercent: 2.34,
+      priceInBTC: 1.0,
+      priceInUSD: 67890.12,
+      lastUpdated: new Date().toISOString()
     });
 
     /* Commented out real API call code for now

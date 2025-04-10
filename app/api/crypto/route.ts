@@ -20,10 +20,16 @@ export async function GET(request: NextRequest) {
     });
 
     if (!apiKey) {
-      console.error('CoinMarketCap API key is missing');
+      console.warn('CoinMarketCap API key is missing. Using mock data.');
       return NextResponse.json({
-        error: 'CoinMarketCap API key is not configured'
-      }, { status: 500 });
+        price: 50000,
+        last_updated: new Date().toISOString(),
+        raw_data: {
+          symbol: 'BTC',
+          market_cap: 1000000000000,
+          percent_change_24h: 2.5
+        }
+      });
     }
 
     const searchParams = request.nextUrl.searchParams;
