@@ -38,9 +38,15 @@ export class SecureMarketDataService {
     // Log a generic error message without exposing details
     console.error(`API Error in ${context}`);
     
-    // Only log detailed error in development
-    if (process.env.NODE_ENV === 'development') {
-      console.debug('Detailed error:', error);
+    // Log detailed error information
+    if (axios.isAxiosError(error)) {
+      console.error('Axios Error Details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+    } else if (error instanceof Error) {
+      console.error('Error Details:', error.message);
     }
   }
   

@@ -3,6 +3,7 @@ import axios from 'axios';
 
 const BitcoinTicker: React.FC = () => {
   const [btcPrice, setBtcPrice] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchBitcoinPrice = async () => {
@@ -16,10 +17,32 @@ const BitcoinTicker: React.FC = () => {
           }
         });
         
-        const price = response.data['Realtime Currency Exchange Rate']['5. Exchange Rate'];
-        setBtcPrice(parseFloat(price));
+        console.log('Full API Response:', response.data);
+
+        const exchangeRateData = response.data['Realtime Currency Exchange Rate'];
+        
+        if (!exchangeRateData) {
+          throw new Error('No exchange rate data found in the response');
+        }
+
+        const price = exchangeRateData['5. Exchange Rate'];
+        
+        if (!price) {
+          throw new Error('Exchange rate is undefined');
+        }
+
+        const parsedPrice = parseFloat(price);
+        
+        if (isNaN(parsedPrice)) {
+          throw new Error('Invalid price format');
+        }
+
+        setBtcPrice(parsedPrice);
+        setError(null);
       } catch (error) {
         console.error('Error fetching Bitcoin price:', error);
+        setError(error instanceof Error ? error.message : 'Unknown error');
+        setBtcPrice(null);
       }
     };
 
@@ -32,7 +55,9 @@ const BitcoinTicker: React.FC = () => {
   return (
     <div className="bitcoin-ticker">
       <h3>Bitcoin Price</h3>
-      {btcPrice ? (
+      {error ? (
+        <p className="text-red-500">Error: {error}</p>
+      ) : btcPrice ? (
         <p>${btcPrice.toLocaleString()}</p>
       ) : (
         <p>Loading...</p>

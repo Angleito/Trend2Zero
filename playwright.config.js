@@ -1,5 +1,4 @@
 const { defineConfig } = require('@playwright/test');
-const path = require('path');
 
 module.exports = defineConfig({
   // Test directory
