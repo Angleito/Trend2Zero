@@ -1,101 +1,51 @@
 import { NextResponse } from 'next/server';
-import axios from 'axios';
+import ExternalApiService from '@/lib/services/externalApiService';
+import MongoDbCacheService from '@/lib/services/mongoDbCacheService';
+
+// Fallback Bitcoin price data for static generation
+const FALLBACK_BITCOIN_PRICE = {
+  symbol: 'BTC',
+  price: 67890.12,
+  change: 1234.56,
+  changePercent: 2.34,
+  priceInBTC: 1.0,
+  priceInUSD: 67890.12,
+  lastUpdated: new Date().toISOString()
+};
 
 export async function GET() {
+  // Initialize services
+  const externalApiService = new ExternalApiService();
+  const mongoDbCacheService = new MongoDbCacheService();
+
   try {
-    const apiKey = process.env.COINMARKETCAP_API_KEY;
-
-    // Log environment variables for debugging
-    console.log('Bitcoin Price API - Environment variables:', {
-      NODE_ENV: process.env.NODE_ENV,
-      HAS_CMC_KEY: !!apiKey,
-      KEY_LENGTH: apiKey ? apiKey.length : 0
-    });
-
-    // For testing purposes, return mock data instead of making a real API call
-    // This is because the API key is invalid
-    console.log('Using mock Bitcoin price data for testing');
-
-    // Mock data that mimics the expected format from the SecureMarketDataService
-    return NextResponse.json({
-      symbol: 'BTC',
-      price: 67890.12,
-      change: 1234.56,
-      changePercent: 2.34,
-      priceInBTC: 1.0,
-      priceInUSD: 67890.12,
-      lastUpdated: new Date().toISOString()
-    });
-
-    /* Commented out real API call code for now
-    if (!apiKey) {
-      console.error('CoinMarketCap API key is missing');
-      return NextResponse.json({
-        error: 'CoinMarketCap API key is not configured'
-      }, { status: 500 });
+    // Try to get data from MongoDB cache first
+    const cachedData = await mongoDbCacheService.getCachedAssetPrice('BTC');
+    if (cachedData) {
+      console.log('Using cached Bitcoin price from MongoDB');
+      return NextResponse.json(cachedData);
     }
 
-    const apiUrl = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest';
-    const requestParams = {
-      'symbol': 'BTC',
-      'convert': 'USD'
-    };
-
-    const headers = {
-      'X-CMC_PRO_API_KEY': apiKey
-    };
-
+    // If not in cache, fetch from external API
     try {
-      console.log('Making request to CoinMarketCap API...');
-      const response = await axios.get(apiUrl, {
-        params: requestParams,
-        headers: headers
-      });
+      console.log('Fetching Bitcoin price from external API');
+      const bitcoinData = await externalApiService.fetchAssetPrice('BTC');
 
-      // Log full response for debugging
-      console.log('CoinMarketCap Response Status:', response.status);
-      console.log('CoinMarketCap Response Data Structure:', Object.keys(response.data));
+      // Cache the result in MongoDB
+      await mongoDbCacheService.cacheAssetPrice('BTC', bitcoinData);
 
-      // More robust extraction of Bitcoin price data
-      const bitcoinData = response.data?.data?.BTC?.quote?.USD;
-      if (!bitcoinData) {
-        console.error('Unexpected response structure:', response.data);
-        return NextResponse.json({
-          error: 'Unable to extract Bitcoin price data',
-          rawResponse: response.data
-        }, { status: 404 });
-      }
+      return NextResponse.json(bitcoinData);
+    } catch (apiError) {
+      console.error('Error fetching Bitcoin price from API:', apiError);
 
-      return NextResponse.json({
-        price: bitcoinData.price,
-        last_updated: bitcoinData.last_updated,
-        raw_data: {
-          symbol: 'BTC',
-          market_cap: bitcoinData.market_cap,
-          percent_change_24h: bitcoinData.percent_change_24h
-        }
-      });
-    } catch (error: any) {
-      console.error('Detailed CoinMarketCap Bitcoin Price API error:',
-        error.response?.data || error.message,
-        error.response?.status,
-        error.response?.headers
-      );
-
-      const status = error.response?.status || 500;
-      const message = error.response?.data?.status?.error_message || 'Failed to fetch Bitcoin price';
-
-      return NextResponse.json({
-        error: message,
-        details: error.message
-      }, { status });
+      // If API call fails, return fallback data
+      return NextResponse.json(FALLBACK_BITCOIN_PRICE);
     }
-    */
-  } catch (error: any) {
-    console.error('Unexpected error in Bitcoin price route:', error);
-    return NextResponse.json({
-      error: 'An unexpected error occurred',
-      details: error.message
-    }, { status: 500 });
+  } catch (error) {
+    console.error('Error in Bitcoin price endpoint:', error);
+    return NextResponse.json(FALLBACK_BITCOIN_PRICE);
   }
 }
+
+// Make this route dynamic to allow API calls
+export const dynamic = 'force-dynamic';

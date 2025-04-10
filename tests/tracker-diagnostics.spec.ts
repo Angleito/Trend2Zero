@@ -25,7 +25,7 @@ test('Diagnose Tracker Page Issues', async ({ page }) => {
 
   // Navigate to the tracker page
   console.log('Navigating to tracker page...');
-  await page.goto('http://localhost:3002/tracker', { timeout: 10000 });
+  await page.goto('http://localhost:3000/tracker', { timeout: 10000 });
 
   // Wait for any content to load
   await page.waitForLoadState('domcontentloaded');

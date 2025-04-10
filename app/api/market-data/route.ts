@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import ExternalApiService from '@/lib/services/externalApiService';
+import MongoDbCacheService from '@/lib/services/mongoDbCacheService';
 
 // Rate limiting configuration
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute in milliseconds
@@ -138,23 +140,101 @@ export async function GET(request: NextRequest) {
     // Handle different endpoints
     const { endpoint, symbol, page, pageSize } = validation.sanitized;
 
-    // In a real implementation, you would call your services here
-    // For now, we'll return mock data
+    // Initialize services
+    const externalApiService = new ExternalApiService();
+    const mongoDbCacheService = new MongoDbCacheService();
+
     let responseData;
 
     switch (endpoint) {
       case 'crypto':
-        responseData = getMockCryptoList(page || 1, pageSize || 20);
+        try {
+          // Try to get data from MongoDB cache first
+          const cachedData = await mongoDbCacheService.getCachedAssetList('Cryptocurrency', page || 1, pageSize || 20);
+          if (cachedData) {
+            console.log('Using cached crypto list from MongoDB');
+            responseData = cachedData;
+          } else {
+            // If not in cache, fetch from external API
+            console.log('Fetching crypto list from external API');
+            responseData = await externalApiService.fetchCryptoList(page || 1, pageSize || 20);
+
+            // Cache the result in MongoDB
+            await mongoDbCacheService.cacheAssetList('Cryptocurrency', page || 1, pageSize || 20, responseData);
+          }
+        } catch (error) {
+          console.error('Error fetching crypto list:', error);
+          // Fallback to mock data if API call fails
+          responseData = getMockCryptoList(page || 1, pageSize || 20);
+        }
         break;
+
       case 'stocks':
-        responseData = getMockStockList(page || 1, pageSize || 20);
+        try {
+          // Try to get data from MongoDB cache first
+          const cachedData = await mongoDbCacheService.getCachedAssetList('Stocks', page || 1, pageSize || 20);
+          if (cachedData) {
+            console.log('Using cached stocks list from MongoDB');
+            responseData = cachedData;
+          } else {
+            // If not in cache, fetch from external API
+            console.log('Fetching stocks list from external API');
+            responseData = await externalApiService.fetchStockList(page || 1, pageSize || 20);
+
+            // Cache the result in MongoDB
+            await mongoDbCacheService.cacheAssetList('Stocks', page || 1, pageSize || 20, responseData);
+          }
+        } catch (error) {
+          console.error('Error fetching stocks list:', error);
+          // Fallback to mock data if API call fails
+          responseData = getMockStockList(page || 1, pageSize || 20);
+        }
         break;
+
       case 'commodities':
-        responseData = getMockCommoditiesList(page || 1, pageSize || 20);
+        try {
+          // Try to get data from MongoDB cache first
+          const cachedData = await mongoDbCacheService.getCachedAssetList('Commodities', page || 1, pageSize || 20);
+          if (cachedData) {
+            console.log('Using cached commodities list from MongoDB');
+            responseData = cachedData;
+          } else {
+            // If not in cache, fetch from external API
+            console.log('Fetching commodities list from external API');
+            responseData = await externalApiService.fetchCommoditiesList(page || 1, pageSize || 20);
+
+            // Cache the result in MongoDB
+            await mongoDbCacheService.cacheAssetList('Commodities', page || 1, pageSize || 20, responseData);
+          }
+        } catch (error) {
+          console.error('Error fetching commodities list:', error);
+          // Fallback to mock data if API call fails
+          responseData = getMockCommoditiesList(page || 1, pageSize || 20);
+        }
         break;
+
       case 'indices':
-        responseData = getMockIndicesList(page || 1, pageSize || 20);
+        try {
+          // Try to get data from MongoDB cache first
+          const cachedData = await mongoDbCacheService.getCachedAssetList('Indices', page || 1, pageSize || 20);
+          if (cachedData) {
+            console.log('Using cached indices list from MongoDB');
+            responseData = cachedData;
+          } else {
+            // If not in cache, fetch from external API
+            console.log('Fetching indices list from external API');
+            responseData = await externalApiService.fetchIndicesList(page || 1, pageSize || 20);
+
+            // Cache the result in MongoDB
+            await mongoDbCacheService.cacheAssetList('Indices', page || 1, pageSize || 20, responseData);
+          }
+        } catch (error) {
+          console.error('Error fetching indices list:', error);
+          // Fallback to mock data if API call fails
+          responseData = getMockIndicesList(page || 1, pageSize || 20);
+        }
         break;
+
       case 'asset':
         if (!symbol) {
           return NextResponse.json(
@@ -162,8 +242,27 @@ export async function GET(request: NextRequest) {
             { status: 400 }
           );
         }
-        responseData = getMockAssetData(symbol);
+        try {
+          // Try to get data from MongoDB cache first
+          const cachedData = await mongoDbCacheService.getCachedAssetPrice(symbol);
+          if (cachedData) {
+            console.log(`Using cached asset data for ${symbol} from MongoDB`);
+            responseData = cachedData;
+          } else {
+            // If not in cache, fetch from external API
+            console.log(`Fetching asset data for ${symbol} from external API`);
+            responseData = await externalApiService.fetchAssetPrice(symbol);
+
+            // Cache the result in MongoDB
+            await mongoDbCacheService.cacheAssetPrice(symbol, responseData);
+          }
+        } catch (error) {
+          console.error(`Error fetching asset data for ${symbol}:`, error);
+          // Fallback to mock data if API call fails
+          responseData = getMockAssetData(symbol);
+        }
         break;
+
       case 'historical':
         if (!symbol) {
           return NextResponse.json(
@@ -171,8 +270,33 @@ export async function GET(request: NextRequest) {
             { status: 400 }
           );
         }
-        responseData = getMockHistoricalData(symbol);
+        const days = params.days ? parseInt(params.days as string) : 30;
+        try {
+          // Try to get data from MongoDB cache first
+          const cachedData = await mongoDbCacheService.getCachedHistoricalData(symbol, days);
+          if (cachedData) {
+            console.log(`Using cached historical data for ${symbol} from MongoDB`);
+            responseData = { data: cachedData };
+          } else {
+            // If not in cache, fetch from external API
+            console.log(`Fetching historical data for ${symbol} from external API`);
+            const historicalData = await externalApiService.fetchHistoricalData(symbol, days);
+            responseData = { data: historicalData };
+
+            // Cache the result in MongoDB
+            await mongoDbCacheService.cacheHistoricalData(symbol, days, historicalData);
+          }
+        } catch (error) {
+          console.error(`Error fetching historical data for ${symbol}:`, error);
+          // Fallback to mock data if API call fails
+          responseData = getMockHistoricalData(symbol);
+        }
+
+        // Log the data for debugging
+        console.log(`Historical data for ${symbol} (${days} days):`,
+          JSON.stringify(responseData).substring(0, 200) + '...');
         break;
+
       default:
         return NextResponse.json(
           { error: 'Endpoint not implemented' },

@@ -5,6 +5,7 @@ export interface AssetData {
   changePercent: number;
   priceInBTC: number;
   priceInUSD: number;
+  lastUpdated?: string; // Optional to maintain backward compatibility
 }
 
 export interface HistoricalDataPoint {

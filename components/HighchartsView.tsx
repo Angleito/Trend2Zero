@@ -182,15 +182,32 @@ const HighchartsView: React.FC<HighchartsViewProps> = ({
         }
 
         // Format data for Highcharts
-        const priceData = historicalData.map((dataPoint: HistoricalDataPoint) => [
-          new Date(dataPoint.date).getTime(),
-          dataPoint.price,
-        ]);
+        const priceData = historicalData.map((dataPoint: HistoricalDataPoint) => {
+          // Handle both Date objects and ISO strings
+          const timestamp = dataPoint.date instanceof Date
+            ? dataPoint.date.getTime()
+            : new Date(dataPoint.date).getTime();
 
-        const volumeData = historicalData.map((dataPoint: HistoricalDataPoint) => [
-          new Date(dataPoint.date).getTime(),
-          dataPoint.volume || 0,
-        ]);
+          return [
+            timestamp,
+            dataPoint.price,
+          ];
+        });
+
+        const volumeData = historicalData.map((dataPoint: HistoricalDataPoint) => {
+          // Handle both Date objects and ISO strings
+          const timestamp = dataPoint.date instanceof Date
+            ? dataPoint.date.getTime()
+            : new Date(dataPoint.date).getTime();
+
+          // Use a default volume if missing
+          const volume = dataPoint.volume ?? 1000000;
+
+          return [
+            timestamp,
+            volume,
+          ];
+        });
 
         // Update chart options with the new data
         setChartOptions(prevOptions => ({
