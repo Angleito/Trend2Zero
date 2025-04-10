@@ -11,8 +11,8 @@ import type { AssetCategory, AssetData, HistoricalDataPoint, MarketAsset } from 
 export class MarketDataService {
   private secureService: SecureMarketDataService;
 
-  constructor(useMockData: boolean = true) {
-    console.log('[MarketDataService] Initializing service');
+  constructor(useMockData: boolean = false) {
+    console.log(`[MarketDataService] Initializing service (Mock Data: ${useMockData})`);
     this.secureService = new SecureMarketDataService(useMockData);
   }
 
@@ -49,3 +49,5 @@ export class MarketDataService {
     return this.secureService.isCryptoCurrency(symbol);
   }
 }
+
+export default MarketDataService;

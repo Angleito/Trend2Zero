@@ -12,8 +12,8 @@ export class SecureMarketDataService {
   private cache: LRUCache<string, any>;
   private useMockData: boolean;
   
-  constructor(useMockData: boolean = true) {
-    console.log('[SecureMarketDataService] Initializing service');
+  constructor(useMockData: boolean = false) {
+    console.log(`[SecureMarketDataService] Initializing service (Mock Data: ${useMockData})`);
     
     // Initialize LRU cache with max 500 entries, each expiring after 5 minutes
     this.cache = new LRUCache<string, any>({
@@ -51,6 +51,35 @@ export class SecureMarketDataService {
   }
   
   /**
+   * Provide mock data for testing or when real data is unavailable
+   */
+  private getMockData(method: string, ...args: any[]): any {
+    switch (method) {
+      case 'listAvailableAssets':
+        return [
+          { symbol: 'BTC', name: 'Bitcoin', category: 'Cryptocurrency' },
+          { symbol: 'ETH', name: 'Ethereum', category: 'Cryptocurrency' }
+        ];
+      
+      case 'getAssetPriceInBTC':
+        return {
+          symbol: args[0],
+          price: args[0] === 'BTC' ? 50000 : 1000,
+          lastUpdated: new Date().toISOString()
+        };
+      
+      case 'getHistoricalData':
+        return Array.from({ length: 30 }, (_, i) => ({
+          date: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString(),
+          price: 50000 + Math.random() * 1000
+        }));
+      
+      default:
+        return null;
+    }
+  }
+  
+  /**
    * List available assets by category
    */
   async listAvailableAssets(options: {
@@ -66,6 +95,13 @@ export class SecureMarketDataService {
     const cachedResult = this.cache.get(cacheKey);
     if (cachedResult) {
       return cachedResult as MarketAsset[];
+    }
+    
+    // Return mock data if enabled
+    if (this.useMockData) {
+      const mockData = this.getMockData('listAvailableAssets', options);
+      this.cache.set(cacheKey, mockData);
+      return mockData;
     }
     
     try {
@@ -88,6 +124,12 @@ export class SecureMarketDataService {
     } catch (error) {
       this.handleAPIError(error, 'listAvailableAssets');
       
+      // Return mock data on error if mock data is enabled
+      if (this.useMockData) {
+        const mockData = this.getMockData('listAvailableAssets', options);
+        return mockData;
+      }
+      
       // Return empty array on error
       return [];
     }
@@ -104,21 +146,35 @@ export class SecureMarketDataService {
       return cachedResult as AssetData;
     }
     
+    // Return mock data if enabled
+    if (this.useMockData) {
+      const mockData = this.getMockData('getAssetPriceInBTC', assetSymbol);
+      this.cache.set(cacheKey, mockData);
+      return mockData;
+    }
+    
     try {
       // Call our secure API proxy
-      const response = await axios.get('/api/market-data', {
+      const response = await axios.get('/api/crypto', {
         params: {
-          endpoint: 'asset',
+          endpoint: 'bitcoin-price',
           symbol: assetSymbol
         }
       });
       
       // Cache and return the result
-      const assetData = response.data.data;
+      const assetData = response.data;
       this.cache.set(cacheKey, assetData);
       return assetData;
     } catch (error) {
       this.handleAPIError(error, `getAssetPriceInBTC for ${assetSymbol}`);
+      
+      // Return mock data on error if mock data is enabled
+      if (this.useMockData) {
+        const mockData = this.getMockData('getAssetPriceInBTC', assetSymbol);
+        return mockData;
+      }
+      
       return null;
     }
   }
@@ -132,6 +188,13 @@ export class SecureMarketDataService {
     const cachedResult = this.cache.get(cacheKey);
     if (cachedResult) {
       return cachedResult as HistoricalDataPoint[];
+    }
+    
+    // Return mock data if enabled
+    if (this.useMockData) {
+      const mockData = this.getMockData('getHistoricalData', symbol, days);
+      this.cache.set(cacheKey, mockData);
+      return mockData;
     }
     
     try {
@@ -150,6 +213,13 @@ export class SecureMarketDataService {
       return historicalData;
     } catch (error) {
       this.handleAPIError(error, `getHistoricalData for ${symbol}`);
+      
+      // Return mock data on error if mock data is enabled
+      if (this.useMockData) {
+        const mockData = this.getMockData('getHistoricalData', symbol, days);
+        return mockData;
+      }
+      
       return [];
     }
   }
