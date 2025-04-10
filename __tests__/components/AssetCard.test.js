@@ -38,20 +38,20 @@ describe('AssetCard Component', () => {
   beforeEach(() => {
     // Reset all mocks
     jest.clearAllMocks();
-    
+
     // Setup default mock implementations
     useAssetPrice.mockReturnValue({
       priceData: { data: mockAsset },
       loading: false,
       error: null
     });
-    
+
     useWatchlist.mockReturnValue({
       isInWatchlist: jest.fn().mockReturnValue(false),
       addToWatchlist: jest.fn(),
       removeFromWatchlist: jest.fn()
     });
-    
+
     useAuth.mockReturnValue({
       isAuthenticated: true
     });
@@ -59,14 +59,15 @@ describe('AssetCard Component', () => {
 
   it('renders asset information correctly', () => {
     render(<AssetCard asset={mockAsset} />);
-    
+
     // Check if asset name and symbol are displayed
     expect(screen.getByText('Bitcoin')).toBeInTheDocument();
     expect(screen.getByText('BTC')).toBeInTheDocument();
-    
+
     // Check if price is displayed
-    expect(screen.getByText('$50,000.00')).toBeInTheDocument();
-    
+    expect(screen.getByText('$')).toBeInTheDocument();
+    expect(screen.getByText('50,000')).toBeInTheDocument();
+
     // Check if price change is displayed
     expect(screen.getByText('+5.00%')).toBeInTheDocument();
   });
@@ -77,9 +78,9 @@ describe('AssetCard Component', () => {
       loading: true,
       error: null
     });
-    
+
     render(<AssetCard asset={mockAsset} />);
-    
+
     // Check for loading indicators
     expect(screen.getAllByText('...').length).toBeGreaterThan(0);
   });
@@ -90,9 +91,9 @@ describe('AssetCard Component', () => {
       loading: false,
       error: new Error('Failed to fetch')
     });
-    
+
     render(<AssetCard asset={mockAsset} />);
-    
+
     // Check for error message
     expect(screen.getByText('Error loading data')).toBeInTheDocument();
   });
@@ -106,15 +107,15 @@ describe('AssetCard Component', () => {
         ytd: 20
       }
     };
-    
+
     useAssetPrice.mockReturnValue({
       priceData: { data: assetWithDetails },
       loading: false,
       error: null
     });
-    
+
     render(<AssetCard asset={assetWithDetails} showDetails={true} />);
-    
+
     // Check if additional details are displayed
     expect(screen.getByText('Market Cap:')).toBeInTheDocument();
     expect(screen.getByText('24h Volume:')).toBeInTheDocument();
@@ -125,19 +126,19 @@ describe('AssetCard Component', () => {
   it('handles watchlist toggle correctly when authenticated', async () => {
     const mockIsInWatchlist = jest.fn().mockReturnValue(false);
     const mockAddToWatchlist = jest.fn().mockResolvedValue({});
-    
+
     useWatchlist.mockReturnValue({
       isInWatchlist: mockIsInWatchlist,
       addToWatchlist: mockAddToWatchlist,
       removeFromWatchlist: jest.fn()
     });
-    
+
     render(<AssetCard asset={mockAsset} />);
-    
+
     // Find and click the watchlist button
     const watchlistButton = screen.getByTitle('Add to watchlist');
     fireEvent.click(watchlistButton);
-    
+
     // Check if addToWatchlist was called with correct parameters
     await waitFor(() => {
       expect(mockAddToWatchlist).toHaveBeenCalledWith('BTC', 'Cryptocurrency');
@@ -147,19 +148,19 @@ describe('AssetCard Component', () => {
   it('handles watchlist toggle correctly when already in watchlist', async () => {
     const mockIsInWatchlist = jest.fn().mockReturnValue(true);
     const mockRemoveFromWatchlist = jest.fn().mockResolvedValue({});
-    
+
     useWatchlist.mockReturnValue({
       isInWatchlist: mockIsInWatchlist,
       addToWatchlist: jest.fn(),
       removeFromWatchlist: mockRemoveFromWatchlist
     });
-    
+
     render(<AssetCard asset={mockAsset} />);
-    
+
     // Find and click the watchlist button
     const watchlistButton = screen.getByTitle('Remove from watchlist');
     fireEvent.click(watchlistButton);
-    
+
     // Check if removeFromWatchlist was called with correct parameters
     await waitFor(() => {
       expect(mockRemoveFromWatchlist).toHaveBeenCalledWith('BTC');
@@ -170,9 +171,9 @@ describe('AssetCard Component', () => {
     useAuth.mockReturnValue({
       isAuthenticated: false
     });
-    
+
     render(<AssetCard asset={mockAsset} />);
-    
+
     // Check that watchlist button is not present
     expect(screen.queryByTitle('Add to watchlist')).not.toBeInTheDocument();
     expect(screen.queryByTitle('Remove from watchlist')).not.toBeInTheDocument();

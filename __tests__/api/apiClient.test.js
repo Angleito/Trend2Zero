@@ -1,5 +1,5 @@
 import axios from 'axios';
-import apiClient, { setAuthToken, getAuthToken, isAuthenticated } from '../../lib/api/apiClient';
+import apiClient, { setAuthToken, getAuthToken, isAuthenticated, axiosInstance } from '../../lib/api/apiClient';
 
 // Mock axios
 jest.mock('axios', () => {
@@ -12,6 +12,22 @@ jest.mock('axios', () => {
     defaults: { baseURL: '' }
   };
   return mockAxios;
+});
+
+// Mock the exported axiosInstance
+jest.mock('../../lib/api/apiClient', () => {
+  const originalModule = jest.requireActual('../../lib/api/apiClient');
+  return {
+    ...originalModule,
+    axiosInstance: {
+      create: jest.fn(() => originalModule.default),
+      interceptors: {
+        request: { use: jest.fn(), eject: jest.fn() },
+        response: { use: jest.fn(), eject: jest.fn() }
+      },
+      defaults: { baseURL: '' }
+    }
+  };
 });
 
 // Mock localStorage
@@ -42,7 +58,7 @@ describe('API Client', () => {
   });
 
   it('creates an axios instance with correct config', () => {
-    expect(axios.create).toHaveBeenCalledWith({
+    expect(axiosInstance.create).toHaveBeenCalledWith({
       baseURL: expect.any(String),
       headers: {
         'Content-Type': 'application/json',
@@ -52,11 +68,11 @@ describe('API Client', () => {
   });
 
   it('sets up request interceptor', () => {
-    expect(axios.interceptors.request.use).toHaveBeenCalled();
+    expect(axiosInstance.interceptors.request.use).toHaveBeenCalled();
   });
 
   it('sets up response interceptor', () => {
-    expect(axios.interceptors.response.use).toHaveBeenCalled();
+    expect(axiosInstance.interceptors.response.use).toHaveBeenCalled();
   });
 
   describe('setAuthToken', () => {

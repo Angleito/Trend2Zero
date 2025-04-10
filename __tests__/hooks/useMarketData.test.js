@@ -1,8 +1,8 @@
-import { renderHook, act } from '@testing-library/react';
-import { 
-  useAsset, 
-  useAssetPrice, 
-  useHistoricalData, 
+import { renderHook, act, waitFor } from '@testing-library/react';
+import {
+  useAsset,
+  useAssetPrice,
+  useHistoricalData,
   useAssetSearch,
   usePopularAssets,
   useAssetsByType
@@ -26,8 +26,8 @@ describe('Market Data Hooks', () => {
       });
 
       // Render the hook
-      const { result, rerender, waitForNextUpdate } = renderHook(
-        (props) => useAsset(props), 
+      const { result, rerender } = renderHook(
+        (props) => useAsset(props),
         { initialProps: 'BTC' }
       );
 
@@ -37,7 +37,7 @@ describe('Market Data Hooks', () => {
       expect(result.current.error).toBe(null);
 
       // Wait for the async operation to complete
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Check the final state
       expect(result.current.loading).toBe(false);
@@ -51,7 +51,7 @@ describe('Market Data Hooks', () => {
       });
 
       rerender('ETH');
-      
+
       // Wait for the async operation to complete
       await waitForNextUpdate();
 
@@ -65,10 +65,10 @@ describe('Market Data Hooks', () => {
       marketDataService.getAssetBySymbol.mockRejectedValue(mockError);
 
       // Render the hook
-      const { result, waitForNextUpdate } = renderHook(() => useAsset('INVALID'));
+      const { result } = renderHook(() => useAsset('INVALID'));
 
       // Wait for the async operation to complete
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Check the error state
       expect(result.current.loading).toBe(false);
@@ -90,17 +90,17 @@ describe('Market Data Hooks', () => {
   describe('useAssetPrice', () => {
     it('fetches price data correctly', async () => {
       // Mock the service response
-      const mockPriceData = { 
-        symbol: 'BTC', 
-        priceInUSD: 50000, 
-        priceInBTC: 1 
+      const mockPriceData = {
+        symbol: 'BTC',
+        priceInUSD: 50000,
+        priceInBTC: 1
       };
       marketDataService.getAssetPrice.mockResolvedValue({
         data: mockPriceData
       });
 
       // Render the hook
-      const { result, waitForNextUpdate } = renderHook(
+      const { result } = renderHook(
         () => useAssetPrice('BTC', false)
       );
 
@@ -109,7 +109,7 @@ describe('Market Data Hooks', () => {
       expect(result.current.priceData).toBe(null);
 
       // Wait for the async operation to complete
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Check the final state
       expect(result.current.loading).toBe(false);
@@ -124,12 +124,12 @@ describe('Market Data Hooks', () => {
       });
 
       // Render the hook
-      const { result, waitForNextUpdate } = renderHook(
+      const { result } = renderHook(
         () => useAssetPrice('BTC', false)
       );
 
       // Wait for the initial fetch to complete
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Clear the mock to track the next call
       marketDataService.getAssetPrice.mockClear();
@@ -161,7 +161,7 @@ describe('Market Data Hooks', () => {
       });
 
       // Render the hook
-      const { result, waitForNextUpdate } = renderHook(
+      const { result } = renderHook(
         () => useHistoricalData('BTC', { days: 30 })
       );
 
@@ -170,7 +170,7 @@ describe('Market Data Hooks', () => {
       expect(result.current.historicalData).toBe(null);
 
       // Wait for the async operation to complete
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Check the final state
       expect(result.current.loading).toBe(false);
@@ -193,7 +193,7 @@ describe('Market Data Hooks', () => {
       });
 
       // Render the hook
-      const { result, waitForNextUpdate } = renderHook(() => useAssetSearch());
+      const { result } = renderHook(() => useAssetSearch());
 
       // Initial state
       expect(result.current.loading).toBe(false);
@@ -208,7 +208,7 @@ describe('Market Data Hooks', () => {
       expect(result.current.loading).toBe(true);
 
       // Wait for the async operation to complete
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Check the final state
       expect(result.current.loading).toBe(false);
@@ -245,7 +245,7 @@ describe('Market Data Hooks', () => {
       });
 
       // Render the hook
-      const { result, waitForNextUpdate } = renderHook(
+      const { result } = renderHook(
         () => usePopularAssets(5)
       );
 
@@ -254,7 +254,7 @@ describe('Market Data Hooks', () => {
       expect(result.current.popularAssets).toEqual([]);
 
       // Wait for the async operation to complete
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Check the final state
       expect(result.current.loading).toBe(false);
@@ -277,7 +277,7 @@ describe('Market Data Hooks', () => {
       });
 
       // Render the hook
-      const { result, waitForNextUpdate } = renderHook(
+      const { result } = renderHook(
         () => useAssetsByType('Cryptocurrency', 10)
       );
 
@@ -286,7 +286,7 @@ describe('Market Data Hooks', () => {
       expect(result.current.assets).toEqual([]);
 
       // Wait for the async operation to complete
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Check the final state
       expect(result.current.loading).toBe(false);
