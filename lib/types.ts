@@ -25,13 +25,18 @@ export interface AssetData {
   changePercent: number;
   priceInBTC: number;
   priceInUSD: number;
+  lastUpdated?: string;
   historicalData?: HistoricalDataPoint[];
 }
 
 // Historical Data Point
 export interface HistoricalDataPoint {
-  date: string;
+  date: string | Date;
   price: number;
+  open?: number;
+  high?: number;
+  low?: number;
+  close?: number;
   volume?: number;
 }
 

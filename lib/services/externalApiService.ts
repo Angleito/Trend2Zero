@@ -3,7 +3,7 @@ import { AssetCategory, AssetData, HistoricalDataPoint, MarketAsset } from '../t
 
 /**
  * External API Service
- * 
+ *
  * This service handles all external API calls to fetch market data
  * from various sources like CoinMarketCap, Alpha Vantage, and MetalPriceAPI.
  */
@@ -281,34 +281,71 @@ export class ExternalApiService {
         throw new Error('Alpha Vantage API key is missing');
       }
 
-      const response = await axios.get('https://www.alphavantage.co/query', {
-        params: {
-          function: 'GLOBAL_QUOTE',
-          symbol,
-          apikey: this.alphaVantageApiKey
-        }
-      });
+      // First try GLOBAL_QUOTE endpoint
+      try {
+        const response = await axios.get('https://www.alphavantage.co/query', {
+          params: {
+            function: 'GLOBAL_QUOTE',
+            symbol,
+            apikey: this.alphaVantageApiKey
+          }
+        });
 
-      const quote = response.data['Global Quote'];
-      if (!quote) {
-        throw new Error(`No data found for stock ${symbol}`);
+        const quote = response.data['Global Quote'];
+        if (quote && quote['05. price']) {
+          const price = parseFloat(quote['05. price']);
+          const change = parseFloat(quote['09. change']);
+          const changePercent = parseFloat(quote['10. change percent'].replace('%', ''));
+          const bitcoinPrice = await this.getBitcoinPrice();
+          const priceInBTC = price / bitcoinPrice;
+
+          return {
+            symbol,
+            price,
+            change,
+            changePercent,
+            priceInBTC,
+            priceInUSD: price,
+            lastUpdated: new Date().toISOString()
+          };
+        }
+      } catch (quoteError) {
+        console.warn(`GLOBAL_QUOTE failed for ${symbol}, trying CURRENCY_EXCHANGE_RATE:`, quoteError);
       }
 
-      const price = parseFloat(quote['05. price']);
-      const change = parseFloat(quote['09. change']);
-      const changePercent = parseFloat(quote['10. change percent'].replace('%', ''));
-      const bitcoinPrice = await this.getBitcoinPrice();
-      const priceInBTC = price / bitcoinPrice;
+      // If GLOBAL_QUOTE fails, try CURRENCY_EXCHANGE_RATE endpoint
+      try {
+        const response = await axios.get('https://www.alphavantage.co/query', {
+          params: {
+            function: 'CURRENCY_EXCHANGE_RATE',
+            from_currency: symbol,
+            to_currency: 'USD',
+            apikey: this.alphaVantageApiKey
+          }
+        });
 
-      return {
-        symbol,
-        price,
-        change,
-        changePercent,
-        priceInBTC,
-        priceInUSD: price,
-        lastUpdated: new Date().toISOString()
-      };
+        const exchangeData = response.data['Realtime Currency Exchange Rate'];
+        if (exchangeData && exchangeData['5. Exchange Rate']) {
+          const price = parseFloat(exchangeData['5. Exchange Rate']);
+          const bitcoinPrice = await this.getBitcoinPrice();
+          const priceInBTC = price / bitcoinPrice;
+
+          return {
+            symbol,
+            price,
+            change: 0, // Exchange rate doesn't provide change data
+            changePercent: 0,
+            priceInBTC,
+            priceInUSD: price,
+            lastUpdated: new Date().toISOString()
+          };
+        }
+      } catch (exchangeError) {
+        console.warn(`CURRENCY_EXCHANGE_RATE failed for ${symbol}:`, exchangeError);
+      }
+
+      // If both methods fail, throw an error
+      throw new Error(`No data found for stock ${symbol}`);
     } catch (error) {
       console.error(`Error fetching stock price for ${symbol}:`, error);
       throw error;
