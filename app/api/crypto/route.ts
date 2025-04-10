@@ -11,15 +11,24 @@ const requestSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     const apiKey = process.env.COINMARKETCAP_API_KEY;
+
+    // Log environment variables for debugging (don't include in production)
+    console.log('Environment variables:', {
+      NODE_ENV: process.env.NODE_ENV,
+      HAS_CMC_KEY: !!apiKey,
+      KEY_LENGTH: apiKey ? apiKey.length : 0
+    });
+
     if (!apiKey) {
-      return NextResponse.json({ 
-        error: 'CoinMarketCap API key is not configured' 
+      console.error('CoinMarketCap API key is missing');
+      return NextResponse.json({
+        error: 'CoinMarketCap API key is not configured'
       }, { status: 500 });
     }
 
     const searchParams = request.nextUrl.searchParams;
     const endpoint = searchParams.get('endpoint') || '';
-    
+
     // Validate request parameters
     const validation = requestSchema.safeParse({
       endpoint,
@@ -27,8 +36,8 @@ export async function GET(request: NextRequest) {
     });
 
     if (!validation.success) {
-      return NextResponse.json({ 
-        error: 'Invalid request parameters' 
+      return NextResponse.json({
+        error: 'Invalid request parameters'
       }, { status: 400 });
     }
 
@@ -43,26 +52,35 @@ export async function GET(request: NextRequest) {
 
       try {
         const response = await axios.get(apiUrl, { params: requestParams });
-        
-        // Extract and validate Bitcoin price data
-        const bitcoinData = response.data.data?.BTC?.quote?.USD;
+
+        // Log full response for debugging
+        console.log('Full CoinMarketCap Response:', JSON.stringify(response.data, null, 2));
+
+        // More robust extraction of Bitcoin price data
+        const bitcoinData = response.data?.data?.BTC?.quote?.USD;
         if (!bitcoinData) {
-          console.error('No Bitcoin price data found in the response');
-          return NextResponse.json({ 
-            error: 'No exchange rate data found' 
+          console.error('Unexpected response structure:', response.data);
+          return NextResponse.json({
+            error: 'Unable to extract Bitcoin price data',
+            rawResponse: response.data
           }, { status: 404 });
         }
 
         return NextResponse.json({
           price: bitcoinData.price,
-          last_updated: bitcoinData.last_updated
+          last_updated: bitcoinData.last_updated,
+          raw_data: {
+            symbol: 'BTC',
+            market_cap: response.data.data.BTC.quote.USD.market_cap,
+            percent_change_24h: response.data.data.BTC.quote.USD.percent_change_24h
+          }
         });
       } catch (error: any) {
         console.error('Detailed CoinMarketCap Bitcoin Price API error:', error.response?.data || error.message);
-        
+
         const status = error.response?.status || 500;
         const message = error.response?.data?.status?.error_message || 'Failed to fetch Bitcoin price';
-        
+
         return NextResponse.json({ error: message }, { status });
       }
     } else {
@@ -77,17 +95,17 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(response.data);
       } catch (error: any) {
         console.error('CoinMarketCap API error:', error.message);
-        
+
         const status = error.response?.status || 500;
         const message = error.response?.data?.error || 'An error occurred while fetching market data';
-        
+
         return NextResponse.json({ error: message }, { status });
       }
     }
   } catch (error) {
     console.error('Unexpected error in crypto route:', error);
-    return NextResponse.json({ 
-      error: 'An unexpected error occurred' 
+    return NextResponse.json({
+      error: 'An unexpected error occurred'
     }, { status: 500 });
   }
 }
