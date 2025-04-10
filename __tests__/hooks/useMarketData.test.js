@@ -1,4 +1,4 @@
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import {
   useAsset,
   useAssetPrice,
@@ -88,12 +88,15 @@ describe('Market Data Hooks', () => {
 
   describe('useAssetPrice', () => {
     it('fetches price data correctly', async () => {
-      // Mock fetch function
-      const mockFetchFn = jest.fn().mockResolvedValue({
+      // Define mock price data
+      const mockPriceData = {
         symbol: 'BTC',
         priceInUSD: 50000,
         priceInBTC: 1
-      });
+      };
+
+      // Mock fetch function
+      const mockFetchFn = jest.fn().mockResolvedValue(mockPriceData);
 
       // Render the hook
       const { result, rerender } = renderHook(
@@ -118,11 +121,7 @@ describe('Market Data Hooks', () => {
 
       // Check the final state
       expect(result.current.loading).toBe(false);
-      expect(result.current.priceData).toEqual({
-        symbol: 'BTC',
-        priceInUSD: 50000,
-        priceInBTC: 1
-      });
+      expect(result.current.priceData).toEqual(mockPriceData);
       expect(mockFetchFn).toHaveBeenCalledWith('BTC');
 
       // Test with a different symbol
@@ -303,9 +302,10 @@ describe('Market Data Hooks', () => {
       expect(result.current.searchResults).toEqual([]);
 
       // Perform a search
-      await act(async () => {
-        await result.current.search('bitcoin');
-      });
+      result.current.search('bitcoin');
+
+      // Wait for the search to complete
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Check the final state
       expect(result.current.loading).toBe(false);
@@ -324,9 +324,10 @@ describe('Market Data Hooks', () => {
       const { result } = renderHook(() => useAssetSearch(mockSearchFn));
 
       // Perform a search with empty query
-      await act(async () => {
-        await result.current.search('');
-      });
+      result.current.search('');
+
+      // Wait for the search to complete
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Should not call the service
       expect(mockSearchFn).not.toHaveBeenCalled();

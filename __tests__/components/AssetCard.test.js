@@ -65,8 +65,8 @@ describe('AssetCard Component', () => {
     expect(screen.getByText('BTC')).toBeInTheDocument();
 
     // Check if price is displayed
-    expect(screen.getByText('$')).toBeInTheDocument();
-    expect(screen.getByText('50,000')).toBeInTheDocument();
+    const priceElement = screen.getByText(/\$50,000/);  // Use regex to match the price
+    expect(priceElement).toBeInTheDocument();
 
     // Check if price change is displayed
     expect(screen.getByText('+5.00%')).toBeInTheDocument();
