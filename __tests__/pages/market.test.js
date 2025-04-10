@@ -1,209 +1,150 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import MarketPage from '../../app/tracker/page';
-import { usePopularAssets, useAssetsByType, useAssetSearch } from '../../lib/hooks/useMarketData';
+import * as useMarketDataHook from '../../lib/hooks/useMarketData';
 
-// Mock the hooks
-jest.mock('../../lib/hooks/useMarketData', () => ({
-  usePopularAssets: jest.fn(),
-  useAssetsByType: jest.fn(),
-  useAssetSearch: jest.fn()
-}));
+// Mock child components
+jest.mock('../../components/AssetSearch', () => {
+  return function MockAssetSearch() {
+    return <div data-testid="mock-asset-search">Mock Asset Search</div>;
+  };
+});
 
-// Mock the AssetCard component
-jest.mock('../../components/AssetCard', () => {
-  return function MockAssetCard({ asset }) {
+jest.mock('../../components/AssetPriceTable', () => {
+  return function MockAssetPriceTable({ category }) {
     return (
-      <div data-testid="asset-card">
-        <div data-testid="asset-symbol">{asset.symbol}</div>
-        <div data-testid="asset-name">{asset.name}</div>
+      <div data-testid="mock-asset-price-table">
+        {category ? `Mock Asset Price Table for ${category}` : 'Mock Asset Price Table'}
       </div>
     );
   };
 });
 
-// Mock next/head
-jest.mock('next/head', () => {
-  return function MockHead({ children }) {
-    return <div data-testid="head">{children}</div>;
+// Mock React's useState
+jest.mock('react', () => {
+  const originalReact = jest.requireActual('react');
+  return {
+    ...originalReact,
+    useState: jest.fn((initialState) => {
+      const state = typeof initialState === 'function' 
+        ? initialState() 
+        : initialState;
+      const setState = jest.fn((newState) => {
+        state = typeof newState === 'function' ? newState(state) : newState;
+      });
+      return [state, setState];
+    })
   };
 });
 
+// Mock the useMarketData hook
+jest.mock('../../lib/hooks/useMarketData', () => ({
+  useMarketData: jest.fn()
+}));
+
 describe('Market Page', () => {
-  const mockPopularAssets = [
-    { symbol: 'BTC', name: 'Bitcoin', assetType: 'crypto' },
-    { symbol: 'ETH', name: 'Ethereum', assetType: 'crypto' },
-    { symbol: 'AAPL', name: 'Apple Inc', assetType: 'stock' }
-  ];
-
-  const mockCryptoAssets = [
-    { symbol: 'BTC', name: 'Bitcoin', assetType: 'crypto' },
-    { symbol: 'ETH', name: 'Ethereum', assetType: 'crypto' }
-  ];
-
-  const mockSearchResults = [
-    { symbol: 'BTC', name: 'Bitcoin', assetType: 'crypto' },
-    { symbol: 'BCH', name: 'Bitcoin Cash', assetType: 'crypto' }
-  ];
+  let mockSetSelectedCategory;
+  let mockSelectedCategory;
 
   beforeEach(() => {
+    // Reset mocks
     jest.clearAllMocks();
     
-    // Default mock implementations
-    usePopularAssets.mockReturnValue({
-      popularAssets: mockPopularAssets,
-      loading: false,
-      error: null,
-      refetch: jest.fn()
+    // Setup default mock for useState
+    mockSelectedCategory = 'All';
+    mockSetSelectedCategory = jest.fn((newCategory) => {
+      mockSelectedCategory = newCategory;
     });
-    
-    useAssetsByType.mockReturnValue({
-      assets: mockCryptoAssets,
-      loading: false,
-      error: null,
-      refetch: jest.fn()
+
+    React.useState.mockImplementation((initialState) => {
+      const state = typeof initialState === 'function' 
+        ? initialState() 
+        : initialState;
+      return [mockSelectedCategory, mockSetSelectedCategory];
     });
-    
-    useAssetSearch.mockReturnValue({
-      search: jest.fn(),
-      searchResults: [],
+
+    // Setup default mock for useMarketData
+    useMarketDataHook.useMarketData.mockReturnValue({
+      popularAssets: [],
       loading: false,
       error: null
     });
   });
 
-  it('renders the page title and search bar', () => {
-    render(<MarketPage />);
-    
-    // Check page title
-    expect(screen.getByText('Market Data')).toBeInTheDocument();
-    
-    // Check search bar
-    expect(screen.getByPlaceholderText('Search assets...')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Search' })).toBeInTheDocument();
-  });
-
-  it('renders asset type tabs', () => {
-    render(<MarketPage />);
-    
-    // Check asset type tabs
-    expect(screen.getByRole('button', { name: 'Popular' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Cryptocurrencies' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Stocks' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Precious Metals' })).toBeInTheDocument();
-  });
-
-  it('renders popular assets by default', () => {
-    render(<MarketPage />);
-    
-    // Check that popular assets are displayed
-    const assetCards = screen.getAllByTestId('asset-card');
-    expect(assetCards).toHaveLength(3);
-    
-    // Check specific assets
-    expect(screen.getByText('BTC')).toBeInTheDocument();
-    expect(screen.getByText('ETH')).toBeInTheDocument();
-    expect(screen.getByText('AAPL')).toBeInTheDocument();
-  });
-
-  it('switches to cryptocurrency assets when tab is clicked', () => {
-    render(<MarketPage />);
-    
-    // Click on Cryptocurrencies tab
-    fireEvent.click(screen.getByRole('button', { name: 'Cryptocurrencies' }));
-    
-    // Check that crypto assets are displayed
-    const assetCards = screen.getAllByTestId('asset-card');
-    expect(assetCards).toHaveLength(2);
-    
-    // Check specific assets
-    expect(screen.getByText('BTC')).toBeInTheDocument();
-    expect(screen.getByText('ETH')).toBeInTheDocument();
-    expect(screen.queryByText('AAPL')).not.toBeInTheDocument();
-  });
-
-  it('performs search when search form is submitted', async () => {
-    // Mock search function and results
-    const mockSearch = jest.fn();
-    useAssetSearch.mockReturnValue({
-      search: mockSearch,
-      searchResults: mockSearchResults,
+  it('renders market page components with default data', () => {
+    // Setup mock hook return value
+    useMarketDataHook.useMarketData.mockReturnValue({
+      popularAssets: [
+        { id: '1', symbol: 'BTC', name: 'Bitcoin' },
+        { id: '2', symbol: 'ETH', name: 'Ethereum' }
+      ],
       loading: false,
       error: null
     });
-    
+
     render(<MarketPage />);
-    
-    // Enter search query
-    const searchInput = screen.getByPlaceholderText('Search assets...');
-    fireEvent.change(searchInput, { target: { value: 'bitcoin' } });
-    
-    // Submit search form
-    fireEvent.submit(searchInput);
-    
-    // Check that search function was called
-    expect(mockSearch).toHaveBeenCalledWith('bitcoin');
-    
-    // Check that search results are displayed
-    const assetCards = screen.getAllByTestId('asset-card');
-    expect(assetCards).toHaveLength(2);
-    
-    // Check specific assets
-    expect(screen.getByText('BTC')).toBeInTheDocument();
-    expect(screen.getByText('BCH')).toBeInTheDocument();
+
+    // Check for components
+    expect(screen.getByTestId('mock-asset-search')).toBeInTheDocument();
+    expect(screen.getByTestId('mock-asset-price-table')).toBeInTheDocument();
   });
 
-  it('shows loading state when fetching data', () => {
-    // Mock loading state
-    usePopularAssets.mockReturnValue({
+  it('handles loading state', () => {
+    // Setup mock hook return value for loading state
+    useMarketDataHook.useMarketData.mockReturnValue({
       popularAssets: [],
       loading: true,
-      error: null,
-      refetch: jest.fn()
-    });
-    
-    render(<MarketPage />);
-    
-    // Check for loading spinner
-    expect(screen.getByRole('status')).toBeInTheDocument();
-    expect(screen.queryAllByTestId('asset-card')).toHaveLength(0);
-  });
-
-  it('shows empty state when no assets are found', () => {
-    // Mock empty results
-    usePopularAssets.mockReturnValue({
-      popularAssets: [],
-      loading: false,
-      error: null,
-      refetch: jest.fn()
-    });
-    
-    render(<MarketPage />);
-    
-    // Check for empty state message
-    expect(screen.getByText('No assets found')).toBeInTheDocument();
-    expect(screen.queryAllByTestId('asset-card')).toHaveLength(0);
-  });
-
-  it('shows empty search results message when search returns no results', () => {
-    // Mock empty search results
-    const mockSearch = jest.fn();
-    useAssetSearch.mockReturnValue({
-      search: mockSearch,
-      searchResults: [],
-      loading: false,
       error: null
     });
-    
+
     render(<MarketPage />);
-    
-    // Enter search query
-    const searchInput = screen.getByPlaceholderText('Search assets...');
-    fireEvent.change(searchInput, { target: { value: 'nonexistent' } });
-    
-    // Submit search form
-    fireEvent.submit(searchInput);
-    
-    // Check for empty search results message
-    expect(screen.getByText('No results found for "nonexistent"')).toBeInTheDocument();
+
+    // Check for loading indicator
+    expect(screen.getByText(/loading market data/i)).toBeInTheDocument();
+  });
+
+  it('handles error state', () => {
+    // Setup mock hook return value for error state
+    const errorMessage = 'Failed to fetch market data';
+    useMarketDataHook.useMarketData.mockReturnValue({
+      popularAssets: [],
+      loading: false,
+      error: errorMessage
+    });
+
+    render(<MarketPage />);
+
+    // Check for error message
+    expect(screen.getByText(errorMessage)).toBeInTheDocument();
+  });
+
+  it('initializes with default category', () => {
+    render(<MarketPage />);
+
+    // Verify the default category is 'All'
+    const allCategoryButton = screen.getByText('All');
+    expect(allCategoryButton).toHaveClass('asset-category-btn-active');
+  });
+
+  it('allows changing category', () => {
+    // Initial render with 'All' category
+    const { rerender } = render(<MarketPage />);
+
+    // Find and click the Stocks category button
+    const stocksButton = screen.getByText('Stocks');
+    fireEvent.click(stocksButton);
+
+    // Verify the setSelectedCategory was called with 'Stocks'
+    expect(mockSetSelectedCategory).toHaveBeenCalledWith('Stocks');
+
+    // Update the mock selected category to simulate state change
+    mockSelectedCategory = 'Stocks';
+
+    // Re-render to reflect the new state
+    rerender(<MarketPage />);
+
+    // Verify the asset price table reflects the selected category
+    const assetPriceTable = screen.getByTestId('mock-asset-price-table');
+    expect(assetPriceTable).toHaveTextContent('Mock Asset Price Table for Stocks');
   });
 });

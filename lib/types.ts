@@ -1,74 +1,76 @@
-export interface AssetData {
+// Asset Categories
+export type AssetCategory = 'Stocks' | 'Commodities' | 'Indices' | 'Cryptocurrency';
+
+// Market Asset Type
+export interface MarketAsset {
+  id?: string;
   symbol: string;
+  name?: string;
+  price?: number;
+  change?: number;
+  changePercent?: number;
+  type?: AssetCategory;
+}
+
+// Asset Data Type
+export interface AssetData {
+  id?: string;
+  symbol: string;
+  name?: string;
+  description?: string;
+  type?: AssetCategory;
+  currentPrice?: number;
   price: number;
   change: number;
   changePercent: number;
   priceInBTC: number;
   priceInUSD: number;
-  lastUpdated?: string; // Optional to maintain backward compatibility
+  historicalData?: HistoricalDataPoint[];
 }
 
+// Historical Data Point
 export interface HistoricalDataPoint {
-  date: Date | string;
+  date: string;
   price: number;
-  open?: number;
-  high?: number;
-  low?: number;
-  close?: number;
   volume?: number;
 }
 
-export interface CurrencyExchangeRate {
-  fromCurrency: string;
-  toCurrency: string;
-  exchangeRate: number;
-  lastRefreshed: Date;
+// Market Data Hook Type
+export interface MarketData {
+  asset: AssetData | null;
+  price: number | null;
+  historicalData: HistoricalDataPoint[] | null;
+  popularAssets: MarketAsset[];
+  searchResults: MarketAsset[];
+  loading: boolean;
+  error: string | null;
+  refetch: () => void;
 }
 
-export interface AlphaVantageStockResponse {
-  'Global Quote': {
-    '01. symbol': string;
-    '05. price': string;
-    '09. change': string;
-    '10. change percent': string;
+// Market Data Hook Options
+export interface MarketDataOptions {
+  symbol?: string | null;
+  type?: AssetCategory | null;
+  searchQuery?: string | null;
+  autoRefresh?: boolean;
+  refreshInterval?: number;
+  limit?: number;
+}
+
+// Utility function to create a default asset
+export function createDefaultAsset(partialAsset: Partial<AssetData> = {}): AssetData {
+  return {
+    symbol: partialAsset.symbol || '',
+    price: partialAsset.price || 0,
+    change: partialAsset.change || 0,
+    changePercent: partialAsset.changePercent || 0,
+    priceInBTC: partialAsset.priceInBTC || 0,
+    priceInUSD: partialAsset.priceInUSD || 0,
+    id: partialAsset.id,
+    name: partialAsset.name,
+    description: partialAsset.description,
+    type: partialAsset.type,
+    currentPrice: partialAsset.currentPrice,
+    historicalData: partialAsset.historicalData || []
   };
-}
-
-export interface AlphaVantageHistoricalResponse {
-  'Time Series (Daily)': {
-    [date: string]: {
-      '1. open': string;
-      '2. high': string;
-      '3. low': string;
-      '4. close': string;
-      '5. volume': string;
-    };
-  };
-}
-
-export interface AlphaVantageCryptoResponse {
-  'Time Series (Digital Currency Daily)': {
-    [date: string]: {
-      '4b. close (USD)': string;
-      '5. volume': string;
-    };
-  };
-}
-
-export interface AlphaVantageExchangeRateResponse {
-  'Realtime Currency Exchange Rate': {
-    '1. From_Currency Code': string;
-    '3. To_Currency Code': string;
-    '5. Exchange Rate': string;
-    '6. Last Refreshed': string;
-  };
-}
-
-export type AssetCategory = 'Stocks' | 'Commodities' | 'Indices' | 'Cryptocurrency';
-
-export interface MarketAsset {
-  symbol: string;
-  name: string;
-  type: AssetCategory;
-  image?: string;
 }

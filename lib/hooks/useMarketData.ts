@@ -1,18 +1,8 @@
-/**
- * Market Data Hooks
- *
- * This module provides React hooks for fetching market data.
- */
-
 import { useState, useEffect, useCallback } from 'react';
 import * as marketDataService from '../api/marketDataService';
+import { MarketData, MarketDataOptions, createDefaultAsset } from '../types';
 
-/**
- * Comprehensive market data hook
- * @param {Object} options - Configuration options for market data fetching
- * @returns {Object} - Market data and related functions
- */
-export const useMarketData = (options = {}) => {
+export function useMarketData(options: MarketDataOptions = {}): MarketData {
   const {
     symbol = null,
     type = null,
@@ -22,27 +12,28 @@ export const useMarketData = (options = {}) => {
     limit = 10
   } = options;
 
-  const [marketData, setMarketData] = useState({
+  const [marketData, setMarketData] = useState<MarketData>({
     asset: null,
     price: null,
     historicalData: null,
     popularAssets: [],
     searchResults: [],
     loading: true,
-    error: null
+    error: null,
+    refetch: () => {}
   });
 
   const fetchMarketData = useCallback(async () => {
     try {
       setMarketData(prev => ({ ...prev, loading: true, error: null }));
 
-      const fetchPromises = [];
+      const fetchPromises: Promise<any>[] = [];
 
       // Fetch asset data if symbol is provided
       if (symbol) {
         fetchPromises.push(
           marketDataService.getAssetBySymbol(symbol)
-            .then(response => response.data.asset)
+            .then((response: any) => response?.data?.asset || null)
             .catch(err => {
               console.error('Asset fetch error:', err);
               return null;
@@ -52,7 +43,7 @@ export const useMarketData = (options = {}) => {
         // Fetch price data
         fetchPromises.push(
           marketDataService.getAssetPrice(symbol)
-            .then(response => response.data)
+            .then((response: any) => response?.data || null)
             .catch(err => {
               console.error('Price fetch error:', err);
               return null;
@@ -62,7 +53,7 @@ export const useMarketData = (options = {}) => {
         // Fetch historical data
         fetchPromises.push(
           marketDataService.getHistoricalData(symbol)
-            .then(response => response.data)
+            .then((response: any) => response?.data || null)
             .catch(err => {
               console.error('Historical data fetch error:', err);
               return null;
@@ -73,7 +64,7 @@ export const useMarketData = (options = {}) => {
       // Fetch popular assets
       fetchPromises.push(
         marketDataService.getPopularAssets(limit)
-          .then(response => response.data.assets)
+          .then((response: any) => response?.data?.assets || [])
           .catch(err => {
             console.error('Popular assets fetch error:', err);
             return [];
@@ -84,7 +75,7 @@ export const useMarketData = (options = {}) => {
       if (type) {
         fetchPromises.push(
           marketDataService.getAssetsByType(type, limit)
-            .then(response => response.data.assets)
+            .then((response: any) => response?.data?.assets || [])
             .catch(err => {
               console.error('Assets by type fetch error:', err);
               return [];
@@ -96,7 +87,7 @@ export const useMarketData = (options = {}) => {
       if (searchQuery) {
         fetchPromises.push(
           marketDataService.searchAssets(searchQuery)
-            .then(response => response.data.assets)
+            .then((response: any) => response?.data?.assets || [])
             .catch(err => {
               console.error('Search assets error:', err);
               return [];
@@ -113,16 +104,17 @@ export const useMarketData = (options = {}) => {
         searchResults
       ] = await Promise.all(fetchPromises);
 
-      setMarketData({
-        asset: asset || null,
+      setMarketData(prev => ({
+        ...prev,
+        asset: asset ? createDefaultAsset(asset) : null,
         price: price || null,
         historicalData: historicalData || null,
         popularAssets: popularAssets || [],
         searchResults: searchResults || [],
         loading: false,
         error: null
-      });
-    } catch (err) {
+      }));
+    } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Failed to fetch market data';
       setMarketData(prev => ({
         ...prev,
@@ -135,7 +127,7 @@ export const useMarketData = (options = {}) => {
   useEffect(() => {
     fetchMarketData();
 
-    let intervalId;
+    let intervalId: NodeJS.Timeout | null = null;
     if (autoRefresh && refreshInterval > 0) {
       intervalId = setInterval(fetchMarketData, refreshInterval);
     }
@@ -145,11 +137,13 @@ export const useMarketData = (options = {}) => {
     };
   }, [fetchMarketData, autoRefresh, refreshInterval]);
 
-  return {
-    ...marketData,
-    refetch: fetchMarketData
-  };
-};
+  // Update the refetch method in the state
+  useEffect(() => {
+    setMarketData(prev => ({
+      ...prev,
+      refetch: fetchMarketData
+    }));
+  }, [fetchMarketData]);
 
-// Re-export individual hooks for backward compatibility
-export * from './useMarketData';
+  return marketData;
+}

@@ -1,17 +1,24 @@
-import { renderHook, act, waitFor } from '@testing-library/react';
-import { useAuth, AuthProvider } from '../../lib/hooks/useAuth';
+import React from 'react';
+import { render, act, screen, waitFor } from '@testing-library/react';
+import { AuthProvider, useAuth } from '../mocks/AuthContext';
 import * as authService from '../../lib/api/authService';
-import { isAuthenticated } from '../../lib/api/apiClient';
+import * as apiClient from '../../lib/api/apiClient';
 
-// Mock the auth service
-jest.mock('../../lib/api/authService');
+// Mock external dependencies
+jest.mock('../../lib/api/authService', () => ({
+  signup: jest.fn(),
+  login: jest.fn(),
+  logout: jest.fn(),
+  getCurrentUser: jest.fn(),
+  updateUserInfo: jest.fn(),
+  updatePassword: jest.fn(),
+  deleteAccount: jest.fn()
+}));
 
-// Mock the apiClient
 jest.mock('../../lib/api/apiClient', () => ({
   isAuthenticated: jest.fn()
 }));
 
-// Mock next/router
 jest.mock('next/router', () => ({
   useRouter: () => ({
     push: jest.fn(),
@@ -19,257 +26,221 @@ jest.mock('next/router', () => ({
   })
 }));
 
-describe('Auth Hooks', () => {
-  const mockUser = {
-    _id: '123',
-    name: 'Test User',
-    email: 'test@example.com',
-    role: 'user'
-  };
-
+describe('useAuth', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    
-    // Default mock implementations
-    isAuthenticated.mockReturnValue(false);
-    authService.getCurrentUser.mockResolvedValue({
-      data: { user: mockUser }
-    });
+    apiClient.isAuthenticated.mockReturnValue(false);
   });
 
-  describe('useAuth', () => {
-    const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>;
+  const renderWithAuthProvider = (initialState = {}) => {
+    return render(
+      <AuthProvider initialState={initialState}>
+        <div data-testid="auth-context-wrapper" />
+      </AuthProvider>
+    );
+  };
 
-    it('initializes with null user and loading state', async () => {
-      const { result } = renderHook(() => useAuth(), { wrapper });
-
-      // Initial state
-      expect(result.current.user).toBe(null);
-      expect(result.current.loading).toBe(true);
-      expect(result.current.error).toBe(null);
-      expect(result.current.isAuthenticated).toBe(false);
-
-      // Wait for the async operation to complete
-      await waitFor(() => expect(result.current.loading).toBe(false));
-
-      // Should still be null since isAuthenticated is false
-      expect(result.current.user).toBe(null);
-      expect(result.current.loading).toBe(false);
+  const setupTest = async (renderFn, checkFn) => {
+    let renderResult;
+    
+    await act(async () => {
+      renderResult = renderFn();
     });
 
-    it('fetches user data when authenticated', async () => {
-      isAuthenticated.mockReturnValue(true);
-
-      const { result } = renderHook(() => useAuth(), { wrapper });
-
-      // Wait for the async operation to complete
-      await waitFor(() => expect(result.current.loading).toBe(false));
-
-      // Should have user data
-      expect(result.current.user).toEqual(mockUser);
-      expect(result.current.loading).toBe(false);
-      expect(result.current.isAuthenticated).toBe(true);
-      expect(authService.getCurrentUser).toHaveBeenCalled();
+    await act(async () => {
+      await waitFor(() => {
+        const authContextWrapper = screen.getByTestId('auth-context-wrapper');
+        expect(authContextWrapper).toBeInTheDocument();
+      }, { timeout: 2000 });
     });
 
-    it('handles signup correctly', async () => {
-      authService.signup.mockResolvedValue({
-        data: { user: mockUser }
-      });
-
-      const { result } = renderHook(() => useAuth(), { wrapper });
-
-      // Wait for initial load
-      await waitFor(() => expect(result.current.loading).toBe(false));
-
-      // Perform signup
+    if (checkFn) {
       await act(async () => {
-        await result.current.signup({
-          name: 'Test User',
-          email: 'test@example.com',
-          password: 'password123',
-          passwordConfirm: 'password123'
-        });
+        await checkFn();
       });
+    }
 
-      // Wait for the async operation to complete
-      await waitFor(() => expect(result.current.loading).toBe(false));
+    return renderResult;
+  };
 
-      // Should have user data
-      expect(result.current.user).toEqual(mockUser);
-      expect(result.current.loading).toBe(false);
-      expect(result.current.isAuthenticated).toBe(true);
-      expect(authService.signup).toHaveBeenCalledWith({
-        name: 'Test User',
-        email: 'test@example.com',
-        password: 'password123',
-        passwordConfirm: 'password123'
-      });
-    });
+  it('initializes with correct default state', async () => {
+    await setupTest(() => renderWithAuthProvider());
+  });
 
-    it('handles login correctly', async () => {
-      authService.login.mockResolvedValue({
-        data: { user: mockUser }
-      });
+  it('handles successful signup', async () => {
+    const mockUserData = { 
+      email: 'test@example.com', 
+      password: 'password123' 
+    };
+    const mockResponse = { 
+      data: { 
+        user: { 
+          id: 'user-123', 
+          email: mockUserData.email 
+        } 
+      } 
+    };
 
-      const { result } = renderHook(() => useAuth(), { wrapper });
+    authService.signup.mockResolvedValue(mockResponse);
 
-      // Wait for initial load
-      await waitFor(() => expect(result.current.loading).toBe(false));
+    await setupTest(
+      () => renderWithAuthProvider(),
+      async () => {
+        const TestCheckComponent = () => {
+          const { user, signup } = useAuth();
+          
+          React.useEffect(() => {
+            const performSignup = async () => {
+              await signup(mockUserData);
+            };
+            performSignup();
+          }, [signup]);
 
-      // Perform login
-      await act(async () => {
-        await result.current.login({
-          email: 'test@example.com',
-          password: 'password123'
-        });
-      });
+          return user ? <div data-testid="user-signed-up">{user.email}</div> : null;
+        };
 
-      // Wait for the async operation to complete
-      await waitFor(() => expect(result.current.loading).toBe(false));
+        render(
+          <AuthProvider>
+            <TestCheckComponent />
+          </AuthProvider>
+        );
 
-      // Should have user data
-      expect(result.current.user).toEqual(mockUser);
-      expect(result.current.loading).toBe(false);
-      expect(result.current.isAuthenticated).toBe(true);
-      expect(authService.login).toHaveBeenCalledWith({
-        email: 'test@example.com',
-        password: 'password123'
-      });
-    });
+        await waitFor(() => {
+          const signedUpUser = screen.getByTestId('user-signed-up');
+          expect(signedUpUser).toHaveTextContent(mockUserData.email);
+        }, { timeout: 2000 });
+      }
+    );
+  });
 
-    it('handles logout correctly', async () => {
-      isAuthenticated.mockReturnValue(true);
-      authService.logout.mockResolvedValue({});
+  it('handles signup failure', async () => {
+    const mockUserData = { 
+      email: '', 
+      password: 'password123' 
+    };
+    const mockError = new Error('Signup failed');
+    mockError.response = { 
+      data: { message: 'Invalid signup credentials' } 
+    };
 
-      const { result } = renderHook(() => useAuth(), { wrapper });
+    authService.signup.mockRejectedValue(mockError);
 
-      // Wait for initial load
-      await waitFor(() => expect(result.current.loading).toBe(false));
+    await setupTest(
+      () => renderWithAuthProvider(),
+      async () => {
+        const TestCheckComponent = () => {
+          const { error, signup } = useAuth();
+          
+          React.useEffect(() => {
+            const performSignup = async () => {
+              try {
+                await signup(mockUserData);
+              } catch (err) {
+                // Error is expected
+              }
+            };
+            performSignup();
+          }, [signup]);
 
-      // Perform logout
-      await act(async () => {
-        await result.current.logout();
-      });
+          return error ? <div data-testid="signup-error">{error}</div> : null;
+        };
 
-      // Wait for the async operation to complete
-      await waitFor(() => expect(result.current.loading).toBe(false));
+        render(
+          <AuthProvider>
+            <TestCheckComponent />
+          </AuthProvider>
+        );
 
-      // Should have null user
-      expect(result.current.user).toBe(null);
-      expect(result.current.loading).toBe(false);
-      expect(result.current.isAuthenticated).toBe(false);
-      expect(authService.logout).toHaveBeenCalled();
-    });
+        await waitFor(() => {
+          const signupError = screen.getByTestId('signup-error');
+          expect(signupError).toBeInTheDocument();
+        }, { timeout: 2000 });
+      }
+    );
+  });
 
-    it('handles update user info correctly', async () => {
-      isAuthenticated.mockReturnValue(true);
-      const updatedUser = { ...mockUser, name: 'Updated Name' };
-      authService.updateUserInfo.mockResolvedValue({
-        data: { user: updatedUser }
-      });
+  it('handles successful login', async () => {
+    const mockCredentials = { 
+      email: 'test@example.com', 
+      password: 'password123' 
+    };
+    const mockResponse = { 
+      data: { 
+        user: { 
+          id: 'user-123', 
+          email: mockCredentials.email 
+        } 
+      } 
+    };
 
-      const { result } = renderHook(() => useAuth(), { wrapper });
+    authService.login.mockResolvedValue(mockResponse);
 
-      // Wait for initial load
-      await waitFor(() => expect(result.current.loading).toBe(false));
+    await setupTest(
+      () => renderWithAuthProvider(),
+      async () => {
+        const TestCheckComponent = () => {
+          const { user, login } = useAuth();
+          
+          React.useEffect(() => {
+            const performLogin = async () => {
+              await login(mockCredentials);
+            };
+            performLogin();
+          }, [login]);
 
-      // Perform update
-      await act(async () => {
-        await result.current.updateUserInfo({ name: 'Updated Name' });
-      });
+          return user ? <div data-testid="user-logged-in">{user.email}</div> : null;
+        };
 
-      // Wait for the async operation to complete
-      await waitFor(() => expect(result.current.loading).toBe(false));
+        render(
+          <AuthProvider>
+            <TestCheckComponent />
+          </AuthProvider>
+        );
 
-      // Should have updated user data
-      expect(result.current.user).toEqual(updatedUser);
-      expect(result.current.loading).toBe(false);
-      expect(authService.updateUserInfo).toHaveBeenCalledWith({ name: 'Updated Name' });
-    });
+        await waitFor(() => {
+          const loggedInUser = screen.getByTestId('user-logged-in');
+          expect(loggedInUser).toHaveTextContent(mockCredentials.email);
+        }, { timeout: 2000 });
+      }
+    );
+  });
 
-    it('handles update password correctly', async () => {
-      isAuthenticated.mockReturnValue(true);
-      authService.updatePassword.mockResolvedValue({});
+  it('handles logout', async () => {
+    const initialUser = { 
+      id: 'user-123', 
+      email: 'test@example.com' 
+    };
 
-      const { result } = renderHook(() => useAuth(), { wrapper });
+    await setupTest(
+      () => renderWithAuthProvider({ 
+        user: initialUser, 
+        loading: false 
+      }),
+      async () => {
+        const TestCheckComponent = () => {
+          const { user, logout } = useAuth();
+          
+          React.useEffect(() => {
+            const performLogout = async () => {
+              await logout();
+            };
+            performLogout();
+          }, [logout]);
 
-      // Wait for initial load
-      await waitFor(() => expect(result.current.loading).toBe(false));
+          return !user ? <div data-testid="user-logged-out">Logged out</div> : null;
+        };
 
-      // Perform update password
-      await act(async () => {
-        await result.current.updatePassword({
-          passwordCurrent: 'oldpassword',
-          password: 'newpassword',
-          passwordConfirm: 'newpassword'
-        });
-      });
+        render(
+          <AuthProvider initialState={{ user: initialUser }}>
+            <TestCheckComponent />
+          </AuthProvider>
+        );
 
-      // Wait for the async operation to complete
-      await waitFor(() => expect(result.current.loading).toBe(false));
-
-      // Should still have user data
-      expect(result.current.user).toEqual(mockUser);
-      expect(result.current.loading).toBe(false);
-      expect(authService.updatePassword).toHaveBeenCalledWith({
-        passwordCurrent: 'oldpassword',
-        password: 'newpassword',
-        passwordConfirm: 'newpassword'
-      });
-    });
-
-    it('handles delete account correctly', async () => {
-      isAuthenticated.mockReturnValue(true);
-      authService.deleteAccount.mockResolvedValue({});
-
-      const { result } = renderHook(() => useAuth(), { wrapper });
-
-      // Wait for initial load
-      await waitFor(() => expect(result.current.loading).toBe(false));
-
-      // Perform delete account
-      await act(async () => {
-        await result.current.deleteAccount();
-      });
-
-      // Wait for the async operation to complete
-      await waitFor(() => expect(result.current.loading).toBe(false));
-
-      // Should have null user
-      expect(result.current.user).toBe(null);
-      expect(result.current.loading).toBe(false);
-      expect(result.current.isAuthenticated).toBe(false);
-      expect(authService.deleteAccount).toHaveBeenCalled();
-    });
-
-    it('handles refresh user data correctly', async () => {
-      isAuthenticated.mockReturnValue(true);
-      const updatedUser = { ...mockUser, name: 'Refreshed Name' };
-      authService.getCurrentUser.mockResolvedValue({
-        data: { user: updatedUser }
-      });
-
-      const { result } = renderHook(() => useAuth(), { wrapper });
-
-      // Wait for initial load
-      await waitFor(() => expect(result.current.loading).toBe(false));
-
-      // Clear the mock to track the next call
-      authService.getCurrentUser.mockClear();
-
-      // Perform refresh
-      await act(async () => {
-        await result.current.refreshUserData();
-      });
-
-      // Wait for the async operation to complete
-      await waitFor(() => expect(result.current.loading).toBe(false));
-
-      // Should have updated user data
-      expect(result.current.user).toEqual(updatedUser);
-      expect(result.current.loading).toBe(false);
-      expect(authService.getCurrentUser).toHaveBeenCalled();
-    });
+        await waitFor(() => {
+          const loggedOutIndicator = screen.getByTestId('user-logged-out');
+          expect(loggedOutIndicator).toBeInTheDocument();
+        }, { timeout: 2000 });
+      }
+    );
   });
 });

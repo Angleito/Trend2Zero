@@ -8,15 +8,15 @@ interface MongooseCache {
   promise: Promise<mongoose.Mongoose> | null;
 }
 
+// Custom interface to extend the global object with mongoose property
+interface CustomGlobal {
+  mongoose?: MongooseCache;
+}
+
 // Extend the global object with our mongoose cache type
 declare global {
   // eslint-disable-next-line no-var
   var mongoose: MongooseCache | undefined;
-}
-
-// Make TypeScript happy with the global.mongoose access
-interface Global {
-  mongoose?: MongooseCache;
 }
 
 /**
@@ -24,10 +24,10 @@ interface Global {
  * in development. This prevents connections growing exponentially
  * during API Route usage.
  */
-let cached: MongooseCache = (global as unknown as Global).mongoose ?? { conn: null, promise: null };
+let cached: MongooseCache = (globalThis as CustomGlobal).mongoose ?? { conn: null, promise: null };
 
 // Ensure global.mongoose is set
-(global as unknown as Global).mongoose = cached;
+(globalThis as CustomGlobal).mongoose = cached;
 
 async function dbConnect(): Promise<mongoose.Connection> {
   // If connection already exists, return it
