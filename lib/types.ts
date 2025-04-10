@@ -8,13 +8,13 @@ export interface AssetData {
 }
 
 export interface HistoricalDataPoint {
-  date: Date;
+  date: Date | string;
   price: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
+  open?: number;
+  high?: number;
+  low?: number;
+  close?: number;
+  volume?: number;
 }
 
 export interface CurrencyExchangeRate {
