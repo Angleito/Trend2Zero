@@ -1,0 +1,41 @@
+{
+  "kind": "singleType",
+  "collectionName": "market_overviews",
+  "info": {
+    "singularName": "market-overview",
+    "pluralName": "market-overviews",
+    "displayName": "Market Overview"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "marketStatus": {
+      "type": "enumeration",
+      "enum": [
+        "open",
+        "closed",
+        "pre-market",
+        "after-hours"
+      ]
+    },
+    "lastUpdated": {
+      "type": "datetime"
+    },
+    "marketSummary": {
+      "type": "richtext"
+    },
+    "indices": {
+      "displayName": "Indices",
+      "type": "component",
+      "repeatable": true,
+      "component": "index.indicies"
+    },
+    "topMovers": {
+      "displayName": "TopMover",
+      "type": "component",
+      "repeatable": true,
+      "component": "top-mover.top-mover"
+    }
+  }
+}

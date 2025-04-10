@@ -1,68 +1,116 @@
 import axios from 'axios';
 
-// Strapi API configuration
-const STRAPI_API_URL = process.env.STRAPI_API_URL || 'http://localhost:1337';
-const STRAPI_API_TOKEN = process.env.STRAPI_API_TOKEN;
-const STRAPI_USERNAME = process.env.STRAPI_USERNAME;
-const STRAPI_PASSWORD = process.env.STRAPI_PASSWORD;
+const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL || 'http://localhost:1337';
 
-// Create axios instance for Strapi
-const strapiAxios = axios.create({
-  baseURL: `${STRAPI_API_URL}/api`,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+export interface StrapiResponse<T> {
+  data: Array<{
+    id: number;
+    attributes: T;
+  }>;
+  meta: {
+    pagination?: {
+      page: number;
+      pageSize: number;
+      pageCount: number;
+      total: number;
+    };
+  };
+}
 
-// Add authentication if needed
-export const authenticateStrapi = async () => {
-  try {
-    if (STRAPI_API_TOKEN) {
-      strapiAxios.defaults.headers.common['Authorization'] = `Bearer ${STRAPI_API_TOKEN}`;
-      return true;
-    }
-
-    // If you're using username/password authentication instead of API token
-    if (STRAPI_USERNAME && STRAPI_PASSWORD) {
-      const response = await strapiAxios.post('/auth/local', {
-        identifier: STRAPI_USERNAME,
-        password: STRAPI_PASSWORD,
-      });
-
-      const { jwt } = response.data;
-      strapiAxios.defaults.headers.common['Authorization'] = `Bearer ${jwt}`;
-      return true;
-    }
-
-    return false;
-  } catch (error) {
-    console.error('Failed to authenticate with Strapi:', error);
-    return false;
-  }
-};
-
-// Generic function to fetch content from Strapi
-export const fetchContent = async <T>(
-  contentType: string,
-  params: Record<string, any> = {}
-): Promise<T> => {
-  try {
-    // Authenticate if needed
-    if (!strapiAxios.defaults.headers.common['Authorization']) {
-      await authenticateStrapi();
-    }
-
-    // Fetch data from Strapi
-    const response = await strapiAxios.get(`/${contentType}`, {
-      params,
+export const strapiClient = {
+  async getBlogPosts(params: Record<string, any> = {}) {
+    const response = await axios.get(`${STRAPI_URL}/api/blog-posts`, { 
+      params: {
+        ...params,
+        populate: '*'
+      }
     });
+    return response.data as StrapiResponse<BlogPost>;
+  },
 
-    return response.data as T;
-  } catch (error) {
-    console.error(`Error fetching ${contentType} from Strapi:`, error);
-    throw error;
+  async getAssets(params: Record<string, any> = {}) {
+    const response = await axios.get(`${STRAPI_URL}/api/assets`, { 
+      params: {
+        ...params,
+        populate: '*'
+      }
+    });
+    return response.data as StrapiResponse<Asset>;
+  },
+
+  async getMarketOverview(params: Record<string, any> = {}) {
+    const response = await axios.get(`${STRAPI_URL}/api/market-overview`, { 
+      params: {
+        ...params,
+        populate: '*'
+      }
+    });
+    return response.data;
+  },
+
+  async getHistoricalData(params: Record<string, any> = {}) {
+    const response = await axios.get(`${STRAPI_URL}/api/historical-data-entries`, { 
+      params: {
+        ...params,
+        populate: '*'
+      }
+    });
+    return response.data as StrapiResponse<HistoricalData>;
   }
 };
 
-// Export the axios instance for direct use
-export default strapiAxios;
+export interface BlogPost {
+  title: string;
+  content: string;
+  slug: string;
+  excerpt?: string;
+  author?: string;
+  category?: string;
+  publishedAt: string;
+}
+
+export interface Asset {
+  name: string;
+  symbol: string;
+  assetType: 'stock' | 'crypto' | 'forex' | 'commodity' | 'index';
+  description?: string;
+  currentPrice: number;
+  priceChange?: number;
+  priceChangePercent?: number;
+  marketCap?: number;
+  volume24h?: number;
+  lastUpdated: string;
+}
+
+export interface HistoricalData {
+  date: string;
+  open?: number;
+  high?: number;
+  low?: number;
+  close: number;
+  volume?: number;
+  asset?: {
+    data: {
+      id: number;
+      attributes: Asset;
+    };
+  };
+}
+
+export interface MarketOverview {
+  marketStatus: 'open' | 'closed' | 'pre-market' | 'after-hours';
+  lastUpdated: string;
+  marketSummary?: string;
+  indices: Array<{
+    Name: string;
+    Value: number;
+    Change: number;
+  }>;
+  topMovers: Array<{
+    Symbol: string;
+    Name: string;
+    Price: number;
+    Change: number;
+    ChangePercent: number;
+  }>;
+}

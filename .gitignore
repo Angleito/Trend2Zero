@@ -137,3 +137,10 @@ mcp_config.json
 mcp_credentials.json
 .smithery/
 .modelcontextprotocol/
+.env.example
+strapi-backend/src/extensions/.gitkeep
+strapi-backend/README.md
+docs/strapi-integration.md
+strapi-backend/config/admin.ts
+strapi-backend/src/api/angleito/routes/angleito.ts
+strapi-backend/src/api/angleito/services/angleito.ts

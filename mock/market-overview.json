@@ -1,0 +1,59 @@
+{
+  "marketStatus": "open",
+  "lastUpdated": "2025-04-10T22:26:00Z",
+  "indices": [
+    {
+      "name": "S&P 500",
+      "value": 4500.25,
+      "change": 15.75
+    },
+    {
+      "name": "Nasdaq", 
+      "value": 14200.50,
+      "change": 75.25
+    },
+    {
+      "name": "Dow Jones",
+      "value": 35750.30,
+      "change": -50.20
+    }
+  ],
+  "topMovers": [
+    {
+      "symbol": "BTC",
+      "name": "Bitcoin",
+      "price": 50000,
+      "change": 1500,
+      "changePercent": 3.1
+    },
+    {
+      "symbol": "ETH", 
+      "name": "Ethereum",
+      "price": 3000,
+      "change": 100,
+      "changePercent": 3.45
+    },
+    {
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "price": 175.25,
+      "change": -2.30,
+      "changePercent": -1.30
+    },
+    {
+      "symbol": "MSFT",
+      "name": "Microsoft",
+      "price": 310.75,
+      "change": 5.25,
+      "changePercent": 1.72
+    },
+    {
+      "symbol": "TSLA",
+      "name": "Tesla",
+      "price": 850.50,
+      "change": 25.75,
+      "changePercent": 3.12
+    }
+  ],
+  "marketSummary": "Markets are generally positive today with technology and cryptocurrency sectors leading the gains."
+}

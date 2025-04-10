@@ -1,0 +1,57 @@
+{
+  "kind": "collectionType",
+  "collectionName": "assets",
+  "info": {
+    "singularName": "asset",
+    "pluralName": "assets",
+    "displayName": "Asset"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "name": {
+      "type": "string"
+    },
+    "symbol": {
+      "type": "string"
+    },
+    "assetType": {
+      "type": "enumeration",
+      "enum": [
+        "stock",
+        "crypto",
+        "forex",
+        "commodity",
+        "index"
+      ]
+    },
+    "description": {
+      "type": "blocks"
+    },
+    "currentPrice": {
+      "type": "decimal"
+    },
+    "priceChange": {
+      "type": "decimal"
+    },
+    "priceChangePercent": {
+      "type": "decimal"
+    },
+    "marketCap": {
+      "type": "biginteger"
+    },
+    "volume24h": {
+      "type": "biginteger"
+    },
+    "lastUpdated": {
+      "type": "datetime"
+    },
+    "historicalData": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::historical-data.historical-data",
+      "mappedBy": "asset"
+    }
+  }
+}
