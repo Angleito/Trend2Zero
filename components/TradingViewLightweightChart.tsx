@@ -39,10 +39,17 @@ const TradingViewLightweightChart: React.FC<TradingViewLightweightChartProps> = 
         const historicalData = await marketService.getHistoricalData(symbol, days);
 
         // Format data for the chart
-        const chartData: LineData[] = historicalData.map((dataPoint: HistoricalDataPoint) => ({
-          time: Math.floor(dataPoint.date.getTime() / 1000) as any,
-          value: dataPoint.price,
-        }));
+        const chartData: LineData[] = historicalData.map((dataPoint: HistoricalDataPoint) => {
+          // Handle both Date objects and ISO strings
+          const timestamp = dataPoint.date instanceof Date
+            ? dataPoint.date.getTime()
+            : new Date(dataPoint.date).getTime();
+
+          return {
+            time: Math.floor(timestamp / 1000) as any,
+            value: dataPoint.price,
+          };
+        });
 
         if (chartData.length === 0) {
           throw new Error('No historical data available');

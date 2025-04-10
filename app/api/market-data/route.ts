@@ -315,9 +315,23 @@ function getMockHistoricalData(symbol: string) {
     // Update base value for next day
     baseValue = price;
 
+    // Generate more realistic data with open, high, low, close, and volume
+    const open = price * (1 - 0.005 + Math.random() * 0.01);
+    const high = price * (1 + 0.005 + Math.random() * 0.01);
+    const low = price * (1 - 0.005 - Math.random() * 0.01);
+    const close = price;
+    const volume = symbol.toUpperCase() === 'BTC' ?
+      1000000000 + Math.random() * 500000000 :
+      1000000 + Math.random() * 500000;
+
     result.push({
-      date: date.toISOString().split('T')[0],
-      price: parseFloat(price.toFixed(2))
+      date: date.toISOString(),
+      price: parseFloat(price.toFixed(2)),
+      open: parseFloat(open.toFixed(2)),
+      high: parseFloat(high.toFixed(2)),
+      low: parseFloat(low.toFixed(2)),
+      close: parseFloat(close.toFixed(2)),
+      volume: Math.round(volume)
     });
   }
 
