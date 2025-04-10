@@ -23,28 +23,61 @@ jobs:
     - name: Install dependencies
       run: |
         npm ci
+        npm install -g wait-on
         npx playwright install --with-deps
 
     - name: Start server in background
       run: |
+        # Start the server and save the process ID
+        echo "Starting server..."
         nohup npm run dev > server.log 2>&1 &
-        sleep 15  # Give the server time to start
-        # Check if server is running
-        curl -s http://localhost:3000 || (cat server.log && exit 1)
+        echo $! > server.pid
+
+        # Wait for the server to be ready
+        echo "Waiting for server to be ready..."
+        npx wait-on http://localhost:3000 -t 60000 || (cat server.log && exit 1)
+
+        # Verify the test page is accessible
+        echo "Checking test page..."
+        curl -s http://localhost:3000/test-page > /dev/null || (echo "Test page not accessible" && cat server.log && exit 1)
+        echo "Server is ready!"
+
+    - name: Debug environment
+      run: |
+        echo "Checking server status..."
+        ps aux | grep node
+        echo "Checking network ports..."
+        netstat -tuln || ss -tuln || echo "Network tools not available"
+        echo "Checking server log..."
+        tail -n 20 server.log
 
     - name: Run Playwright tests
       run: |
         # Run only the GitHub Actions compatibility test
-        npx playwright test tests/github-actions.spec.js
+        npx playwright test tests/github-actions.spec.js --config=playwright.config.js
       env:
         # Increase Node.js memory limit
         NODE_OPTIONS: --max_old_space_size=4096
+        # Tell Playwright we're in CI
+        CI: true
 
     - name: Collect server logs
-      if: failure()
+      if: always()
       run: |
         # Collect any server logs for debugging
         cat server.log || echo "No server logs found"
+
+    - name: Stop server
+      if: always()
+      run: |
+        # Stop the server if it's still running
+        if [ -f server.pid ]; then
+          echo "Stopping server..."
+          kill $(cat server.pid) || true
+          echo "Server stopped"
+        else
+          echo "No server PID file found"
+        fi
 
     - name: Upload Playwright report
       uses: actions/upload-artifact@v4
