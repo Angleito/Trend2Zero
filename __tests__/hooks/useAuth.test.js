@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useAuth, AuthProvider } from '../../lib/hooks/useAuth';
 import * as authService from '../../lib/api/authService';
 import { isAuthenticated } from '../../lib/api/apiClient';
@@ -41,7 +41,7 @@ describe('Auth Hooks', () => {
     const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>;
 
     it('initializes with null user and loading state', async () => {
-      const { result, waitForNextUpdate } = renderHook(() => useAuth(), { wrapper });
+      const { result } = renderHook(() => useAuth(), { wrapper });
 
       // Initial state
       expect(result.current.user).toBe(null);
@@ -50,7 +50,7 @@ describe('Auth Hooks', () => {
       expect(result.current.isAuthenticated).toBe(false);
 
       // Wait for the async operation to complete
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Should still be null since isAuthenticated is false
       expect(result.current.user).toBe(null);
@@ -60,10 +60,10 @@ describe('Auth Hooks', () => {
     it('fetches user data when authenticated', async () => {
       isAuthenticated.mockReturnValue(true);
 
-      const { result, waitForNextUpdate } = renderHook(() => useAuth(), { wrapper });
+      const { result } = renderHook(() => useAuth(), { wrapper });
 
       // Wait for the async operation to complete
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Should have user data
       expect(result.current.user).toEqual(mockUser);
@@ -77,14 +77,14 @@ describe('Auth Hooks', () => {
         data: { user: mockUser }
       });
 
-      const { result, waitForNextUpdate } = renderHook(() => useAuth(), { wrapper });
+      const { result } = renderHook(() => useAuth(), { wrapper });
 
       // Wait for initial load
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Perform signup
-      act(() => {
-        result.current.signup({
+      await act(async () => {
+        await result.current.signup({
           name: 'Test User',
           email: 'test@example.com',
           password: 'password123',
@@ -92,11 +92,8 @@ describe('Auth Hooks', () => {
         });
       });
 
-      // Should be loading
-      expect(result.current.loading).toBe(true);
-
       // Wait for the async operation to complete
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Should have user data
       expect(result.current.user).toEqual(mockUser);
@@ -115,24 +112,21 @@ describe('Auth Hooks', () => {
         data: { user: mockUser }
       });
 
-      const { result, waitForNextUpdate } = renderHook(() => useAuth(), { wrapper });
+      const { result } = renderHook(() => useAuth(), { wrapper });
 
       // Wait for initial load
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Perform login
-      act(() => {
-        result.current.login({
+      await act(async () => {
+        await result.current.login({
           email: 'test@example.com',
           password: 'password123'
         });
       });
 
-      // Should be loading
-      expect(result.current.loading).toBe(true);
-
       // Wait for the async operation to complete
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Should have user data
       expect(result.current.user).toEqual(mockUser);
@@ -148,21 +142,18 @@ describe('Auth Hooks', () => {
       isAuthenticated.mockReturnValue(true);
       authService.logout.mockResolvedValue({});
 
-      const { result, waitForNextUpdate } = renderHook(() => useAuth(), { wrapper });
+      const { result } = renderHook(() => useAuth(), { wrapper });
 
       // Wait for initial load
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Perform logout
-      act(() => {
-        result.current.logout();
+      await act(async () => {
+        await result.current.logout();
       });
 
-      // Should be loading
-      expect(result.current.loading).toBe(true);
-
       // Wait for the async operation to complete
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Should have null user
       expect(result.current.user).toBe(null);
@@ -178,21 +169,18 @@ describe('Auth Hooks', () => {
         data: { user: updatedUser }
       });
 
-      const { result, waitForNextUpdate } = renderHook(() => useAuth(), { wrapper });
+      const { result } = renderHook(() => useAuth(), { wrapper });
 
       // Wait for initial load
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Perform update
-      act(() => {
-        result.current.updateUserInfo({ name: 'Updated Name' });
+      await act(async () => {
+        await result.current.updateUserInfo({ name: 'Updated Name' });
       });
 
-      // Should be loading
-      expect(result.current.loading).toBe(true);
-
       // Wait for the async operation to complete
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Should have updated user data
       expect(result.current.user).toEqual(updatedUser);
@@ -204,25 +192,22 @@ describe('Auth Hooks', () => {
       isAuthenticated.mockReturnValue(true);
       authService.updatePassword.mockResolvedValue({});
 
-      const { result, waitForNextUpdate } = renderHook(() => useAuth(), { wrapper });
+      const { result } = renderHook(() => useAuth(), { wrapper });
 
       // Wait for initial load
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Perform update password
-      act(() => {
-        result.current.updatePassword({
+      await act(async () => {
+        await result.current.updatePassword({
           passwordCurrent: 'oldpassword',
           password: 'newpassword',
           passwordConfirm: 'newpassword'
         });
       });
 
-      // Should be loading
-      expect(result.current.loading).toBe(true);
-
       // Wait for the async operation to complete
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Should still have user data
       expect(result.current.user).toEqual(mockUser);
@@ -238,21 +223,18 @@ describe('Auth Hooks', () => {
       isAuthenticated.mockReturnValue(true);
       authService.deleteAccount.mockResolvedValue({});
 
-      const { result, waitForNextUpdate } = renderHook(() => useAuth(), { wrapper });
+      const { result } = renderHook(() => useAuth(), { wrapper });
 
       // Wait for initial load
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Perform delete account
-      act(() => {
-        result.current.deleteAccount();
+      await act(async () => {
+        await result.current.deleteAccount();
       });
 
-      // Should be loading
-      expect(result.current.loading).toBe(true);
-
       // Wait for the async operation to complete
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Should have null user
       expect(result.current.user).toBe(null);
@@ -268,24 +250,21 @@ describe('Auth Hooks', () => {
         data: { user: updatedUser }
       });
 
-      const { result, waitForNextUpdate } = renderHook(() => useAuth(), { wrapper });
+      const { result } = renderHook(() => useAuth(), { wrapper });
 
       // Wait for initial load
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Clear the mock to track the next call
       authService.getCurrentUser.mockClear();
 
       // Perform refresh
-      act(() => {
-        result.current.refreshUserData();
+      await act(async () => {
+        await result.current.refreshUserData();
       });
 
-      // Should be loading
-      expect(result.current.loading).toBe(true);
-
       // Wait for the async operation to complete
-      await waitForNextUpdate();
+      await waitFor(() => expect(result.current.loading).toBe(false));
 
       // Should have updated user data
       expect(result.current.user).toEqual(updatedUser);

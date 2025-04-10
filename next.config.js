@@ -10,7 +10,17 @@ const nextConfig = {
   
   // Optional: Add webpack configuration if needed
   webpack: (config, { isServer }) => {
-    // Example: Add custom webpack configuration
+    // Ensure compatibility with Node.js modules
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        url: require.resolve('url/'), // Provide a polyfill for the 'url' module
+      };
+    }
+
+    // Optimize module resolution
+    config.resolve.extensions.push('.ts', '.tsx');
+
     return config;
   }
 };

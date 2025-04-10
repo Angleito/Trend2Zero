@@ -1,22 +1,21 @@
 // Learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
 
-// Mock Next.js router
-jest.mock('next/router', () => ({
+// Polyfill for TextEncoder
+import { TextEncoder, TextDecoder } from 'util';
+global.TextEncoder = TextEncoder;
+global.TextDecoder = TextDecoder;
+
+// Mock Next.js navigation
+jest.mock('next/navigation', () => ({
+  useParams: () => ({
+    symbol: 'BTC'
+  }),
   useRouter: () => ({
     push: jest.fn(),
     replace: jest.fn(),
-    prefetch: jest.fn(),
-    back: jest.fn(),
-    pathname: '/',
-    query: {},
-    asPath: '/',
-    events: {
-      on: jest.fn(),
-      off: jest.fn(),
-      emit: jest.fn(),
-    },
-  }),
+    back: jest.fn()
+  })
 }));
 
 // Mock next/image

@@ -254,7 +254,8 @@ export class ExternalApiService {
 
       const cryptoData = response.data.data[symbol];
       const usdQuote = cryptoData.quote.USD;
-      const btcQuote = cryptoData.quote.BTC || { price: usdQuote.price / this.getBitcoinPrice() };
+      const bitcoinPrice = await this.getBitcoinPrice();
+      const btcQuote = cryptoData.quote.BTC || { price: usdQuote.price / bitcoinPrice };
 
       return {
         symbol,
@@ -263,7 +264,7 @@ export class ExternalApiService {
         changePercent: usdQuote.percent_change_24h,
         priceInBTC: btcQuote.price,
         priceInUSD: usdQuote.price,
-        lastUpdated: new Date(usdQuote.last_updated)
+        lastUpdated: new Date(usdQuote.last_updated).toISOString()
       };
     } catch (error) {
       console.error(`Error fetching crypto price for ${symbol}:`, error);
@@ -306,7 +307,7 @@ export class ExternalApiService {
         changePercent,
         priceInBTC,
         priceInUSD: price,
-        lastUpdated: new Date()
+        lastUpdated: new Date().toISOString()
       };
     } catch (error) {
       console.error(`Error fetching stock price for ${symbol}:`, error);
@@ -347,7 +348,7 @@ export class ExternalApiService {
         changePercent: 0,
         priceInBTC,
         priceInUSD: rate,
-        lastUpdated: new Date(response.data.timestamp * 1000)
+        lastUpdated: new Date(response.data.timestamp * 1000).toISOString()
       };
     } catch (error) {
       console.error(`Error fetching commodity price for ${symbol}:`, error);

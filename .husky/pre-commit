@@ -1,5 +1,5 @@
 #!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
+# Husky pre-commit hook
 
 # Run linting
 echo "🔍 Running linting..."

@@ -219,7 +219,15 @@ export class MongoDbCacheService {
         return null;
       }
 
-      return cache.data.map(point => ({
+      return cache.data.map((point: {
+        date: Date;
+        price: number;
+        open?: number;
+        high?: number;
+        low?: number;
+        close?: number;
+        volume?: number;
+      }) => ({
         date: point.date,
         price: point.price,
         open: point.open,

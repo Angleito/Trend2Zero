@@ -14,6 +14,7 @@ const customJestConfig = {
     '^@/components/(.*)$': '<rootDir>/components/$1',
     '^@/pages/(.*)$': '<rootDir>/pages/$1',
     '^@/lib/(.*)$': '<rootDir>/lib/$1',
+    '^@/app/(.*)$': '<rootDir>/app/$1'
   },
   testPathIgnorePatterns: [
     '<rootDir>/node_modules/',
@@ -21,11 +22,14 @@ const customJestConfig = {
     '<rootDir>/backend/',
     '<rootDir>/tests/.*\\.spec\\.js$'
   ],
+  testEnvironmentOptions: {
+    customExportConditions: ['']
+  },
   collectCoverage: true,
   collectCoverageFrom: [
     'components/**/*.{js,jsx,ts,tsx}',
     'lib/**/*.{js,jsx,ts,tsx}',
-    'pages/**/*.{js,jsx,ts,tsx}',
+    'app/**/*.{js,jsx,ts,tsx}',
     '!**/*.d.ts',
     '!**/node_modules/**',
     '!**/.next/**',
@@ -39,6 +43,13 @@ const customJestConfig = {
       statements: 70,
     },
   },
+  globals: {
+    'ts-jest': {
+      tsconfig: {
+        jsx: 'react'
+      }
+    }
+  }
 };
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

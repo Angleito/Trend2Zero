@@ -1,34 +1,23 @@
 import axios from 'axios';
-import apiClient, { setAuthToken, getAuthToken, isAuthenticated, axiosInstance } from '../../lib/api/apiClient';
+import apiClient, { setAuthToken, getAuthToken, isAuthenticated } from '../../lib/api/apiClient';
 
-// Mock axios
-jest.mock('axios', () => {
-  const mockAxios = {
-    create: jest.fn(() => mockAxios),
-    interceptors: {
-      request: { use: jest.fn(), eject: jest.fn() },
-      response: { use: jest.fn(), eject: jest.fn() }
-    },
-    defaults: { baseURL: '' }
-  };
-  return mockAxios;
-});
+const mockAxiosCreate = jest.fn();
+const mockRequestUse = jest.fn();
+const mockResponseUse = jest.fn();
 
-// Mock the exported axiosInstance
-jest.mock('../../lib/api/apiClient', () => {
-  const originalModule = jest.requireActual('../../lib/api/apiClient');
-  return {
-    ...originalModule,
-    axiosInstance: {
-      create: jest.fn(() => originalModule.default),
-      interceptors: {
-        request: { use: jest.fn(), eject: jest.fn() },
-        response: { use: jest.fn(), eject: jest.fn() }
-      },
-      defaults: { baseURL: '' }
-    }
-  };
-});
+// Create mock instance before using it in mock
+const mockAxiosInstance = {
+  interceptors: {
+    request: { use: mockRequestUse },
+    response: { use: mockResponseUse }
+  },
+  defaults: { baseURL: '' }
+};
+
+// Mock axios after creating the instance
+jest.mock('axios', () => ({
+  create: mockAxiosCreate.mockReturnValue(mockAxiosInstance)
+}));
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -58,7 +47,7 @@ describe('API Client', () => {
   });
 
   it('creates an axios instance with correct config', () => {
-    expect(axiosInstance.create).toHaveBeenCalledWith({
+    expect(mockAxiosCreate).toHaveBeenCalledWith({
       baseURL: expect.any(String),
       headers: {
         'Content-Type': 'application/json',
@@ -68,11 +57,17 @@ describe('API Client', () => {
   });
 
   it('sets up request interceptor', () => {
-    expect(axiosInstance.interceptors.request.use).toHaveBeenCalled();
+    expect(mockRequestUse).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.any(Function)
+    );
   });
 
   it('sets up response interceptor', () => {
-    expect(axiosInstance.interceptors.response.use).toHaveBeenCalled();
+    expect(mockResponseUse).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.any(Function)
+    );
   });
 
   describe('setAuthToken', () => {

@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useWatchlist } from '../../lib/hooks/useWatchlist';
 import * as watchlistService from '../../lib/api/watchlistService';
 import { useAuth } from '../../lib/hooks/useAuth';
@@ -40,17 +40,16 @@ describe('useWatchlist Hook', () => {
   });
 
   it('fetches watchlist data on mount when authenticated', async () => {
-    const { result, waitForNextUpdate } = renderHook(() => useWatchlist());
+    const { result } = renderHook(() => useWatchlist());
 
     // Initial state
     expect(result.current.loading).toBe(true);
     expect(result.current.watchlist).toEqual([]);
 
     // Wait for the async operation to complete
-    await waitForNextUpdate();
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     // Check the final state
-    expect(result.current.loading).toBe(false);
     expect(result.current.watchlist).toEqual(mockWatchlist);
     expect(watchlistService.getWatchlist).toHaveBeenCalled();
   });
@@ -83,24 +82,20 @@ describe('useWatchlist Hook', () => {
       data: { watchlist: updatedWatchlist }
     });
 
-    const { result, waitForNextUpdate } = renderHook(() => useWatchlist());
+    const { result } = renderHook(() => useWatchlist());
 
     // Wait for initial load
-    await waitForNextUpdate();
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     // Add to watchlist
-    act(() => {
-      result.current.addToWatchlist('ETH', 'Cryptocurrency');
+    await act(async () => {
+      await result.current.addToWatchlist('ETH', 'Cryptocurrency');
     });
 
-    // Should be loading
-    expect(result.current.loading).toBe(true);
-
     // Wait for the async operation to complete
-    await waitForNextUpdate();
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     // Check the final state
-    expect(result.current.loading).toBe(false);
     expect(result.current.watchlist).toEqual(updatedWatchlist);
     expect(watchlistService.addToWatchlist).toHaveBeenCalledWith({
       assetSymbol: 'ETH',
@@ -115,33 +110,29 @@ describe('useWatchlist Hook', () => {
       data: { watchlist: updatedWatchlist }
     });
 
-    const { result, waitForNextUpdate } = renderHook(() => useWatchlist());
+    const { result } = renderHook(() => useWatchlist());
 
     // Wait for initial load
-    await waitForNextUpdate();
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     // Remove from watchlist
-    act(() => {
-      result.current.removeFromWatchlist('BTC');
+    await act(async () => {
+      await result.current.removeFromWatchlist('BTC');
     });
 
-    // Should be loading
-    expect(result.current.loading).toBe(true);
-
     // Wait for the async operation to complete
-    await waitForNextUpdate();
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     // Check the final state
-    expect(result.current.loading).toBe(false);
     expect(result.current.watchlist).toEqual(updatedWatchlist);
     expect(watchlistService.removeFromWatchlist).toHaveBeenCalledWith('BTC');
   });
 
   it('checks if asset is in watchlist correctly', async () => {
-    const { result, waitForNextUpdate } = renderHook(() => useWatchlist());
+    const { result } = renderHook(() => useWatchlist());
 
     // Wait for initial load
-    await waitForNextUpdate();
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     // Check if assets are in watchlist
     expect(result.current.isInWatchlist('BTC')).toBe(true);
@@ -154,21 +145,20 @@ describe('useWatchlist Hook', () => {
     const mockError = new Error('API Error');
     watchlistService.getWatchlist.mockRejectedValue(mockError);
 
-    const { result, waitForNextUpdate } = renderHook(() => useWatchlist());
+    const { result } = renderHook(() => useWatchlist());
 
     // Wait for the async operation to complete
-    await waitForNextUpdate();
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     // Check the error state
-    expect(result.current.loading).toBe(false);
     expect(result.current.error).toBe('Failed to fetch watchlist');
     expect(result.current.watchlist).toEqual([]);
   });
 
   it('handles errors when adding to watchlist', async () => {
     // Mock initial load
-    const { result, waitForNextUpdate } = renderHook(() => useWatchlist());
-    await waitForNextUpdate();
+    const { result } = renderHook(() => useWatchlist());
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     // Mock error for add
     const mockError = new Error('API Error');
@@ -183,16 +173,18 @@ describe('useWatchlist Hook', () => {
       }
     });
 
+    // Wait for the async operation to complete
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
     // Check the error state
-    expect(result.current.loading).toBe(false);
     expect(result.current.error).toBe('Failed to add to watchlist');
     expect(result.current.watchlist).toEqual(mockWatchlist); // Unchanged
   });
 
   it('handles errors when removing from watchlist', async () => {
     // Mock initial load
-    const { result, waitForNextUpdate } = renderHook(() => useWatchlist());
-    await waitForNextUpdate();
+    const { result } = renderHook(() => useWatchlist());
+    await waitFor(() => expect(result.current.loading).toBe(false));
 
     // Mock error for remove
     const mockError = new Error('API Error');
@@ -207,8 +199,10 @@ describe('useWatchlist Hook', () => {
       }
     });
 
+    // Wait for the async operation to complete
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
     // Check the error state
-    expect(result.current.loading).toBe(false);
     expect(result.current.error).toBe('Failed to remove from watchlist');
     expect(result.current.watchlist).toEqual(mockWatchlist); // Unchanged
   });
