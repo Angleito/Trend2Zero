@@ -80,6 +80,12 @@ async function globalTeardown() {
     // Clean up browser and test-related processes
     const cleanupProcesses = () => {
       try {
+        // Skip process cleanup in CI environment
+        if (process.env.CI) {
+          log('Skipping process cleanup in CI environment');
+          return;
+        }
+
         // Only kill browser processes related to testing
         const processesToKill = [
           'chromium.*playwright',
@@ -90,7 +96,13 @@ async function globalTeardown() {
         processesToKill.forEach(process => {
           try {
             // Use a more specific pattern to avoid killing unrelated processes
-            execSync(`pkill -f "${process}"`);
+            if (process.platform === 'win32') {
+              // Windows-specific process killing (not implemented)
+              log(`Skipping process cleanup for ${process} on Windows`, 'warn');
+            } else {
+              // Unix-based process killing
+              execSync(`pkill -f "${process}" || true`);
+            }
           } catch (killError) {
             // Ignore errors if process is not found
             log(`Could not kill ${process} processes`, 'warn');

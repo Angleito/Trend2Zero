@@ -9,8 +9,8 @@ test('basic test', async ({ page }) => {
 
   while (retries > 0) {
     try {
-      // Navigate to the homepage instead of tracker
-      await page.goto('http://localhost:3000/', { timeout: 15000 });
+      // Navigate to the homepage using baseURL from config
+      await page.goto('/', { timeout: 15000 });
 
       // Wait for the page to load
       await page.waitForSelector('h1', { timeout: 5000 });
