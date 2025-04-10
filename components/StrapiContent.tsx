@@ -1,13 +1,13 @@
 import React from 'react';
-import { BlocksRenderer } from '@strapi/blocks-react-renderer';
-import { getBlogPosts, getBlogPostBySlug } from '../lib/strapi/content';
+import { getBlogPosts, getBlogPostBySlug, BlogPost } from '../lib/strapi/content';
 
 interface StrapiContentProps {
   slug?: string;
+  children?: (posts: BlogPost[]) => React.ReactNode;
 }
 
-const StrapiContent: React.FC<StrapiContentProps> = ({ slug }) => {
-  const [content, setContent] = React.useState<any>(null);
+const StrapiContent: React.FC<StrapiContentProps> = ({ slug, children }) => {
+  const [content, setContent] = React.useState<BlogPost[]>([]);
   const [loading, setLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -15,21 +15,28 @@ const StrapiContent: React.FC<StrapiContentProps> = ({ slug }) => {
     const fetchContent = async () => {
       try {
         setLoading(true);
-        
-        let data;
+
+        let data: BlogPost[];
         if (slug) {
           // Fetch a specific post by slug
           const response = await getBlogPostBySlug(slug);
-          data = response.data[0]?.attributes;
+          data = response.data.map(item => ({
+            id: item.id,
+            ...item.attributes
+          }));
         } else {
           // Fetch all posts
           const response = await getBlogPosts();
           data = response.data.map(item => ({
             id: item.id,
-            ...item.attributes
+            ...item.attributes,
+            // Add default values for missing fields
+            excerpt: item.attributes.excerpt || 'No excerpt available',
+            author: item.attributes.author || 'Unknown',
+            category: item.attributes.category || 'Uncategorized'
           }));
         }
-        
+
         setContent(data);
         setError(null);
       } catch (err) {
@@ -51,49 +58,51 @@ const StrapiContent: React.FC<StrapiContentProps> = ({ slug }) => {
     return <div className="error">{error}</div>;
   }
 
-  if (!content) {
-    return <div className="not-found">Content not found</div>;
+  if (!content || content.length === 0) {
+    return <div className="not-found">No content found</div>;
   }
 
-  // Display a single blog post
-  if (slug && content) {
+  // If children render prop is provided, use it
+  if (children) {
+    return <>{children(content)}</>;
+  }
+
+  // Default rendering for single post or list view
+  if (slug && content.length > 0) {
+    const post = content[0];
     return (
       <article className="blog-post">
-        <h1>{content.title}</h1>
+        <h1>{post.title}</h1>
         <div className="metadata">
-          <span>Published: {new Date(content.publishedAt).toLocaleDateString()}</span>
+          <span>Published: {new Date(post.publishedAt).toLocaleDateString()}</span>
         </div>
-        
-        {/* Render rich text content if using Strapi's blocks */}
-        {content.content && typeof content.content === 'object' && (
-          <BlocksRenderer content={content.content} />
-        )}
-        
-        {/* Fallback for plain text content */}
-        {content.content && typeof content.content === 'string' && (
-          <div dangerouslySetInnerHTML={{ __html: content.content }} />
+
+        {/* Render content based on type */}
+        {post.content && (
+          <div className="content">
+            {typeof post.content === 'object'
+              ? <pre>{JSON.stringify(post.content, null, 2)}</pre>
+              : <div dangerouslySetInnerHTML={{ __html: post.content }} />
+            }
+          </div>
         )}
       </article>
     );
   }
 
-  // Display a list of blog posts
+  // Default list view
   return (
     <div className="blog-posts">
       <h1>Blog Posts</h1>
-      {Array.isArray(content) && content.length > 0 ? (
-        <ul>
-          {content.map((post: any) => (
-            <li key={post.id}>
-              <h2>{post.title}</h2>
-              <p>Published: {new Date(post.publishedAt).toLocaleDateString()}</p>
-              <a href={`/blog/${post.slug}`}>Read more</a>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>No posts found</p>
-      )}
+      <ul>
+        {content.map((post) => (
+          <li key={post.id || post.slug}>
+            <h2>{post.title}</h2>
+            <p>Published: {new Date(post.publishedAt).toLocaleDateString()}</p>
+            <a href={`/blog/${post.slug}`}>Read more</a>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };

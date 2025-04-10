@@ -1,31 +1,39 @@
-import { Strapi } from '@strapi/sdk';
+import axios from 'axios';
 
-// Initialize Strapi client
-const strapiClient = new Strapi({
-  url: process.env.STRAPI_API_URL || 'http://localhost:1337',
-  prefix: '/api',
-  axiosOptions: {},
+// Strapi API configuration
+const STRAPI_API_URL = process.env.STRAPI_API_URL || 'http://localhost:1337';
+const STRAPI_API_TOKEN = process.env.STRAPI_API_TOKEN;
+const STRAPI_USERNAME = process.env.STRAPI_USERNAME;
+const STRAPI_PASSWORD = process.env.STRAPI_PASSWORD;
+
+// Create axios instance for Strapi
+const strapiAxios = axios.create({
+  baseURL: `${STRAPI_API_URL}/api`,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 // Add authentication if needed
 export const authenticateStrapi = async () => {
   try {
-    if (process.env.STRAPI_API_TOKEN) {
-      strapiClient.setToken(process.env.STRAPI_API_TOKEN);
+    if (STRAPI_API_TOKEN) {
+      strapiAxios.defaults.headers.common['Authorization'] = `Bearer ${STRAPI_API_TOKEN}`;
       return true;
     }
-    
+
     // If you're using username/password authentication instead of API token
-    if (process.env.STRAPI_USERNAME && process.env.STRAPI_PASSWORD) {
-      const { jwt } = await strapiClient.auth.local.login({
-        identifier: process.env.STRAPI_USERNAME,
-        password: process.env.STRAPI_PASSWORD,
+    if (STRAPI_USERNAME && STRAPI_PASSWORD) {
+      const response = await strapiAxios.post('/auth/local', {
+        identifier: STRAPI_USERNAME,
+        password: STRAPI_PASSWORD,
       });
-      
-      strapiClient.setToken(jwt);
+
+      const { jwt } = response.data;
+      strapiAxios.defaults.headers.common['Authorization'] = `Bearer ${jwt}`;
       return true;
     }
-    
+
     return false;
   } catch (error) {
     console.error('Failed to authenticate with Strapi:', error);
@@ -40,13 +48,15 @@ export const fetchContent = async <T>(
 ): Promise<T> => {
   try {
     // Authenticate if needed
-    await authenticateStrapi();
-    
+    if (!strapiAxios.defaults.headers.common['Authorization']) {
+      await authenticateStrapi();
+    }
+
     // Fetch data from Strapi
-    const response = await strapiClient.find(contentType, {
-      ...params,
+    const response = await strapiAxios.get(`/${contentType}`, {
+      params,
     });
-    
+
     return response.data as T;
   } catch (error) {
     console.error(`Error fetching ${contentType} from Strapi:`, error);
@@ -54,5 +64,5 @@ export const fetchContent = async <T>(
   }
 };
 
-// Export the client for direct use
-export default strapiClient;
+// Export the axios instance for direct use
+export default strapiAxios;
