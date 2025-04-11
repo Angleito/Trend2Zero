@@ -7,7 +7,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { createChart, ColorType, IChartApi, ISeriesApi, LineData, LineSeriesOptions, LastPriceAnimationMode, PriceLineSource } from 'lightweight-charts';
+import { createChart, ColorType } from 'lightweight-charts';
 import { MarketDataService } from '../lib/services/marketDataService';
 import type { HistoricalDataPoint } from '../lib/types';
 
@@ -23,30 +23,43 @@ const TradingViewLightweightChart: React.FC<TradingViewLightweightChartProps> = 
   days = 30,
 }) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
-  const seriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
+    let chart: any = null;
+    let series: any = null;
+
+    const handleResize = () => {
+      if (chart && chartContainerRef.current) {
+        chart.applyOptions({
+          width: chartContainerRef.current.clientWidth
+        });
+      }
+    };
+
+    const initChart = async () => {
       try {
         setLoading(true);
         setError(null);
+
+        if (!chartContainerRef.current) {
+          return;
+        }
 
         // Fetch historical data for the symbol
         const marketService = new MarketDataService();
         const historicalData = await marketService.getHistoricalData(symbol, days);
 
         // Format data for the chart
-        const chartData: LineData[] = historicalData.map((dataPoint: HistoricalDataPoint) => {
+        const chartData = historicalData.map((dataPoint: HistoricalDataPoint) => {
           // Handle both Date objects and ISO strings
           const timestamp = dataPoint.date instanceof Date
             ? dataPoint.date.getTime()
             : new Date(dataPoint.date).getTime();
 
           return {
-            time: Math.floor(timestamp / 1000) as any,
+            time: Math.floor(timestamp / 1000),
             value: dataPoint.price,
           };
         });
@@ -55,104 +68,63 @@ const TradingViewLightweightChart: React.FC<TradingViewLightweightChartProps> = 
           throw new Error('No historical data available');
         }
 
-        // Update the chart with the new data
-        if (seriesRef.current) {
-          seriesRef.current.setData(chartData);
-        }
+        // Create chart
+        chart = createChart(chartContainerRef.current, {
+          layout: {
+            background: { type: ColorType.Solid, color: theme === 'dark' ? '#1E1E1E' : '#FFFFFF' },
+            textColor: theme === 'dark' ? '#D9D9D9' : '#191919',
+          },
+          width: chartContainerRef.current.clientWidth,
+          height: chartContainerRef.current.clientHeight,
+          grid: {
+            vertLines: {
+              color: theme === 'dark' ? '#2B2B43' : '#E6E6E6',
+            },
+            horzLines: {
+              color: theme === 'dark' ? '#2B2B43' : '#E6E6E6',
+            },
+          },
+          timeScale: {
+            borderColor: theme === 'dark' ? '#2B2B43' : '#E6E6E6',
+          },
+        });
+
+        // Create the line series
+        series = chart.addLineSeries({
+          color: '#FF9500',
+          lineWidth: 2,
+          priceLineVisible: true,
+          priceLineWidth: 1,
+          priceLineColor: '#FF9500',
+          priceLineStyle: 0,
+          lastValueVisible: true,
+          title: 'Price',
+        });
+
+        // Set the data
+        series.setData(chartData);
+
+        // Add event listeners
+        window.addEventListener('resize', handleResize);
 
         setLoading(false);
       } catch (err) {
-        console.error('Error fetching chart data:', err);
+        console.error('Error loading chart data:', err);
         setError('Failed to load chart data');
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, [symbol, days]);
-
-  useEffect(() => {
-    if (!chartContainerRef.current) return;
-
-    const handleResize = () => {
-      if (chartRef.current) {
-        chartRef.current.applyOptions({
-          width: chartContainerRef.current?.clientWidth || 600
-        });
-      }
-    };
-
-    // Initialize chart
-    const chart = createChart(chartContainerRef.current, {
-      layout: {
-        background: { type: ColorType.Solid, color: theme === 'dark' ? '#1E1E1E' : '#FFFFFF' },
-        textColor: theme === 'dark' ? '#D9D9D9' : '#191919',
-      },
-      width: chartContainerRef.current.clientWidth,
-      height: chartContainerRef.current.clientHeight,
-      grid: {
-        vertLines: {
-          color: theme === 'dark' ? '#2B2B43' : '#E6E6E6',
-        },
-        horzLines: {
-          color: theme === 'dark' ? '#2B2B43' : '#E6E6E6',
-        },
-      },
-      timeScale: {
-        borderColor: theme === 'dark' ? '#2B2B43' : '#E6E6E6',
-      },
-      crosshair: {
-        mode: 0,
-      },
-    });
-
-    // Create the line series
-    const lineSeriesOptions: LineSeriesOptions = {
-      color: '#FF9500',
-      lineWidth: 2,
-      crosshairMarkerVisible: true,
-      lastValueVisible: true,
-      priceLineVisible: true,
-      lineStyle: 0, // Solid line
-      lineType: 0, // Line type
-      visible: true, // Series visibility
-      pointMarkersVisible: true, // Show point markers
-      crosshairMarkerBorderWidth: 2, // Required property
-      crosshairMarkerRadius: 5, // Required property
-      crosshairMarkerBorderColor: '#FF9500', // Required property
-      crosshairMarkerBackgroundColor: '#FFFFFF', // Required property
-      lineVisible: true, // Required property
-      lastPriceAnimation: LastPriceAnimationMode.Disabled, // Correctly set to a valid LastPriceAnimationMode
-      title: 'Price', // Required property
-      priceLineSource: PriceLineSource.LastVisible, // Correctly set to a valid PriceLineSource
-      priceLineWidth: 2, // Required property
-      priceLineColor: '#FF9500', // Required property
-      priceLineStyle: 0, // Required property
-      baseLineVisible: true, // Required property
-      baseLineColor: '#FF9500', // Required property
-      baseLineWidth: 1, // Required property
-      baseLineStyle: 0, // Required property
-      priceFormat: { type: 'price', precision: 2, minMove: 0.01 }, // Required property
-    };
-    
-    // Use the correct method to add a line series
-    const lineSeries = chart.addLineSeries(lineSeriesOptions);
-
-    // Store references
-    chartRef.current = chart;
-    seriesRef.current = lineSeries;
-
-    // Add event listeners
-    window.addEventListener('resize', handleResize);
+    initChart();
 
     // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize);
-      chart.remove();
-      chartRef.current = null;
-      seriesRef.current = null;
+      if (chart) {
+        chart.remove();
+      }
     };
-  }, [theme]);
+  }, [symbol, days, theme]);
 
   if (loading) {
     return (
