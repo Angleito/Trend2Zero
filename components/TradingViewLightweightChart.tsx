@@ -7,7 +7,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { createChart, ColorType, IChartApi, ISeriesApi, LineData } from 'lightweight-charts';
+import { createChart, ColorType, IChartApi, ISeriesApi, LineData, LineSeriesOptions, LastPriceAnimationMode, PriceLineSource } from 'lightweight-charts';
 import { MarketDataService } from '../lib/services/marketDataService';
 import type { HistoricalDataPoint } from '../lib/types';
 
@@ -107,13 +107,36 @@ const TradingViewLightweightChart: React.FC<TradingViewLightweightChartProps> = 
     });
 
     // Create the line series
-    const lineSeries = chart.addLineSeries({
+    const lineSeriesOptions: LineSeriesOptions = {
       color: '#FF9500',
       lineWidth: 2,
       crosshairMarkerVisible: true,
       lastValueVisible: true,
       priceLineVisible: true,
-    });
+      lineStyle: 0, // Solid line
+      lineType: 0, // Line type
+      visible: true, // Series visibility
+      pointMarkersVisible: true, // Show point markers
+      crosshairMarkerBorderWidth: 2, // Required property
+      crosshairMarkerRadius: 5, // Required property
+      crosshairMarkerBorderColor: '#FF9500', // Required property
+      crosshairMarkerBackgroundColor: '#FFFFFF', // Required property
+      lineVisible: true, // Required property
+      lastPriceAnimation: LastPriceAnimationMode.Disabled, // Correctly set to a valid LastPriceAnimationMode
+      title: 'Price', // Required property
+      priceLineSource: PriceLineSource.LastVisible, // Correctly set to a valid PriceLineSource
+      priceLineWidth: 2, // Required property
+      priceLineColor: '#FF9500', // Required property
+      priceLineStyle: 0, // Required property
+      baseLineVisible: true, // Required property
+      baseLineColor: '#FF9500', // Required property
+      baseLineWidth: 1, // Required property
+      baseLineStyle: 0, // Required property
+      priceFormat: { type: 'price', precision: 2, minMove: 0.01 }, // Required property
+    };
+    
+    // Use the correct method to add a line series
+    const lineSeries = chart.addLineSeries(lineSeriesOptions);
 
     // Store references
     chartRef.current = chart;
