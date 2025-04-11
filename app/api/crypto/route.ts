@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import axios from 'axios';
 
 // Fallback data for static generation
 const FALLBACK_CRYPTO_DATA = {
@@ -11,7 +12,17 @@ const FALLBACK_CRYPTO_DATA = {
   }
 };
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const endpoint = searchParams.get('endpoint');
+
+  // Validate endpoint
+  if (endpoint !== 'bitcoin-price') {
+    return NextResponse.json({
+      error: 'Invalid or missing endpoint. Use "bitcoin-price".'
+    }, { status: 400 });
+  }
+
   // Check if running in production
   if (process.env.NODE_ENV === 'production') {
     // Return fallback data for static generation
@@ -27,14 +38,30 @@ export async function GET() {
       return NextResponse.json(FALLBACK_CRYPTO_DATA);
     }
 
-    // Placeholder for actual API call logic
-    // This would be replaced with a real implementation
-    return NextResponse.json(FALLBACK_CRYPTO_DATA);
+    // Fetch real-time data from CoinMarketCap
+    const response = await axios.get('https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest', {
+      params: { symbol: 'BTC', convert: 'USD' },
+      headers: { 'X-CMC_PRO_API_KEY': apiKey }
+    });
+
+    const btcData = response.data.data.BTC.quote.USD;
+
+    const processedData = {
+      price: btcData.price,
+      last_updated: btcData.last_updated,
+      raw_data: {
+        symbol: 'BTC',
+        market_cap: btcData.market_cap,
+        percent_change_24h: btcData.percent_change_24h
+      }
+    };
+
+    return NextResponse.json(processedData);
   } catch (error) {
     console.error('Error fetching crypto data:', error);
     return NextResponse.json(FALLBACK_CRYPTO_DATA);
   }
 }
 
-// Enable static generation
-export const dynamic = 'force-static';
+// Allow dynamic rendering
+export const dynamic = 'auto';

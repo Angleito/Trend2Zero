@@ -1,6 +1,6 @@
 /**
  * Mock Integration Service
- * 
+ *
  * This service provides mock data and integration points for testing in both Vercel and Strapi environments.
  * It's designed to be a drop-in replacement for real API services when testing or when APIs are unavailable.
  */
@@ -9,31 +9,35 @@ import { AssetData, HistoricalDataPoint, MarketAsset } from '../types';
 
 export class MockIntegrationService {
   private environment: 'vercel' | 'strapi' | 'development';
-  
+
   constructor(environment?: 'vercel' | 'strapi' | 'development') {
     // Auto-detect environment if not specified
     if (!environment) {
-      if (process.env.VERCEL) {
-        this.environment = 'vercel';
-      } else if (process.env.STRAPI_ADMIN) {
-        this.environment = 'strapi';
+      if (typeof process !== 'undefined' && process.env) {
+        if (process.env.VERCEL) {
+          this.environment = 'vercel';
+        } else if (process.env.STRAPI_ADMIN) {
+          this.environment = 'strapi';
+        } else {
+          this.environment = 'development';
+        }
       } else {
         this.environment = 'development';
       }
     } else {
       this.environment = environment;
     }
-    
+
     console.log(`MockIntegrationService initialized in ${this.environment} environment`);
   }
-  
+
   /**
    * Get the current environment
    */
   getEnvironment(): string {
     return this.environment;
   }
-  
+
   /**
    * Get mock crypto data
    */
@@ -41,7 +45,7 @@ export class MockIntegrationService {
     // Generate slightly different data based on environment for testing
     const basePrice = symbol === 'BTC' ? 50000 : 3000;
     const priceVariation = this.environment === 'vercel' ? 1.05 : (this.environment === 'strapi' ? 0.95 : 1);
-    
+
     return {
       symbol,
       price: basePrice * priceVariation,
@@ -52,37 +56,37 @@ export class MockIntegrationService {
       lastUpdated: new Date().toISOString()
     };
   }
-  
+
   /**
    * Get mock historical data
    */
   async getMockHistoricalData(symbol: string, days: number = 30): Promise<HistoricalDataPoint[]> {
     const result: HistoricalDataPoint[] = [];
     const today = new Date();
-    
+
     // Base values for different symbols
     let baseValue = symbol.toUpperCase() === 'BTC' ? 50000 : 3000;
-    
+
     // Add environment-specific variation
     if (this.environment === 'vercel') {
       baseValue *= 1.05; // 5% higher on Vercel
     } else if (this.environment === 'strapi') {
       baseValue *= 0.95; // 5% lower on Strapi
     }
-    
+
     // Generate data points for each day
     for (let i = days; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
-      
+
       // Add some random variation
       const randomFactor = 0.02; // 2% max variation
       const dailyVariation = baseValue * randomFactor * (Math.random() * 2 - 1);
       const price = baseValue + dailyVariation;
-      
+
       // Update base value for next day
       baseValue = price;
-      
+
       // Generate more realistic data with open, high, low, close, and volume
       const open = price * (1 - 0.005 + Math.random() * 0.01);
       const high = price * (1 + 0.005 + Math.random() * 0.01);
@@ -91,7 +95,7 @@ export class MockIntegrationService {
       const volume = symbol.toUpperCase() === 'BTC' ?
         1000000000 + Math.random() * 500000000 :
         1000000 + Math.random() * 500000;
-      
+
       result.push({
         date: new Date(date),
         price: parseFloat(price.toFixed(2)),
@@ -102,10 +106,10 @@ export class MockIntegrationService {
         volume: Math.round(volume)
       });
     }
-    
+
     return result;
   }
-  
+
   /**
    * Get mock asset list
    */
@@ -115,7 +119,7 @@ export class MockIntegrationService {
     pageSize: number = 20
   ): Promise<{ data: MarketAsset[], pagination: any }> {
     let assets: MarketAsset[] = [];
-    
+
     switch (assetType) {
       case 'crypto':
         assets = [
@@ -174,18 +178,18 @@ export class MockIntegrationService {
         ];
         break;
     }
-    
+
     // Add environment-specific marker to asset names for testing
     assets = assets.map(asset => ({
       ...asset,
       name: `${asset.name} [${this.environment}]`
     }));
-    
+
     // Apply pagination
     const start = (page - 1) * pageSize;
     const end = Math.min(start + pageSize, assets.length);
     const paginatedAssets = assets.slice(start, end);
-    
+
     return {
       data: paginatedAssets,
       pagination: {
@@ -196,7 +200,7 @@ export class MockIntegrationService {
       }
     };
   }
-  
+
   /**
    * Get environment-specific configuration
    */
@@ -228,7 +232,7 @@ export class MockIntegrationService {
         };
     }
   }
-  
+
   /**
    * Test connection to external services
    */
@@ -238,7 +242,7 @@ export class MockIntegrationService {
       timestamp: new Date().toISOString(),
       services: {}
     };
-    
+
     // Test Vercel API connection
     try {
       const vercelApiUrl = this.getEnvironmentConfig().apiBaseUrl + '/health';
@@ -253,7 +257,7 @@ export class MockIntegrationService {
         message: error.message
       };
     }
-    
+
     // Test Strapi API connection
     try {
       const strapiApiUrl = this.getEnvironmentConfig().strapiBaseUrl + '/api/assets';
@@ -268,7 +272,7 @@ export class MockIntegrationService {
         message: error.message
       };
     }
-    
+
     // Test database connection
     try {
       results.services.database = {
@@ -282,7 +286,7 @@ export class MockIntegrationService {
         message: error.message
       };
     }
-    
+
     return results;
   }
 }
