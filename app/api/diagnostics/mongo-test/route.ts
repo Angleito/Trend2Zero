@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/db/mongodb';
 
 export async function GET() {
   try {
-    const conn = await dbConnect();
+    // Return mock data for Vercel deployment
     return NextResponse.json({
-      connected: true,
-      dbName: conn.name,
-      host: conn.host
+      connected: false,
+      message: 'MongoDB connection not available in production build'
     });
   } catch (error) {
     console.error('MongoDB connection error:', error);

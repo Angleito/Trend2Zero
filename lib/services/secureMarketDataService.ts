@@ -1,8 +1,5 @@
 import axios from 'axios';
-import { LRUCache } from 'lru-cache';
 import { AssetCategory, AssetData, HistoricalDataPoint, MarketAsset } from '../types';
-import ExternalApiService from './externalApiService';
-import MongoDbCacheService from './mongoDbCacheService';
 
 /**
  * Secure Market Data Service
@@ -12,22 +9,13 @@ import MongoDbCacheService from './mongoDbCacheService';
  * It uses MongoDB for persistent caching and falls back to cached data if API calls fail.
  */
 export class SecureMarketDataService {
-  private cache: LRUCache<string, any>;
-  private externalApiService: ExternalApiService;
-  private mongoDbCacheService: MongoDbCacheService;
+  private cache: Map<string, any>;
 
   constructor() {
     console.log(`[SecureMarketDataService] Initializing service`);
 
-    // Initialize LRU cache with max 500 entries, each expiring after 5 minutes
-    this.cache = new LRUCache<string, any>({
-      max: 500,
-      ttl: 1000 * 60 * 5 // 5 minutes
-    });
-
-    // Initialize external API service and MongoDB cache service
-    this.externalApiService = new ExternalApiService();
-    this.mongoDbCacheService = new MongoDbCacheService();
+    // Initialize a simple cache
+    this.cache = new Map<string, any>();
   }
 
   /**
@@ -65,69 +53,20 @@ export class SecureMarketDataService {
     pageSize?: number;
     keywords?: string;
   } = {}): Promise<MarketAsset[]> {
-    const { category, page = 1, pageSize = 20 } = options;
-
-    // Generate cache key
-    const cacheKey = this.generateCacheKey('listAvailableAssets', JSON.stringify(options));
-    const cachedResult = this.cache.get(cacheKey);
-    if (cachedResult) {
-      return cachedResult as MarketAsset[];
-    }
-
-    try {
-      // Determine which endpoint to call based on category
-      let endpoint = 'stocks';
-      if (category === 'Cryptocurrency') {
-        endpoint = 'crypto';
-      } else if (category === 'Commodities') {
-        endpoint = 'commodities';
-      } else if (category === 'Indices') {
-        endpoint = 'indices';
-      }
-
-      // Call our secure API proxy
-      const response = await axios.get('/api/market-data', {
-        params: {
-          endpoint,
-          page,
-          pageSize
-        }
-      });
-
-      // Cache and return the result
-      const assets = response.data.data;
-      this.cache.set(cacheKey, assets);
-      return assets;
-    } catch (error) {
-      this.handleAPIError(error, 'listAvailableAssets');
-
-      // Try to get data from MongoDB cache
-      try {
-        const categoryStr = category || 'all';
-        const cachedData = await this.mongoDbCacheService.getCachedAssetList(categoryStr, page, pageSize);
-        if (cachedData) {
-          console.log(`Retrieved cached asset list for ${categoryStr} from MongoDB`);
-          return cachedData.data;
-        }
-      } catch (cacheError) {
-        console.error('Error retrieving from MongoDB cache:', cacheError);
-      }
-
-      throw error;
-    }
+    // Return mock data for Vercel deployment
+    return [
+      { symbol: 'BTC', name: 'Bitcoin', type: 'Cryptocurrency', description: 'Digital gold' },
+      { symbol: 'ETH', name: 'Ethereum', type: 'Cryptocurrency', description: 'Smart contract platform' },
+      { symbol: 'AAPL', name: 'Apple Inc.', type: 'Stocks', description: 'Technology company' },
+      { symbol: 'GOOGL', name: 'Alphabet Inc.', type: 'Stocks', description: 'Technology company' },
+      { symbol: 'XAU', name: 'Gold', type: 'Commodities', description: 'Precious metal' }
+    ];
   }
 
   /**
    * Get asset price in BTC
    */
   async getAssetPriceInBTC(assetSymbol: string): Promise<AssetData | null> {
-    // Generate cache key
-    const cacheKey = this.generateCacheKey('getAssetPriceInBTC', assetSymbol);
-    const cachedResult = this.cache.get(cacheKey);
-    if (cachedResult) {
-      return cachedResult as AssetData;
-    }
-
     // Fallback data for static generation
     const fallbackData: Record<string, AssetData> = {
       'BTC': {
@@ -168,149 +107,62 @@ export class SecureMarketDataService {
       }
     };
 
-    // Return fallback data during static generation
-    if (process.env.NODE_ENV === 'production') {
-      const data = fallbackData[assetSymbol];
-      if (data) {
-        this.cache.set(cacheKey, data);
-        return data;
-      }
-      return null;
+    // Return fallback data
+    const data = fallbackData[assetSymbol];
+    if (data) {
+      return data;
     }
 
-    try {
-      // Call our secure API proxy
-      const response = await axios.get('/api/crypto/bitcoin-price', {
-        params: {
-          symbol: assetSymbol
-        }
-      });
-
-      // Cache and return the result
-      const assetData = response.data;
-      this.cache.set(cacheKey, assetData);
-
-      // Also cache in MongoDB for persistence
-      try {
-        await this.mongoDbCacheService.cacheAssetPrice(assetSymbol, assetData);
-      } catch (cacheError) {
-        console.error('Error caching asset price in MongoDB:', cacheError);
-      }
-
-      return assetData;
-    } catch (error) {
-      this.handleAPIError(error, `getAssetPriceInBTC for ${assetSymbol}`);
-
-      // Try to get data from MongoDB cache
-      try {
-        const cachedData = await this.mongoDbCacheService.getCachedAssetPrice(assetSymbol);
-        if (cachedData) {
-          console.log(`Retrieved cached price for ${assetSymbol} from MongoDB`);
-          return cachedData;
-        }
-      } catch (cacheError) {
-        console.error('Error retrieving from MongoDB cache:', cacheError);
-      }
-
-      // If MongoDB cache fails, try to fetch directly from external API
-      try {
-        console.log(`Attempting to fetch ${assetSymbol} price directly from external API`);
-        const externalData = await this.externalApiService.fetchAssetPrice(assetSymbol);
-
-        // Cache the result
-        this.cache.set(cacheKey, externalData);
-
-        // Also cache in MongoDB for persistence
-        try {
-          await this.mongoDbCacheService.cacheAssetPrice(assetSymbol, externalData);
-        } catch (cacheError) {
-          console.error('Error caching asset price in MongoDB:', cacheError);
-        }
-
-        return externalData;
-      } catch (externalError) {
-        console.error(`Failed to fetch ${assetSymbol} price from external API:`, externalError);
-      }
-
-      // Return fallback data if all else fails
-      const data = fallbackData[assetSymbol];
-      if (data) {
-        return data;
-      }
-
-      throw error;
-    }
+    // Return default data for unknown symbols
+    return {
+      symbol: assetSymbol,
+      price: 100.00,
+      change: 1.00,
+      changePercent: 1.0,
+      priceInBTC: 0.001,
+      priceInUSD: 100.00,
+      lastUpdated: new Date().toISOString()
+    };
   }
 
   /**
    * Get historical price data
    */
   async getHistoricalData(symbol: string, days: number = 30): Promise<HistoricalDataPoint[]> {
-    // Generate cache key
-    const cacheKey = this.generateCacheKey('getHistoricalData', symbol, days);
-    const cachedResult = this.cache.get(cacheKey);
-    if (cachedResult) {
-      return cachedResult as HistoricalDataPoint[];
-    }
+    // Generate mock historical data
+    const result: HistoricalDataPoint[] = [];
+    const today = new Date();
+    let basePrice = 100;
+    
+    if (symbol === 'BTC') basePrice = 60000;
+    else if (symbol === 'ETH') basePrice = 3000;
+    else if (symbol === 'AAPL') basePrice = 180;
+    else if (symbol === 'GOOGL') basePrice = 125;
+    else if (symbol === 'XAU') basePrice = 2000;
 
-    try {
-      // Call our secure API proxy
-      const response = await axios.get('/api/market-data', {
-        params: {
-          endpoint: 'historical',
-          symbol,
-          days
-        }
+    for (let i = days; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      
+      // Add some random variation
+      const randomFactor = 0.98 + Math.random() * 0.04; // Between 0.98 and 1.02
+      const price = basePrice * randomFactor;
+      
+      result.push({
+        date,
+        price,
+        open: price * 0.99,
+        high: price * 1.01,
+        low: price * 0.98,
+        close: price,
+        volume: Math.floor(Math.random() * 1000000)
       });
-
-      // Cache and return the result
-      const historicalData = response.data.data;
-      this.cache.set(cacheKey, historicalData);
-
-      // Also cache in MongoDB for persistence
-      try {
-        await this.mongoDbCacheService.cacheHistoricalData(symbol, days, historicalData);
-      } catch (cacheError) {
-        console.error('Error caching historical data in MongoDB:', cacheError);
-      }
-
-      return historicalData;
-    } catch (error) {
-      this.handleAPIError(error, `getHistoricalData for ${symbol}`);
-
-      // Try to get data from MongoDB cache
-      try {
-        const cachedData = await this.mongoDbCacheService.getCachedHistoricalData(symbol, days);
-        if (cachedData) {
-          console.log(`Retrieved cached historical data for ${symbol} from MongoDB`);
-          return cachedData;
-        }
-      } catch (cacheError) {
-        console.error('Error retrieving from MongoDB cache:', cacheError);
-      }
-
-      // If MongoDB cache fails, try to fetch directly from external API
-      try {
-        console.log(`Attempting to fetch ${symbol} historical data directly from external API`);
-        const externalData = await this.externalApiService.fetchHistoricalData(symbol, days);
-
-        // Cache the result
-        this.cache.set(cacheKey, externalData);
-
-        // Also cache in MongoDB for persistence
-        try {
-          await this.mongoDbCacheService.cacheHistoricalData(symbol, days, externalData);
-        } catch (cacheError) {
-          console.error('Error caching historical data in MongoDB:', cacheError);
-        }
-
-        return externalData;
-      } catch (externalError) {
-        console.error(`Failed to fetch ${symbol} historical data from external API:`, externalError);
-      }
-
-      throw error;
+      
+      // Update base price for next day
+      basePrice = price;
     }
+
+    return result;
   }
 
   /**
