@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import ExternalApiService from '@/lib/services/externalApiService';
-import MongoDbCacheService from '@/lib/services/mongoDbCacheService';
+import ExternalApiService from '../../../lib/services/externalApiService';
+import MongoDbCacheService from '../../../lib/services/mongoDbCacheService';
 
 // Rate limiting configuration
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute in milliseconds

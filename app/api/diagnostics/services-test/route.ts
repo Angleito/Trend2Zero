@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import ExternalApiService from '@/lib/services/externalApiService';
+import ExternalApiService from '../../../../lib/services/externalApiService';
 
 export async function GET() {
   const results = {

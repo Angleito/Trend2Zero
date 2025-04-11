@@ -35,6 +35,12 @@ const nextConfig = {
     // Optimize module resolution
     config.resolve.extensions.push('.ts', '.tsx');
 
+    // Add path aliases to webpack config
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': require('path').resolve(__dirname),
+    };
+
     return config;
   }
 };
