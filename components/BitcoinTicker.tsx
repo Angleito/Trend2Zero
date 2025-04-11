@@ -17,19 +17,22 @@ const BitcoinTicker: React.FC = () => {
     const fetchBitcoinPrice = async () => {
       try {
         console.log('Fetching Bitcoin price...');
-        const response = await axios.get('/api/crypto', {
-          params: { endpoint: 'bitcoin-price' }
-        });
-
-        console.log('Bitcoin API response:', response.data);
-
-        // Detailed error handling
-        if (response.data.error) {
-          console.error('Bitcoin API error:', response.data.error);
-          throw new Error(response.data.error);
+        const response = await fetch('/api/crypto?endpoint=bitcoin-price');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const { price, raw_data } = response.data;
+        const data = await response.json();
+        console.log('Bitcoin API response:', data);
+
+        // Detailed error handling
+        if (data.error) {
+          console.error('Bitcoin API error:', data.error);
+          throw new Error(data.error);
+        }
+
+        const { price, raw_data } = data;
 
         if (!price) {
           throw new Error('No price data available');
@@ -76,22 +79,22 @@ const BitcoinTicker: React.FC = () => {
   }, [updateBitcoinData]);
 
   return (
-    <div className="bitcoin-ticker">
+    <div className="bitcoin-ticker" data-testid="bitcoin-ticker">
       <h3>Bitcoin Price</h3>
       {error ? (
-        <p className="text-red-500">Error: {error}</p>
+        <p className="text-red-500" data-testid="error-message">Error: {error}</p>
       ) : btcPrice ? (
         <div>
-          <p>${btcPrice.toLocaleString()}</p>
+          <p data-testid="bitcoin-price">${btcPrice.toLocaleString()}</p>
           {marketData.marketCap && (
-            <p>Market Cap: ${marketData.marketCap.toLocaleString()}</p>
+            <p data-testid="market-cap">Market Cap: ${marketData.marketCap.toLocaleString()}</p>
           )}
           {marketData.percentChange24h && (
-            <p>24h Change: {marketData.percentChange24h.toFixed(2)}%</p>
+            <p data-testid="percent-change">24h Change: {marketData.percentChange24h.toFixed(2)}%</p>
           )}
         </div>
       ) : (
-        <p>Loading...</p>
+        <p data-testid="loading-message">Loading...</p>
       )}
     </div>
   );

@@ -13,6 +13,7 @@ export interface MarketAsset {
   change?: number;
   changePercent?: number;
   type?: AssetCategory;
+  description?: string; // Added to support mock data and diagnostics
 }
 
 // Asset Data Type

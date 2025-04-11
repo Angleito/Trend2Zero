@@ -40,7 +40,7 @@ test('Comprehensive API Diagnostics', async ({ request }) => {
       console.log('Bitcoin price API error:', text.substring(0, 200));
     }
   } catch (error) {
-    console.log('Bitcoin price API request failed with error:', error.message);
+    console.log('Bitcoin price API request failed with error:', error && typeof error === 'object' && 'message' in error ? (error as any).message : String(error));
   }
 
   // Create diagnostic API endpoints
@@ -61,7 +61,7 @@ test('Comprehensive API Diagnostics', async ({ request }) => {
       console.log('Failed to check environment variables:', await envCheckResponse.text());
     }
   } catch (error) {
-    console.log('Environment check request failed with error:', error.message);
+    console.log('Environment check request failed with error:', error && typeof error === 'object' && 'message' in error ? (error as any).message : String(error));
   }
 
   // Test MongoDB connection with timeout
@@ -80,7 +80,7 @@ test('Comprehensive API Diagnostics', async ({ request }) => {
       console.log('MongoDB connection test failed:', text.substring(0, 200));
     }
   } catch (error) {
-    console.log('MongoDB test request failed with error:', error.message);
+    console.log('MongoDB test request failed with error:', error && typeof error === 'object' && 'message' in error ? (error as any).message : String(error));
   }
 
   // Test API services with timeout
@@ -99,7 +99,7 @@ test('Comprehensive API Diagnostics', async ({ request }) => {
       console.log('API services test failed:', text.substring(0, 200));
     }
   } catch (error) {
-    console.log('API services test request failed with error:', error.message);
+    console.log('API services test request failed with error:', error && typeof error === 'object' && 'message' in error ? (error as any).message : String(error));
   }
 });
 

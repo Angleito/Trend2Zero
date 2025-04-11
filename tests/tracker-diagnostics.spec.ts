@@ -75,7 +75,7 @@ test('Diagnose Tracker Page Issues', async ({ page }) => {
   console.log(`Is loading spinner visible: ${isLoading}`);
 
   // Check for error messages
-  const errorMessages = await page.locator('text=error', { exact: false }).allTextContents();
+  const errorMessages = await page.locator('text=error').allTextContents();
   if (errorMessages.length > 0) {
     console.log('Error messages found:', errorMessages);
   }

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { AssetCategory, AssetData, HistoricalDataPoint, MarketAsset } from '../types';
+import MockDataService from './mockDataService';
 
 /**
  * External API Service
@@ -11,11 +12,17 @@ export class ExternalApiService {
   private coinMarketCapApiKey: string;
   private alphaVantageApiKey: string;
   private metalPriceApiKey: string;
+  private mockDataService: MockDataService;
+  private useMockData: boolean;
+  private mockDataCacheMinutes: number;
 
   constructor() {
     this.coinMarketCapApiKey = process.env.COINMARKETCAP_API_KEY || '';
     this.alphaVantageApiKey = process.env.ALPHA_VANTAGE_API_KEY || '';
     this.metalPriceApiKey = process.env.METAL_PRICE_API_KEY || '';
+    this.mockDataService = new MockDataService();
+    this.useMockData = process.env.USE_MOCK_DATA === 'true';
+    this.mockDataCacheMinutes = parseInt(process.env.MOCK_DATA_CACHE_MINUTES || '60', 10);
   }
 
   /**
@@ -23,6 +30,12 @@ export class ExternalApiService {
    */
   async fetchCryptoList(page: number = 1, pageSize: number = 20): Promise<any> {
     try {
+      // If mock data is enabled, return mock data immediately
+      if (this.useMockData) {
+        console.log('Using mock data for crypto list');
+        return this.mockDataService.getMockCryptoList(page, pageSize);
+      }
+
       if (!this.coinMarketCapApiKey) {
         throw new Error('CoinMarketCap API key is missing');
       }
@@ -57,6 +70,13 @@ export class ExternalApiService {
       };
     } catch (error) {
       console.error('Error fetching crypto list:', error);
+
+      // If API call fails and fallback to mock data is enabled, return mock data
+      if (this.useMockData) {
+        console.log('Falling back to mock data for crypto list');
+        return this.mockDataService.getMockCryptoList(page, pageSize);
+      }
+
       throw error;
     }
   }
@@ -66,6 +86,12 @@ export class ExternalApiService {
    */
   async fetchStockList(page: number = 1, pageSize: number = 20): Promise<any> {
     try {
+      // If mock data is enabled, return mock data immediately
+      if (this.useMockData) {
+        console.log('Using mock data for stock list');
+        return this.mockDataService.getMockStockList(page, pageSize);
+      }
+
       if (!this.alphaVantageApiKey) {
         throw new Error('Alpha Vantage API key is missing');
       }
@@ -108,6 +134,13 @@ export class ExternalApiService {
       };
     } catch (error) {
       console.error('Error fetching stock list:', error);
+
+      // If API call fails and fallback to mock data is enabled, return mock data
+      if (this.useMockData) {
+        console.log('Falling back to mock data for stock list');
+        return this.mockDataService.getMockStockList(page, pageSize);
+      }
+
       throw error;
     }
   }
@@ -117,6 +150,12 @@ export class ExternalApiService {
    */
   async fetchCommoditiesList(page: number = 1, pageSize: number = 20): Promise<any> {
     try {
+      // If mock data is enabled, return mock data immediately
+      if (this.useMockData) {
+        console.log('Using mock data for commodities list');
+        return this.mockDataService.getMockCommoditiesList(page, pageSize);
+      }
+
       if (!this.metalPriceApiKey) {
         throw new Error('Metal Price API key is missing');
       }
@@ -165,6 +204,13 @@ export class ExternalApiService {
       };
     } catch (error) {
       console.error('Error fetching commodities list:', error);
+
+      // If API call fails and fallback to mock data is enabled, return mock data
+      if (this.useMockData) {
+        console.log('Falling back to mock data for commodities list');
+        return this.mockDataService.getMockCommoditiesList(page, pageSize);
+      }
+
       throw error;
     }
   }
@@ -175,6 +221,12 @@ export class ExternalApiService {
    */
   async fetchIndicesList(page: number = 1, pageSize: number = 20): Promise<any> {
     try {
+      // If mock data is enabled, return mock data immediately
+      if (this.useMockData) {
+        console.log('Using mock data for indices list');
+        return this.mockDataService.getMockIndicesList(page, pageSize);
+      }
+
       if (!this.alphaVantageApiKey) {
         throw new Error('Alpha Vantage API key is missing');
       }
@@ -210,6 +262,13 @@ export class ExternalApiService {
       };
     } catch (error) {
       console.error('Error fetching indices list:', error);
+
+      // If API call fails and fallback to mock data is enabled, return mock data
+      if (this.useMockData) {
+        console.log('Falling back to mock data for indices list');
+        return this.mockDataService.getMockIndicesList(page, pageSize);
+      }
+
       throw error;
     }
   }
@@ -219,6 +278,12 @@ export class ExternalApiService {
    */
   async fetchAssetPrice(symbol: string): Promise<AssetData> {
     try {
+      // If mock data is enabled, return mock data immediately
+      if (this.useMockData) {
+        console.log(`Using mock data for asset price: ${symbol}`);
+        return this.mockDataService.getMockAssetPrice(symbol);
+      }
+
       // Determine the API to use based on the asset type
       if (this.isCryptoCurrency(symbol)) {
         return this.fetchCryptoPrice(symbol);
@@ -229,6 +294,13 @@ export class ExternalApiService {
       }
     } catch (error) {
       console.error(`Error fetching price for ${symbol}:`, error);
+
+      // If API call fails and fallback to mock data is enabled, return mock data
+      if (this.useMockData) {
+        console.log(`Falling back to mock data for asset price: ${symbol}`);
+        return this.mockDataService.getMockAssetPrice(symbol);
+      }
+
       throw error;
     }
   }
@@ -398,6 +470,12 @@ export class ExternalApiService {
    */
   async fetchHistoricalData(symbol: string, days: number = 30): Promise<HistoricalDataPoint[]> {
     try {
+      // If mock data is enabled, return mock data immediately
+      if (this.useMockData) {
+        console.log(`Using mock data for historical data: ${symbol}`);
+        return this.mockDataService.getMockHistoricalData(symbol, days);
+      }
+
       // Determine the API to use based on the asset type
       if (this.isCryptoCurrency(symbol)) {
         return this.fetchCryptoHistoricalData(symbol, days);
@@ -408,6 +486,13 @@ export class ExternalApiService {
       }
     } catch (error) {
       console.error(`Error fetching historical data for ${symbol}:`, error);
+
+      // If API call fails and fallback to mock data is enabled, return mock data
+      if (this.useMockData) {
+        console.log(`Falling back to mock data for historical data: ${symbol}`);
+        return this.mockDataService.getMockHistoricalData(symbol, days);
+      }
+
       throw error;
     }
   }
