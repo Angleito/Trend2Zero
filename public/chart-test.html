@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lightweight Charts Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            margin-top: 0;
+        }
+        .chart-container {
+            height: 400px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .log {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            margin-top: 20px;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Lightweight Charts Test</h1>
+        
+        <div class="controls">
+            <button id="createChart">Create Chart</button>
+            <button id="clearChart">Clear Chart</button>
+            <button id="toggleTheme">Toggle Theme</button>
+        </div>
+        
+        <div id="chart" class="chart-container"></div>
+        
+        <div class="log" id="log"></div>
+    </div>
+
+    <!-- Import the library directly from CDN -->
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    
+    <script>
+        // Logging function
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logElement.prepend(entry);
+        }
+
+        // Sample data
+        function generateData() {
+            const data = [];
+            const startDate = new Date('2023-01-01');
+            let basePrice = 30000;
+            
+            for (let i = 0; i < 100; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+                
+                // Add some random variation
+                const randomFactor = 0.98 + Math.random() * 0.04;
+                basePrice = basePrice * randomFactor;
+                
+                data.push({
+                    time: Math.floor(date.getTime() / 1000),
+                    value: basePrice
+                });
+            }
+            
+            log(`Generated ${data.length} data points`, 'success');
+            return data;
+        }
+
+        // Chart variables
+        let chart = null;
+        let lineSeries = null;
+        let currentTheme = 'dark';
+
+        // Create chart function
+        function createNewChart() {
+            try {
+                // Clear previous chart if exists
+                if (chart) {
+                    chart.remove();
+                    chart = null;
+                    lineSeries = null;
+                    log('Previous chart removed', 'info');
+                }
+                
+                const chartElement = document.getElementById('chart');
+                chartElement.innerHTML = '';
+                
+                log('Creating new chart...', 'info');
+                
+                // Create chart
+                chart = LightweightCharts.createChart(chartElement, {
+                    width: chartElement.clientWidth,
+                    height: chartElement.clientHeight,
+                    layout: {
+                        background: { 
+                            type: 'solid', 
+                            color: currentTheme === 'dark' ? '#1E1E2D' : '#FFFFFF' 
+                        },
+                        textColor: currentTheme === 'dark' ? '#D9D9D9' : '#191919',
+                    },
+                    grid: {
+                        vertLines: { color: currentTheme === 'dark' ? '#2B2B43' : '#E6E6E6' },
+                        horzLines: { color: currentTheme === 'dark' ? '#2B2B43' : '#E6E6E6' },
+                    },
+                    timeScale: {
+                        borderColor: currentTheme === 'dark' ? '#2B2B43' : '#E6E6E6',
+                        timeVisible: true,
+                        secondsVisible: false,
+                    },
+                });
+                
+                log('Chart created successfully', 'success');
+                
+                // Add line series
+                lineSeries = chart.addLineSeries({
+                    color: '#FF9500',
+                    lineWidth: 2,
+                    priceLineVisible: true,
+                    lastValueVisible: true,
+                });
+                
+                log('Line series added', 'success');
+                
+                // Set data
+                const data = generateData();
+                lineSeries.setData(data);
+                
+                log('Data set successfully', 'success');
+                
+                // Fit content
+                chart.timeScale().fitContent();
+                log('Chart content fitted', 'success');
+                
+                // Handle resize
+                window.addEventListener('resize', handleResize);
+                
+            } catch (error) {
+                log(`Error creating chart: ${error.message}`, 'error');
+                console.error('Chart creation error:', error);
+            }
+        }
+
+        // Handle resize
+        function handleResize() {
+            if (chart) {
+                const chartElement = document.getElementById('chart');
+                chart.applyOptions({ 
+                    width: chartElement.clientWidth,
+                    height: chartElement.clientHeight
+                });
+                log('Chart resized', 'info');
+            }
+        }
+
+        // Toggle theme
+        function toggleTheme() {
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            log(`Theme changed to ${currentTheme}`, 'info');
+            createNewChart();
+        }
+
+        // Event listeners
+        document.getElementById('createChart').addEventListener('click', createNewChart);
+        document.getElementById('clearChart').addEventListener('click', function() {
+            if (chart) {
+                chart.remove();
+                chart = null;
+                lineSeries = null;
+                document.getElementById('chart').innerHTML = '';
+                log('Chart cleared', 'info');
+            }
+        });
+        document.getElementById('toggleTheme').addEventListener('click', toggleTheme);
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            log('Page loaded', 'info');
+            createNewChart();
+        });
+    </script>
+</body>
+</html>
