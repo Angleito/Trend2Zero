@@ -1,6 +1,9 @@
 // Asset Categories
 export type AssetCategory = 'Stocks' | 'Commodities' | 'Indices' | 'Cryptocurrency';
 
+// Environment type
+export type Environment = 'vercel' | 'strapi' | 'development';
+
 // Market Asset Type
 export interface MarketAsset {
   id?: string;
@@ -77,5 +80,82 @@ export function createDefaultAsset(partialAsset: Partial<AssetData> = {}): Asset
     type: partialAsset.type,
     currentPrice: partialAsset.currentPrice,
     historicalData: partialAsset.historicalData || []
+  };
+}
+
+export type AlphaVantageStockResponse = {
+  'Global Quote': {
+    '01. symbol': string;
+    '05. price': string;
+    '09. change': string;
+    '10. change percent': string;
+    [key: string]: any;
+  };
+};
+
+export type AlphaVantageHistoricalResponse = {
+  'Time Series (Daily)': {
+    [date: string]: {
+      '1. open': string;
+      '2. high': string;
+      '3. low': string;
+      '4. close': string;
+      '5. volume': string;
+    };
+  };
+  [key: string]: any;
+};
+
+export type CurrencyExchangeRate = {
+  fromCurrencyCode: string;
+  fromCurrencyName: string;
+  toCurrencyCode: string;
+  toCurrencyName: string;
+  exchangeRate: number;
+  lastRefreshed: string;
+  timeZone: string;
+  [key: string]: any;
+};
+
+export type AlphaVantageExchangeRateResponse = {
+  'Realtime Currency Exchange Rate': {
+    [key: string]: string;
+  };
+  [key: string]: any;
+};
+
+export type AlphaVantageCryptoResponse = {
+  'Realtime Crypto Currency Quote': {
+    [key: string]: string;
+  };
+  [key: string]: any;
+};
+
+// Mock integration service configuration
+export interface MockIntegrationConfig {
+  apiBaseUrl: string;
+  strapiBaseUrl: string;
+  cacheEnabled: boolean;
+  cacheDuration: number;
+  mockDataEnabled: boolean;
+}
+
+// Mock integration service test result
+export interface ServiceTestResult {
+  status: string;
+  url?: string;
+  message?: string;
+  error?: string;
+}
+
+// Mock integration service test results
+export interface ServiceTestResults {
+  environment: Environment;
+  timestamp: string;
+  services: {
+    vercelApi?: ServiceTestResult;
+    strapiApi?: ServiceTestResult;
+    database?: ServiceTestResult;
+    [key: string]: ServiceTestResult | undefined;
   };
 }

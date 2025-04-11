@@ -1,12 +1,12 @@
 import axios from 'axios';
-import { 
-  AssetData, 
-  HistoricalDataPoint, 
-  CurrencyExchangeRate,
+import {
+  AssetData,
+  HistoricalDataPoint,
   AlphaVantageStockResponse,
   AlphaVantageHistoricalResponse,
-  AlphaVantageCryptoResponse,
-  AlphaVantageExchangeRateResponse
+  CurrencyExchangeRate,
+  AlphaVantageExchangeRateResponse,
+  AlphaVantageCryptoResponse
 } from '../types';
 
 export class AlphaVantageService {
@@ -132,10 +132,13 @@ export class AlphaVantageService {
       
       const rateData = response['Realtime Currency Exchange Rate'];
       const exchangeRate = {
-        fromCurrency: rateData['1. From_Currency Code'],
-        toCurrency: rateData['3. To_Currency Code'],
+        fromCurrencyCode: rateData['1. From_Currency Code'],
+        fromCurrencyName: rateData['2. From_Currency Name'],
+        toCurrencyCode: rateData['3. To_Currency Code'],
+        toCurrencyName: rateData['4. To_Currency Name'],
         exchangeRate: parseFloat(rateData['5. Exchange Rate']),
-        lastRefreshed: new Date(rateData['6. Last Refreshed'])
+        lastRefreshed: rateData['6. Last Refreshed'],
+        timeZone: rateData['7. Time Zone']
       };
 
       this.setCachedData(cacheKey, exchangeRate);
@@ -163,7 +166,7 @@ export class AlphaVantageService {
       const btcRate = await this.getCurrencyExchangeRate(symbol, 'BTC');
 
       const timeSeries = response['Time Series (Digital Currency Daily)'];
-      const latestData = Object.entries(timeSeries)[0][1];
+      const latestData = Object.entries(timeSeries)[0][1] as Record<string, string>;
       const usdPrice = parseFloat(latestData['4b. close (USD)']);
 
       const cryptoData = {

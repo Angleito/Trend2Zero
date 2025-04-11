@@ -7,14 +7,14 @@ export async function GET() {
     const conn = await dbConnect();
     return NextResponse.json({
       connected: true,
-      dbName: conn.db.databaseName,
+      dbName: conn.db?.databaseName ?? null,
       host: conn.host
     });
   } catch (error) {
     console.error('MongoDB connection error:', error);
     return NextResponse.json({
       connected: false,
-      error: error.message
+      error: error instanceof Error ? error.message : String(error)
     }, { status: 500 });
   }
 }
