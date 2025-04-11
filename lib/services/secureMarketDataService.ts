@@ -55,11 +55,11 @@ export class SecureMarketDataService {
   } = {}): Promise<MarketAsset[]> {
     // Return mock data for Vercel deployment
     return [
-      { symbol: 'BTC', name: 'Bitcoin', type: 'Cryptocurrency', description: 'Digital gold' },
-      { symbol: 'ETH', name: 'Ethereum', type: 'Cryptocurrency', description: 'Smart contract platform' },
-      { symbol: 'AAPL', name: 'Apple Inc.', type: 'Stocks', description: 'Technology company' },
-      { symbol: 'GOOGL', name: 'Alphabet Inc.', type: 'Stocks', description: 'Technology company' },
-      { symbol: 'XAU', name: 'Gold', type: 'Commodities', description: 'Precious metal' }
+      { symbol: 'BTC', name: 'Bitcoin', type: 'Cryptocurrency' },
+      { symbol: 'ETH', name: 'Ethereum', type: 'Cryptocurrency' },
+      { symbol: 'AAPL', name: 'Apple Inc.', type: 'Stocks' },
+      { symbol: 'GOOGL', name: 'Alphabet Inc.', type: 'Stocks' },
+      { symbol: 'XAU', name: 'Gold', type: 'Commodities' }
     ];
   }
 
@@ -129,6 +129,12 @@ export class SecureMarketDataService {
    * Get historical price data
    */
   async getHistoricalData(symbol: string, days: number = 30): Promise<HistoricalDataPoint[]> {
+    // Check if symbol is valid
+    const validSymbols = ['BTC', 'ETH', 'AAPL', 'GOOGL', 'XAU'];
+    if (!validSymbols.includes(symbol)) {
+      throw new Error(`Invalid symbol: ${symbol}`);
+    }
+
     // Generate mock historical data
     const result: HistoricalDataPoint[] = [];
     const today = new Date();

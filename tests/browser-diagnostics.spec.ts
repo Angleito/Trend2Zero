@@ -65,7 +65,7 @@ test('Comprehensive Bitcoin Price Diagnostics', async ({ page }) => {
 
   // Check for Bitcoin price API calls
   const bitcoinApiCalls = networkRequests.filter(url =>
-    url.includes('/api/crypto/bitcoin-price')
+    url.includes('/api/crypto') && url.includes('endpoint=bitcoin-price')
   );
 
   // If no API calls found, log all network requests for debugging

@@ -1,89 +1,75 @@
-# Browser Diagnostics for Trend2Zero
-
-This document explains how to use the browser diagnostics tools to catch and fix browser compatibility issues before they cause problems in production.
+# Browser Diagnostic Scripts
 
 ## Overview
 
-The Trend2Zero project includes a pre-commit and pre-push hook that runs browser diagnostics to check for common browser compatibility issues. This helps catch issues early in the development process, especially for components that rely on browser-specific APIs like charts.
+These diagnostic scripts provide interactive, visual debugging for various components and pages in the Trend2Zero application. Unlike traditional headless testing, these scripts launch a visible browser window, allowing developers to inspect rendering, interactions, and error states in real-time.
 
-## How It Works
+## Available Diagnostic Scripts
 
-1. **Pre-Commit Hook**: Before each commit, the browser diagnostics script runs to check for common issues in the codebase.
-2. **Pre-Push Hook**: Before pushing to the remote repository, the browser diagnostics script runs again to ensure all issues are fixed.
-3. **Manual Diagnostics**: You can also run the browser diagnostics manually using the `npm run browser:diagnose` command.
+Each diagnostic script follows a consistent pattern:
+- Launches a browser in headed mode
+- Navigates to a specific test page
+- Takes screenshots at different stages
+- Captures and logs console errors
+- Checks for specific elements and their presence
+- Provides a 10-second window for visual inspection
 
-## What It Checks
+### Available Scripts
 
-The browser diagnostics script checks for:
+1. **Chart Diagnostics**
+   ```bash
+   npm run diagnostic:chart
+   ```
+   Tests the TradingViewLightweightChart component, checking chart rendering and error handling.
 
-1. **Browser API Usage**: Ensures that browser-specific APIs like `document` and `window` are used safely with proper checks for SSR environments.
-2. **Component-Specific Issues**: Checks for known issues in specific components like `TradingViewLightweightChart`.
-3. **Playwright Tests**: Runs Playwright tests to ensure components render correctly in different browsers.
-4. **Visual Inspection**: Opens components in the browser for visual inspection.
+2. **Bitcoin Ticker Diagnostics**
+   ```bash
+   npm run diagnostic:bitcoin-ticker
+   ```
+   Diagnoses the Bitcoin Ticker component, verifying price display and error states.
 
-## Requirements
+3. **Market Overview Diagnostics**
+   ```bash
+   npm run diagnostic:market-overview
+   ```
+   Checks the Market Overview page for proper rendering of asset lists and performance indicators.
 
-- **Browser Tools MCP**: The script uses the Browser Tools MCP server for browser automation. It will be installed automatically if not already present.
-- **Development Server**: The script requires the development server to be running (`npm run dev`).
-- **Playwright**: The script uses Playwright for browser testing.
+4. **Asset Price Converter Diagnostics**
+   ```bash
+   npm run diagnostic:asset-price-converter
+   ```
+   Tests the Asset Price Converter for correct conversion inputs, results, and error handling.
 
-## Usage
+5. **Tracker Page Diagnostics**
+   ```bash
+   npm run diagnostic:tracker
+   ```
+   Verifies the Tracker page's watchlist, asset tracking controls, and performance summary.
 
-### Automatic Checks
+## How to Use
 
-The browser diagnostics run automatically:
+1. Ensure your development server is running (`npm run dev`)
+2. Open a new terminal
+3. Run the desired diagnostic script
+4. Observe the browser window and console output
 
-- When you commit code (`git commit`)
-- When you push code (`git push`)
+## Diagnostic Process
 
-### Manual Checks
+Each script does the following:
+- Launches a non-headless (visible) browser
+- Navigates to the test page
+- Takes initial screenshots
+- Checks for specific elements
+- Captures console errors
+- Provides a 10-second window for manual inspection
+- Automatically closes the browser
 
-You can also run the browser diagnostics manually:
+## Customization
 
-```bash
-npm run browser:diagnose
-```
+The diagnostic scripts are based on a flexible template (`browser-diagnostic-template.js`) that can be easily extended or modified to support new components or testing scenarios.
 
-### Skipping Checks
+## Best Practices
 
-In rare cases, you may need to skip the browser diagnostics:
-
-```bash
-git commit --no-verify
-git push --no-verify
-```
-
-**Note**: Skipping checks should be done only in exceptional circumstances, as it bypasses important safeguards.
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Development Server Not Running**: If you see an error about the development server not running, start it with `npm run dev`.
-2. **Browser Tools MCP Not Found**: If the Browser Tools MCP server fails to start, try installing it manually with `npm install -g @agentdeskai/browser-tools-mcp`.
-3. **Playwright Tests Failing**: If Playwright tests fail, check the test output for details and fix the issues in the relevant components.
-
-### Getting Help
-
-If you encounter issues with the browser diagnostics, check:
-
-1. The console output for specific error messages
-2. The browser console for JavaScript errors
-3. The Playwright test results for test failures
-
-## Adding New Components to Check
-
-To add a new component to the browser diagnostics:
-
-1. Open `scripts/browser-diagnostics.js`
-2. Add the component path to the `COMPONENTS_TO_CHECK` array
-3. Add any component-specific checks to the `checkComponent` function
-
-## Creating Test Pages
-
-For each component that needs browser testing:
-
-1. Create a test page in `app/test/[component-name]/page.tsx`
-2. Add Playwright tests in `tests/[component-name].spec.js`
-
-This allows the browser diagnostics to test the component in isolation.
+- Use these scripts during development to catch rendering issues early
+- Pay attention to console errors and screenshots
+- If an issue is found, use the browser's developer tools for further investigation

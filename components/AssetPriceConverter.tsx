@@ -102,7 +102,7 @@ const AssetPriceConverter: React.FC<AssetPriceConverterProps> = ({ assetSymbol }
         <div className="text-center py-4">
           <p className="text-red-500 mb-2">{error || 'Asset data not available'}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => { if (typeof window !== 'undefined') window.location.reload(); }}
             className="px-4 py-2 bg-[#FF9500] text-white rounded hover:bg-opacity-90 transition-colors"
           >
             Retry

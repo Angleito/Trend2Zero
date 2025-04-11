@@ -205,7 +205,7 @@ const AssetPriceTable: React.FC<AssetPriceTableProps> = ({
       <div className="bg-red-900/20 border border-red-500 rounded-lg p-4 text-center">
         <p className="text-red-500">{error}</p>
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => { if (typeof window !== 'undefined') window.location.reload(); }}
           className="mt-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
         >
           Retry

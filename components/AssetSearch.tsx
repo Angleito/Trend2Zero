@@ -22,11 +22,13 @@ const AssetSearch: React.FC<AssetSearchProps> = ({ onAssetSelect }) => {
         setShowResults(false);
       }
     };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+    return undefined;
   }, []);
 
   useEffect(() => {
