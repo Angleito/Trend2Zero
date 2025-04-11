@@ -1,18 +1,48 @@
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
-// We'll use types for TypeScript but import the actual library dynamically
+import {
+  createChart,
+  ColorType,
+  IChartApi,
+  ISeriesApi,
+  LineData,
+  Time,
+  UTCTimestamp,
+  BusinessDay,
+  CrosshairMode,
+  LineStyle,
+  LineSeries
+} from 'lightweight-charts';
 
-// Define ColorType enum since we're not importing it directly
-enum ColorType {
-  Solid = 'solid',
+// Define prop types
+export interface TradingViewLightweightChartProps {
+  data?: { time: number | string; value: number }[];
+  symbol?: string;
+  theme?: 'light' | 'dark';
+  days?: number;
+  width?: number;
+  height?: number;
 }
 
-// We'll dynamically import the chart library on the client side
-let createChart: any = null;
+// Helper function to convert time to proper format
+const formatTime = (timestamp: number | string | BusinessDay): Time => {
+  // If it's already a valid Time type (ISO string), return it
+  if (typeof timestamp === 'string') {
+    return timestamp as Time;
+  }
+
+  // Check if it's a BusinessDay object
+  if (timestamp !== null && typeof timestamp === 'object' && 'year' in timestamp) {
+    return timestamp as BusinessDay;
+  }
+
+  // Convert numeric timestamp to UTCTimestamp
+  return Math.floor(Number(timestamp) / 1000) as UTCTimestamp;
+};
 
 export interface TradingViewLightweightChartProps {
-  data?: any[];
+  data?: { time: number | string; value: number }[];
   symbol?: string;
   theme?: 'light' | 'dark';
   days?: number;
@@ -31,8 +61,10 @@ const TradingViewLightweightChart: React.FC<TradingViewLightweightChartProps> = 
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
-  const [chartData, setChartData] = useState<any[]>([]);
+  const [formattedData, setFormattedData] = useState<LineData[]>([]);
   const [debugInfo, setDebugInfo] = useState<any>({});
+  const [chart, setChart] = useState<IChartApi | null>(null);
+  const [lineSeries, setLineSeries] = useState<ISeriesApi<any> | null>(null);
 
   // Generate data based on symbol or use provided data
   useEffect(() => {
@@ -44,7 +76,11 @@ const TradingViewLightweightChart: React.FC<TradingViewLightweightChartProps> = 
         // If data is provided directly, use it
         if (data && data.length > 0) {
           console.log(`[Chart] Using provided data with ${data.length} points`);
-          setChartData(data);
+          const formattedProviderData = data.map(point => ({
+            time: formatTime(point.time),
+            value: point.value
+          }));
+          setFormattedData(formattedProviderData);
           setIsLoading(false);
           return;
         }
@@ -73,7 +109,7 @@ const TradingViewLightweightChart: React.FC<TradingViewLightweightChartProps> = 
             const price = basePrice * randomFactor;
 
             generatedData.push({
-              time: Math.floor(date.getTime() / 1000),
+              time: date.getTime(),
               value: price
             });
 
@@ -82,7 +118,12 @@ const TradingViewLightweightChart: React.FC<TradingViewLightweightChartProps> = 
           }
 
           console.log(`[Chart] Generated ${generatedData.length} data points`);
-          setChartData(generatedData);
+          const formatted = generatedData.map(point => ({
+            time: formatTime(point.time),
+            value: point.value
+          }));
+
+          setFormattedData(formatted);
           setIsLoading(false);
         } else {
           // No data and no symbol provided
@@ -100,175 +141,149 @@ const TradingViewLightweightChart: React.FC<TradingViewLightweightChartProps> = 
     generateData();
   }, [data, symbol, days]);
 
-  // Create and update chart
+  // Create chart instance once
   useEffect(() => {
-    if (isLoading || !chartContainerRef.current) {
-      console.log('[Chart] Skipping chart creation - still loading or no container');
-      return;
-    }
-
-    if (isError) {
-      console.log('[Chart] Skipping chart creation - in error state');
+    if (!chartContainerRef.current || chart !== null || isError) {
       return;
     }
 
     console.log('[Chart] Creating chart...');
 
-    // Clear previous chart
-    if (chartContainerRef.current) {
-      console.log('[Chart] Clearing previous chart');
-      chartContainerRef.current.innerHTML = '';
+    try {
+      // Create chart with explicit dimensions
+      const newChart = createChart(chartContainerRef.current, {
+        width: width,
+        height: height,
+        layout: {
+          background: {
+            type: ColorType.Solid,
+            color: theme === 'dark' ? '#1E1E2D' : '#FFFFFF'
+          },
+          textColor: theme === 'dark' ? '#D9D9D9' : '#191919',
+        },
+        grid: {
+          vertLines: { color: theme === 'dark' ? '#2B2B43' : '#E6E6E6' },
+          horzLines: { color: theme === 'dark' ? '#2B2B43' : '#E6E6E6' },
+        },
+        timeScale: {
+          borderColor: theme === 'dark' ? '#2B2B43' : '#E6E6E6',
+          timeVisible: true,
+          secondsVisible: false,
+        },
+        rightPriceScale: {
+          borderColor: theme === 'dark' ? '#2B2B43' : '#E6E6E6',
+          visible: true,
+        },
+        crosshair: {
+          mode: CrosshairMode.Normal,
+          vertLine: {
+            color: theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+            width: 1,
+            style: LineStyle.Dashed,
+          },
+          horzLine: {
+            color: theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+            width: 1,
+            style: LineStyle.Dashed,
+          },
+        },
+      });
+
+      // Add line series
+      const newLineSeries = newChart.addSeries(LineSeries, {
+        color: '#FF9500',
+        lineWidth: 2,
+        priceLineVisible: true,
+        lastValueVisible: true,
+        crosshairMarkerVisible: true,
+      });
+
+      console.log('[Chart] Chart and series created');
+
+      // Store chart and series in state
+      setChart(newChart);
+      setLineSeries(newLineSeries);
+
+      // Debug info
+      const debugData = {
+        containerExists: true,
+        containerDimensions: {
+          clientWidth: chartContainerRef.current.clientWidth,
+          clientHeight: chartContainerRef.current.clientHeight,
+          offsetWidth: chartContainerRef.current.offsetWidth,
+          offsetHeight: chartContainerRef.current.offsetHeight
+        },
+        chartCreated: true,
+        theme,
+        width,
+        height,
+        timestamp: new Date().toISOString()
+      };
+      setDebugInfo(debugData);
+
+      // Handle resize
+      const handleResize = () => {
+        if (chartContainerRef.current) {
+          newChart.applyOptions({
+            width: chartContainerRef.current.clientWidth,
+            height: chartContainerRef.current.clientHeight
+          });
+          newChart.timeScale().fitContent();
+        }
+      };
+
+      // Add resize listener
+      if (typeof window !== 'undefined') {
+        window.addEventListener('resize', handleResize);
+      }
+
+      // Return cleanup function
+      return () => {
+        console.log('[Chart] Cleaning up chart');
+        if (typeof window !== 'undefined') {
+          window.removeEventListener('resize', handleResize);
+        }
+        newChart.remove();
+        setChart(null);
+        setLineSeries(null);
+      };
+    } catch (error) {
+      console.error('[Chart] Error creating chart:', error);
+      setIsError(true);
+      return undefined;
+    }
+  }, [chartContainerRef.current, chart, isError, width, height, theme]);
+
+  // Update chart data when formattedData changes
+  useEffect(() => {
+    if (!lineSeries || isLoading || isError) {
+      return;
     }
 
-    // Debug info
-    const debugData = {
-      containerExists: !!chartContainerRef.current,
-      containerDimensions: chartContainerRef.current ? {
-        clientWidth: chartContainerRef.current.clientWidth,
-        clientHeight: chartContainerRef.current.clientHeight,
-        offsetWidth: chartContainerRef.current.offsetWidth,
-        offsetHeight: chartContainerRef.current.offsetHeight
-      } : null,
-      dataPoints: chartData.length,
-      theme,
-      width,
-      height,
-      timestamp: new Date().toISOString()
-    };
-    setDebugInfo(debugData);
-    console.log('[Chart] Debug info:', debugData);
+    try {
+      if (formattedData.length > 0) {
+        console.log(`[Chart] Setting data with ${formattedData.length} points`);
+        lineSeries.setData(formattedData);
+      } else {
+        // Fallback data if chartData is empty
+        console.log('[Chart] Using fallback data');
+        const now = Date.now();
+        lineSeries.setData([
+          { time: formatTime(now - 86400000), value: 100 },
+          { time: formatTime(now), value: 110 },
+        ]);
+      }
 
-    // Dynamically import the chart library
-    const initChart = async () => {
-      try {
-        // Import the library dynamically
-        if (!createChart) {
-          console.log('[Chart] Dynamically importing lightweight-charts');
-          const chartModule = await import('lightweight-charts');
-          createChart = chartModule.createChart;
-          console.log('[Chart] Chart library loaded successfully');
-        }
-
-        if (!chartContainerRef.current) {
-          console.log('[Chart] Chart container no longer exists');
-          return;
-        }
-
-        // Create chart with explicit dimensions
-        const chart = createChart(chartContainerRef.current, {
-          width: width,
-          height: height,
-          layout: {
-            background: {
-              type: ColorType.Solid,
-              color: theme === 'dark' ? '#1E1E2D' : '#FFFFFF'
-            },
-            textColor: theme === 'dark' ? '#D9D9D9' : '#191919',
-          },
-          grid: {
-            vertLines: { color: theme === 'dark' ? '#2B2B43' : '#E6E6E6' },
-            horzLines: { color: theme === 'dark' ? '#2B2B43' : '#E6E6E6' },
-          },
-          timeScale: {
-            borderColor: theme === 'dark' ? '#2B2B43' : '#E6E6E6',
-            timeVisible: true,
-            secondsVisible: false,
-          },
-        });
-
-        console.log('[Chart] Chart created');
-
-        // Add line series
-        const lineSeries = chart.addLineSeries({
-          color: '#FF9500',
-          lineWidth: 2,
-          priceLineVisible: true,
-          lastValueVisible: true,
-        });
-
-        console.log('[Chart] Line series added');
-
-        // Set data
-        if (chartData.length > 0) {
-          console.log(`[Chart] Setting data with ${chartData.length} points`);
-
-          // Ensure time is in the correct format
-          const formattedData = chartData.map(point => ({
-            time: typeof point.time === 'string' ? point.time : point.time,
-            value: point.value
-          }));
-
-          lineSeries.setData(formattedData);
-          console.log('[Chart] Data set successfully');
-        } else {
-          // Fallback data if chartData is empty
-          console.log('[Chart] Using fallback data');
-          lineSeries.setData([
-            { time: Math.floor(Date.now() / 1000) - 86400, value: 100 },
-            { time: Math.floor(Date.now() / 1000), value: 110 },
-          ]);
-        }
-
-        // Fit content
+      // Fit content
+      if (chart) {
         chart.timeScale().fitContent();
         console.log('[Chart] Fitted content');
-
-        // Force a resize to ensure proper rendering
-        setTimeout(() => {
-          if (chartContainerRef.current) {
-            console.log('[Chart] Forcing resize');
-            chart.applyOptions({
-              width: chartContainerRef.current.clientWidth,
-              height: chartContainerRef.current.clientHeight
-            });
-            chart.timeScale().fitContent();
-          }
-        }, 100);
-
-        // Handle resize
-        const handleResize = () => {
-          if (chartContainerRef.current) {
-            chart.applyOptions({
-              width: chartContainerRef.current.clientWidth,
-              height: chartContainerRef.current.clientHeight
-            });
-          }
-        };
-
-        // Add resize listener
-        if (typeof window !== 'undefined') {
-          window.addEventListener('resize', handleResize);
-          console.log('[Chart] Added resize listener');
-        }
-
-        // Store cleanup function
-        return () => {
-          console.log('[Chart] Cleaning up chart');
-          if (typeof window !== 'undefined') {
-            window.removeEventListener('resize', handleResize);
-          }
-          chart.remove();
-        };
-      } catch (error) {
-        console.error('[Chart] Error creating chart:', error);
-        setIsError(true);
-        return undefined;
       }
-    };
-
-    // Initialize the chart
-    let cleanup: (() => void) | undefined;
-    initChart().then(cleanupFn => {
-      cleanup = cleanupFn;
-    });
-
-    // Return cleanup function
-    return () => {
-      if (cleanup) {
-        cleanup();
-      }
-    };
-  }, [chartData, isLoading, isError, width, height, theme]);
+    } catch (error) {
+      console.error('[Chart] Error updating chart data:', error);
+      setIsError(true);
+    }
+  }, [formattedData, lineSeries, chart, isLoading, isError]);
 
   // Handle retry
   const handleRetry = () => {
@@ -276,7 +291,7 @@ const TradingViewLightweightChart: React.FC<TradingViewLightweightChartProps> = 
     setIsLoading(true);
     setIsError(false);
     // This will trigger the data generation effect
-    setChartData([]);
+    setFormattedData([]);
   };
 
   // Loading state
