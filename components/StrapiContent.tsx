@@ -20,14 +20,14 @@ const StrapiContent: React.FC<StrapiContentProps> = ({ slug, children }) => {
         if (slug) {
           // Fetch a specific post by slug
           const response = await getBlogPostBySlug(slug);
-          data = response.data.map(item => ({
+          data = response.data.map((item: any) => ({
             id: item.id,
             ...item.attributes
           }));
         } else {
           // Fetch all posts
           const response = await getBlogPosts();
-          data = response.data.map(item => ({
+          data = response.data.map((item: any) => ({
             id: item.id,
             ...item.attributes,
             // Add default values for missing fields

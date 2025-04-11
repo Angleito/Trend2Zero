@@ -135,9 +135,11 @@ const AssetPriceTable: React.FC<AssetPriceTableProps> = ({
 
         // For name sorting
         if (sortConfig.key === 'name') {
+          const aName = a.name || '';
+          const bName = b.name || '';
           return sortConfig.direction === 'ascending'
-            ? a.name.localeCompare(b.name)
-            : b.name.localeCompare(a.name);
+            ? aName.localeCompare(bName)
+            : bName.localeCompare(aName);
         }
 
         // For symbol sorting
@@ -149,9 +151,11 @@ const AssetPriceTable: React.FC<AssetPriceTableProps> = ({
 
         // For category sorting
         if (sortConfig.key === 'type') {
+          const aType = a.type || '';
+          const bType = b.type || '';
           return sortConfig.direction === 'ascending'
-            ? a.type.localeCompare(b.type)
-            : b.type.localeCompare(a.type);
+            ? aType.localeCompare(bType)
+            : bType.localeCompare(aType);
         }
 
         return 0;
@@ -262,7 +266,7 @@ const AssetPriceTable: React.FC<AssetPriceTableProps> = ({
                     href={`/asset/${asset.symbol}`}
                     className="text-orange-500 hover:text-orange-400 transition-colors"
                   >
-                    {asset.name}
+                    {asset.name || asset.symbol}
                   </Link>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-gray-300">
@@ -270,7 +274,7 @@ const AssetPriceTable: React.FC<AssetPriceTableProps> = ({
                 </td>
                 {showCategory && (
                   <td className="px-6 py-4 whitespace-nowrap text-gray-300">
-                    {asset.type}
+                    {asset.type || '-'}
                   </td>
                 )}
                 <td className="px-6 py-4 whitespace-nowrap text-gray-300">

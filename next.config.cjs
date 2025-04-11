@@ -14,7 +14,7 @@ const nextConfig = {
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
-        url: require.resolve('url/'), // Provide a polyfill for the 'url' module
+        url: require.resolve('url'), // Corrected URL module import
       };
     }
 

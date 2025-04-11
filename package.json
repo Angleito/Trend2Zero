@@ -14,7 +14,8 @@
     "strapi:dev": "cd strapi-backend && npm run develop",
     "strapi:build": "cd strapi-backend && npm run build",
     "strapi:start": "cd strapi-backend && npm run start",
-    "browser:diagnose": "node scripts/browser-diagnostics.js"
+    "browser:diagnose": "node scripts/browser-diagnostics.js",
+    "vercel:test": "node scripts/test-vercel-deployment.js"
   },
   "dependencies": {
     "@vercel/analytics": "^1.5.0",

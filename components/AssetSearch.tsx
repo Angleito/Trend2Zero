@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MarketDataService } from '../lib/services/marketDataService';
 import type { MarketAsset } from '../lib/types';
 import Link from 'next/link';
-import Image from 'next/image';
 
 interface AssetSearchProps {
   onAssetSelect?: (asset: MarketAsset) => void;
@@ -46,7 +45,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({ onAssetSelect }) => {
         });
 
         const filteredResults = assets.filter(asset =>
-          asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (asset.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
           asset.symbol.toLowerCase().includes(searchTerm.toLowerCase())
         );
 
@@ -122,24 +121,14 @@ const AssetSearch: React.FC<AssetSearchProps> = ({ onAssetSelect }) => {
                   onClick={() => handleAssetClick(asset)}
                 >
                   <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-gray-700 rounded-full mr-3">
-                    {asset.image ? (
-                      <Image
-                        src={asset.image}
-                        alt={asset.name}
-                        width={24}
-                        height={24}
-                        className="w-6 h-6"
-                      />
-                    ) : (
-                      <span className="text-sm font-medium text-gray-300">
-                        {asset.symbol.substring(0, 2)}
-                      </span>
-                    )}
+                    <span className="text-sm font-medium text-gray-300">
+                      {asset.symbol.substring(0, 2)}
+                    </span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-white">{asset.name}</p>
+                    <p className="text-sm font-medium text-white">{asset.name || asset.symbol}</p>
                     <p className="text-xs text-gray-400">
-                      {asset.symbol} • {asset.type}
+                      {asset.symbol} • {asset.type || 'Unknown'}
                     </p>
                   </div>
                 </Link>
