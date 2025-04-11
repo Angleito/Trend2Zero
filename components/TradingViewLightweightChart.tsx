@@ -105,7 +105,9 @@ const TradingViewLightweightChart: React.FC<TradingViewLightweightChartProps> = 
         series.setData(chartData);
 
         // Add event listeners
-        window.addEventListener('resize', handleResize);
+        if (typeof window !== 'undefined') {
+          window.addEventListener('resize', handleResize);
+        }
 
         setLoading(false);
       } catch (err) {
@@ -119,7 +121,9 @@ const TradingViewLightweightChart: React.FC<TradingViewLightweightChartProps> = 
 
     // Cleanup
     return () => {
-      window.removeEventListener('resize', handleResize);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', handleResize);
+      }
       if (chart) {
         chart.remove();
       }
@@ -140,7 +144,7 @@ const TradingViewLightweightChart: React.FC<TradingViewLightweightChartProps> = 
         <div className="text-center">
           <p className="text-red-500 mb-2">{error}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => typeof window !== 'undefined' && window.location.reload()}
             className="px-4 py-2 bg-[#FF9500] text-white rounded hover:bg-opacity-90 transition-colors"
           >
             Retry
