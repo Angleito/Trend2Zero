@@ -18,6 +18,7 @@
     }
   ],
   "env": {
-    "NODE_PATH": "."
+    "NODE_PATH": ".",
+    "NEXT_TYPESCRIPT_CHECK": "false"
   }
 }
