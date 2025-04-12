@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import type { AssetCategory } from '../../lib/types';
-import Link from 'next/link';
+
 
 // Import client components directly
 import StickyHeader from '../../components/StickyHeader';
@@ -10,6 +10,8 @@ import AssetPriceTable from '../../components/AssetPriceTable';
 import AssetSearch from '../../components/AssetSearch';
 import { useMarketData } from '../../lib/hooks/useMarketData';
 
+import Image from 'next/image';
+import Link from 'next/link';
 export default function TrackerPage() {
   const [selectedCategory, setSelectedCategory] = useState<AssetCategory | 'All'>('All');
   const [isClientSide, setIsClientSide] = useState(false);
@@ -25,7 +27,7 @@ export default function TrackerPage() {
   // Safely handle marketData properties
   const loading = marketData?.loading ?? true;
   const error = marketData?.error ?? null;
-  const assets = marketData?.popularAssets ?? [];
+  
 
   // Ensure component only renders on client side
   useEffect(() => {
@@ -34,16 +36,22 @@ export default function TrackerPage() {
 
   // Retry market data fetch if there's an error
   const handleRetry = () => {
-    marketData.refetch();
+    if (marketData?.refetch) {
+      marketData.refetch();
+    }
   };
 
-  // If not client-side, return null to prevent hydration errors
+  // Show loading state during server-side rendering
   if (!isClientSide) {
-    return null;
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#FF9500]"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col" data-testid="tracker-page">
+    <div className="min-h-screen flex flex-col" data-testid="tracker-page">
       <StickyHeader />
 
       <main className="flex-grow p-6">
@@ -83,7 +91,11 @@ export default function TrackerPage() {
                       <button
                         key={category}
                         onClick={() => setSelectedCategory(category)}
-                        className={`asset-category-btn ${selectedCategory === category ? 'asset-category-btn-active' : ''}`}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                          selectedCategory === category
+                            ? 'bg-[#FF9500] text-white'
+                            : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                        }`}
                         data-testid={`category-btn-${category.toLowerCase()}`}
                       >
                         {category}

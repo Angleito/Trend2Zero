@@ -1,102 +1,122 @@
-no# Trend2Zero
+# Trend2Zero CLI
 
-## Project Overview
-Trend2Zero is a comprehensive financial tracking and analysis application that provides real-time market data and insights.
+## Overview
 
-## Key Features
-- Real-time cryptocurrency and stock market tracking
-- Advanced price analysis and historical data visualization
-- Multi-asset portfolio management
+Trend2Zero CLI is a comprehensive command-line interface for managing and interacting with the Trend2Zero project. It provides easy-to-use commands for building, testing, deploying, and managing your application.
 
-## Technology Stack
-- Next.js
-- React
-- TypeScript
-- Node.js
-- Tailwind CSS
+## Prerequisites
 
-## Data Sources
-- Alpha Vantage API for stock market data
-- CoinMarketCap API for cryptocurrency information
+- Node.js (>=18.0.0)
+- npm
 
-## Getting Started
+## Installation
 
-### Prerequisites
-- Node.js (v16 or later)
-- npm or yarn
-
-### Installation
-1. Clone the repository
-2. Install dependencies: `npm install`
-3. Environment Configuration
-   - For development: Copy `.env.example` to `.env` and fill in your API keys
-   - For production: Create `.env.production` with production-specific configurations
-4. Development Server: `npm run dev`
-
-### Production Build
-1. Set up environment variables in `.env.production`
-2. Build the application: `npm run build`
-3. Start the production server: `npm run start`
-
-#### Environment Variable Management
-- Use `.env.example` as a template for local development
-- Create `.env.production` for production-specific settings
-- Prefix client-side variables with `NEXT_PUBLIC_`
-- Never commit sensitive API keys to version control
-
-## API Integrations
-- Stocks and ETFs (via Alpha Vantage API)
-- Cryptocurrencies (via CoinMarketCap API)
-
-## MCP Server Workflow
-
-The Model Context Protocol (MCP) client is used for tool-based search and integration. The workflow is designed for seamless local development and easy debugging.
-
-### Default Local Server Behavior
-
-- By default, the MCP client connects to a local MCP server at `http://localhost:8081`.
-- Before connecting, the client checks if the local server is running by polling the `/listTools` endpoint.
-- If the server is not running, it is started automatically by spawning `scripts/mcp-local-server.js`.
-- No additional dependencies are required; only Node.js built-ins are used.
-
-### Overriding the MCP Server URL
-
-- You can override the default MCP server URL by setting the `MCP_SERVER_URL` environment variable.
-  - Example: `MCP_SERVER_URL="http://localhost:9090" npm run dev`
-- If `MCP_SERVER_URL` is set, the client will use the specified server and will not attempt to start the local server automatically.
-
-### Running the Local MCP Server Manually (for Debugging)
-
-To run the local MCP server manually (for debugging or custom mock responses):
-
-```sh
-node scripts/mcp-local-server.js
+### Global Installation
+```bash
+npm install -g .
 ```
 
-- By default, the server listens on port 8081.
-- You can override the port:
-  - With an environment variable: `PORT=9090 node scripts/mcp-local-server.js`
-  - Or with a CLI argument: `node scripts/mcp-local-server.js --port 9090`
+### Local Project Installation
+```bash
+npm install
+```
 
-### Endpoints
+## Commands
 
-- `POST /listTools` — Returns the list of available tools.
-- `POST /callTool` — Accepts tool invocation requests and returns mock results.
+### Build Commands
+```bash
+# Standard build
+trend2zero build
 
-### Troubleshooting & Caveats
+# Build with bundle analysis
+trend2zero build --analyze
 
-- If the default port (8081) is already in use, the server may fail to start. Use a different port as shown above.
-- If you set `MCP_SERVER_URL` to a remote or custom server, the local server will not be started automatically.
-- For debugging, running the server manually allows you to see logs and modify mock responses in `scripts/mcp-local-server.js`.
-- Ensure your environment variables are set correctly to avoid connection issues.
+# Analyze build performance
+trend2zero build --performance
+```
 
-### Relevant Code
+### Cache Management
+```bash
+# Clear build cache
+trend2zero cache --clear
 
-- MCP client logic: [`lib/services/braveSearchMcp.ts`](lib/services/braveSearchMcp.ts)
-- Local MCP server implementation: [`scripts/mcp-local-server.js`](scripts/mcp-local-server.js)
+# Analyze cache performance
+trend2zero cache --analyze
+
+# Validate cache
+trend2zero cache --validate
+
+# Show cache metrics
+trend2zero cache --metrics
+
+# Prune cache
+trend2zero cache --prune
+```
+
+### Testing
+```bash
+# Run all tests
+trend2zero test
+
+# Run unit tests
+trend2zero test --unit
+
+# Run end-to-end tests
+trend2zero test --e2e
+
+# Run visual tests
+trend2zero test --visual
+
+# Generate test coverage report
+trend2zero test --coverage
+
+# Run tests in watch mode
+trend2zero test --watch
+```
+
+### Continuous Build Monitoring
+```bash
+# Run continuous build monitoring
+npm run monitor:build
+```
+
+Continuous monitoring helps track:
+- Build consistency
+- Visual regressions
+- Console and page errors
+- Build stability validation
+
+The monitoring system:
+- Starts the development server
+- Runs Playwright tests to monitor the build
+- Captures and logs any inconsistencies or errors
+- Generates detailed reports in the `tests/` directory
+
+### Deployment
+```bash
+# Deploy to staging
+trend2zero deploy
+
+# Deploy to production
+trend2zero deploy --production
+```
+
+### Development
+```bash
+# Start development server
+trend2zero dev
+```
+
+### Performance
+```bash
+# Run performance tests
+trend2zero performance
+```
 
 ## Contributing
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+Please read the `CONTRIBUTING.md` file for details on our code of conduct and the process for submitting pull requests.
 
 ## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+This project is licensed under the terms specified in the `LICENSE` file.

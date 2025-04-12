@@ -7,6 +7,8 @@ import TradingViewLightweightChart from '../../../components/TradingViewLightwei
  * Test page for TradingViewLightweightChart component
  * This page is used for visual testing and browser diagnostics
  */
+import Image from 'next/image';
+import Link from 'next/link';
 export default function TradingViewLightweightChartTestPage() {
   const [errorMode, setErrorMode] = useState(false);
 

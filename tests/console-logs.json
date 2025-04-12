@@ -1,0 +1,22 @@
+[
+  {
+    "type": "warning",
+    "text": "[JavaScript Warning: \"Loading failed for the <script> with source “http://localhost:3000/_next/static/chunks/main-app.js?v=1744498383074”.\" {file: \"http://localhost:3000/\" line: 1}]",
+    "timestamp": "2025-04-12T22:53:03.207Z"
+  },
+  {
+    "type": "warning",
+    "text": "[JavaScript Warning: \"Loading failed for the <script> with source “http://localhost:3000/_next/static/chunks/app-pages-internals.js”.\" {file: \"http://localhost:3000/\" line: 1}]",
+    "timestamp": "2025-04-12T22:53:03.271Z"
+  },
+  {
+    "type": "warning",
+    "text": "[JavaScript Warning: \"Loading failed for the <script> with source “http://localhost:3000/_next/static/chunks/app/page.js”.\" {file: \"http://localhost:3000/\" line: 1}]",
+    "timestamp": "2025-04-12T22:53:03.271Z"
+  },
+  {
+    "type": "warning",
+    "text": "[JavaScript Warning: \"Loading failed for the <script> with source “http://localhost:3000/_next/static/chunks/app/error.js”.\" {file: \"http://localhost:3000/\" line: 1}]",
+    "timestamp": "2025-04-12T22:53:03.271Z"
+  }
+]

@@ -2,23 +2,41 @@
   "version": 2,
   "builds": [
     {
-      "src": "package.json",
-      "use": "@vercel/next",
-      "config": {
-        "installCommand": "npm install --legacy-peer-deps",
-        "buildCommand": "next build",
-        "outputDirectory": ".next"
-      }
+      "src": "next.config.js",
+      "use": "@vercel/next"
     }
   ],
   "routes": [
     {
+      "src": "^/static/(.*)$",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "^/(_next/static/|_next/image/|favicon.ico|robots.txt|sitemap.xml)(.*)$",
+      "headers": {
+        "cache-control": "public, max-age=31536000, stale-while-revalidate=3600"
+      }
+    },
+    {
       "src": "/(.*)",
-      "dest": "/$1"
+      "headers": {
+        "cache-control": "public, max-age=3600, stale-while-revalidate=60, stale-if-error=3600"
+      }
     }
   ],
   "env": {
-    "NODE_PATH": ".",
-    "NEXT_TYPESCRIPT_CHECK": "false"
+    "NEXT_PUBLIC_VERCEL_ENV": "production",
+    "NEXT_CACHE_HANDLER_PATH": "./cache-handler.js"
+  },
+  "buildSettings": {
+    "maxDuration": 60,
+    "timeout": 60
+  },
+  "outputDirectory": ".next",
+  "performance": {
+    "maxConcurrentBuilds": 4,
+    "cacheHandlerPath": "./cache-handler.js"
   }
 }

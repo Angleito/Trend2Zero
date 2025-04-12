@@ -1,33 +1,24 @@
 module.exports = {
   presets: [
-    [
-      '@babel/preset-env',
-      {
-        targets: {
-          node: 'current',
-        },
-        modules: 'commonjs',
-      },
-    ],
-    '@babel/preset-typescript',
+    ['@babel/preset-env', { targets: { node: 'current' } }],
+    '@babel/preset-typescript'
   ],
   plugins: [
-    ['@babel/plugin-transform-typescript', { allowDeclareFields: true }],
     '@babel/plugin-transform-runtime',
     '@babel/plugin-proposal-class-properties',
     '@babel/plugin-proposal-object-rest-spread',
-    [
-      'module-resolver',
-      {
-        root: ['./src'],
-        alias: {
-          '@models': './src/models',
-          '@controllers': './src/controllers',
-          '@services': './src/services',
-          '@utils': './src/utils',
-        },
-      },
-    ],
+    '@babel/plugin-proposal-optional-chaining',
+    '@babel/plugin-proposal-nullish-coalescing-operator',
+    ['module-resolver', {
+      root: ['./src'],
+      alias: {
+        '@': './src',
+        '@models': './src/models',
+        '@controllers': './src/controllers',
+        '@services': './src/services',
+        '@utils': './src/utils'
+      }
+    }]
   ],
   env: {
     test: {

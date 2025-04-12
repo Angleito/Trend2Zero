@@ -140,22 +140,52 @@ export class MockDataService {
    * Get mock asset price data
    */
   getMockAssetPrice(symbol: string): AssetData {
-    // Generate a random price between 100 and 10000
-    const price = Math.random() * 9900 + 100;
-    // Generate a random change between -5% and 5%
-    const changePercent = (Math.random() * 10) - 5;
-    const change = price * (changePercent / 100);
-    // Mock Bitcoin price at 50000
-    const bitcoinPrice = 50000;
-    const priceInBTC = price / bitcoinPrice;
+    // Use predefined base prices for known assets
+    const basePrices: { [key: string]: number } = {
+      'BTC': 50000,
+      'ETH': 3000,
+      'BNB': 500,
+      'SOL': 150,
+      'XRP': 1.20,
+      'ADA': 2.50,
+      'DOGE': 0.15,
+      'DOT': 20,
+      'MATIC': 1.50,
+      'AVAX': 35,
+      // Stock prices
+      'AAPL': 175,
+      'MSFT': 350,
+      'GOOGL': 2800,
+      'AMZN': 3500,
+      'TSLA': 250,
+      'META': 480,
+      'NVDA': 880,
+      'JPM': 180,
+      'V': 270,
+      'JNJ': 155,
+      // Commodities
+      'XAU': 2000,  // Gold
+      'XAG': 25,    // Silver
+      'XPT': 950,   // Platinum
+      'XPD': 1200,  // Palladium
+      'CL': 85,     // Crude Oil
+      'NG': 3.50    // Natural Gas
+    };
+
+    const basePrice = basePrices[symbol.toUpperCase()] || 100;
+    // Reduce variation to max ±1% for more stability
+    const changePercent = (Math.random() * 2) - 1;
+    const change = basePrice * (changePercent / 100);
+    const bitcoinPrice = basePrices['BTC'];
+    const priceInBTC = basePrice / bitcoinPrice;
 
     return {
       symbol,
-      price,
+      price: basePrice,
       change,
       changePercent,
       priceInBTC,
-      priceInUSD: price,
+      priceInUSD: basePrice,
       lastUpdated: new Date().toISOString()
     };
   }
@@ -165,37 +195,55 @@ export class MockDataService {
    */
   getMockHistoricalData(symbol: string, days: number = 30): HistoricalDataPoint[] {
     const result: HistoricalDataPoint[] = [];
-    const basePrice = Math.random() * 9900 + 100;
-    
-    // Generate data points for the specified number of days
-    for (let i = 0; i < days; i++) {
-      const date = new Date();
-      date.setDate(date.getDate() - (days - i));
-      
-      // Add some randomness to the price
-      const volatility = 0.02; // 2% volatility
-      const randomChange = (Math.random() * 2 - 1) * volatility;
-      const price = basePrice * (1 + randomChange * i);
-      
-      // Generate open, high, low prices around the close price
-      const open = price * (1 + (Math.random() * 0.02 - 0.01));
-      const high = Math.max(open, price) * (1 + Math.random() * 0.01);
-      const low = Math.min(open, price) * (1 - Math.random() * 0.01);
-      
-      // Generate random volume
-      const volume = Math.floor(Math.random() * 1000000) + 100000;
-      
+    const today = new Date();
+    const basePrices: { [key: string]: number } = {
+      'BTC': 50000,
+      'ETH': 3000,
+      'AAPL': 175,
+      'MSFT': 350,
+      'XAU': 2000
+    };
+
+    let baseValue = basePrices[symbol.toUpperCase()] || 100;
+
+    // Reduce daily variation to max ±0.5% for more stability
+    const maxDailyVariation = 0.005;
+
+    for (let i = days; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+
+      const dailyVariation = baseValue * maxDailyVariation * (Math.random() * 2 - 1);
+      const price = baseValue + dailyVariation;
+
+      // Generate realistic OHLC data with tight spreads
+      const spread = price * 0.001; // 0.1% spread
+      const open = price * (1 - spread/2 + Math.random() * spread);
+      const high = Math.max(open, price) * (1 + Math.random() * (spread/2));
+      const low = Math.min(open, price) * (1 - Math.random() * (spread/2));
+      const close = price;
+
+      // Generate realistic volume based on asset type
+      const baseVolume = symbol.toUpperCase() === 'BTC' ? 1000000000 : 
+                        symbol.toUpperCase() === 'ETH' ? 500000000 :
+                        symbol.length === 4 ? 50000 : // Forex pairs
+                        100000; // Stocks and others
+      const volume = Math.round(baseVolume * (0.8 + Math.random() * 0.4));
+
       result.push({
-        date,
-        price,
-        open,
-        high,
-        low,
-        close: price,
+        date: new Date(date),
+        price: parseFloat(price.toFixed(2)),
+        open: parseFloat(open.toFixed(2)),
+        high: parseFloat(high.toFixed(2)),
+        low: parseFloat(low.toFixed(2)),
+        close: parseFloat(close.toFixed(2)),
         volume
       });
+
+      // Update base value with smaller drift for next day
+      baseValue = close * (1 + (Math.random() * 0.002 - 0.001)); // ±0.1% drift
     }
-    
+
     return result;
   }
 }

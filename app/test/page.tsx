@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
-import Link from 'next/link';
 
+
+import Image from 'next/image';
+import Link from 'next/link';
 export default function TestPage() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center">

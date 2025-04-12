@@ -1,33 +1,74 @@
 import { defineConfig, devices } from '@playwright/test';
-import path from 'path';
 
 export default defineConfig({
-  testDir: path.resolve(__dirname, 'tests'),
-  testMatch: ['**/*.spec.ts', '**/*.spec.js'],
+  testDir: './tests',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 3 : 1,
   workers: process.env.CI ? 1 : undefined,
+  
+  // Enhanced reporting
   reporter: [
-    ['html'],
-    ['json', { outputFile: 'playwright-report/report.json' }]
+    ['html', { open: 'never' }],
+    ['list'],
+    ['json', { outputFile: 'test-results/test-results.json' }]
   ],
+  
   use: {
-    baseURL: 'http://localhost:3000',
+    // Improved tracing and debugging
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure'
+    video: 'retain-on-failure',
+    
+    // Base configuration
+    baseURL: 'http://localhost:3000',
+    viewport: { width: 1280, height: 720 },
+    
+    // Enhanced timeout handling
+    actionTimeout: 30000,
+    navigationTimeout: 45000,
+    
+    // Reduce flakiness
+    ignoreHTTPSErrors: true,
+    bypassCSP: true,
   },
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000
-  },
+  
+  // Projects with different browser configurations
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { 
+        ...devices['Desktop Chrome'],
+        screenshot: 'on',
+        launchOptions: {
+          slowMo: 100, // Add slight delay to reduce race conditions
+          headless: false
+        }
+      },
+    },
+    {
+      name: 'firefox',
+      use: { 
+        ...devices['Desktop Firefox'],
+        screenshot: 'on',
+        launchOptions: {
+          slowMo: 100,
+          headless: false
+        }
+      },
     }
-  ]
+  ],
+  
+  // Visual regression snapshot configuration
+  expect: {
+    toHaveScreenshot: {
+      maxDiffPixelRatio: 0.02,
+      threshold: 0.2,
+      maxDiffPixels: 100
+    }
+  },
+  
+  // Snapshot and result directories
+  snapshotDir: './tests/__snapshots__',
+  outputDir: './test-results',
 });

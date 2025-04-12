@@ -1,7 +1,8 @@
-import Link from 'next/link';
-import Image from 'next/image';
+import React from 'react';
 import StickyHeader from '../components/StickyHeader';
 
+import Image from 'next/image';
+import Link from 'next/link';
 export default function Home() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">

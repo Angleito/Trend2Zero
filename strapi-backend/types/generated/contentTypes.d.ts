@@ -411,6 +411,7 @@ export interface ApiAngleitoAngleito extends Struct.CollectionTypeSchema {
 export interface ApiAssetAsset extends Struct.CollectionTypeSchema {
   collectionName: 'assets';
   info: {
+    description: 'Represents financial assets like cryptocurrencies, stocks, and commodities';
     displayName: 'Asset';
     pluralName: 'assets';
     singularName: 'asset';
@@ -419,14 +420,13 @@ export interface ApiAssetAsset extends Struct.CollectionTypeSchema {
     draftAndPublish: true;
   };
   attributes: {
-    assetType: Schema.Attribute.Enumeration<
-      ['stock', 'crypto', 'forex', 'commodity', 'index']
-    >;
+    assetType: Schema.Attribute.Enumeration<['crypto', 'stock', 'commodity']> &
+      Schema.Attribute.Required;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
-    currentPrice: Schema.Attribute.Decimal;
-    description: Schema.Attribute.Blocks;
+    currentPrice: Schema.Attribute.Decimal & Schema.Attribute.Required;
+    description: Schema.Attribute.Text;
     historicalData: Schema.Attribute.Relation<
       'oneToMany',
       'api::historical-data.historical-data'
@@ -436,11 +436,13 @@ export interface ApiAssetAsset extends Struct.CollectionTypeSchema {
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::asset.asset'> &
       Schema.Attribute.Private;
     marketCap: Schema.Attribute.BigInteger;
-    name: Schema.Attribute.String;
+    name: Schema.Attribute.String & Schema.Attribute.Required;
     priceChange: Schema.Attribute.Decimal;
     priceChangePercent: Schema.Attribute.Decimal;
     publishedAt: Schema.Attribute.DateTime;
-    symbol: Schema.Attribute.String;
+    symbol: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -451,6 +453,7 @@ export interface ApiAssetAsset extends Struct.CollectionTypeSchema {
 export interface ApiBlogPostBlogPost extends Struct.CollectionTypeSchema {
   collectionName: 'blog_posts';
   info: {
+    description: 'Blog posts about market trends and financial insights';
     displayName: 'Blog Post';
     pluralName: 'blog-posts';
     singularName: 'blog-post';
@@ -459,9 +462,10 @@ export interface ApiBlogPostBlogPost extends Struct.CollectionTypeSchema {
     draftAndPublish: true;
   };
   attributes: {
-    author: Schema.Attribute.String;
-    category: Schema.Attribute.String;
+    author: Schema.Attribute.String & Schema.Attribute.Required;
+    category: Schema.Attribute.String & Schema.Attribute.Required;
     content: Schema.Attribute.RichText & Schema.Attribute.Required;
+    coverImage: Schema.Attribute.Media<'images'>;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -473,7 +477,10 @@ export interface ApiBlogPostBlogPost extends Struct.CollectionTypeSchema {
     > &
       Schema.Attribute.Private;
     publishedAt: Schema.Attribute.DateTime;
-    slug: Schema.Attribute.UID<'title'> & Schema.Attribute.Required;
+    slug: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    tags: Schema.Attribute.JSON;
     title: Schema.Attribute.String & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
@@ -520,6 +527,7 @@ export interface ApiMarketOverviewMarketOverview
   extends Struct.SingleTypeSchema {
   collectionName: 'market_overviews';
   info: {
+    description: 'Market overview data including indices and top movers';
     displayName: 'Market Overview';
     pluralName: 'market-overviews';
     singularName: 'market-overview';
@@ -531,20 +539,25 @@ export interface ApiMarketOverviewMarketOverview
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
-    indices: Schema.Attribute.Component<'index.indicies', true>;
-    lastUpdated: Schema.Attribute.DateTime;
+    indices: Schema.Attribute.JSON & Schema.Attribute.Required;
+    lastUpdated: Schema.Attribute.DateTime & Schema.Attribute.Required;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
       'api::market-overview.market-overview'
     > &
       Schema.Attribute.Private;
+    marketSentiment: Schema.Attribute.Enumeration<
+      ['bullish', 'bearish', 'neutral']
+    >;
     marketStatus: Schema.Attribute.Enumeration<
       ['open', 'closed', 'pre-market', 'after-hours']
-    >;
-    marketSummary: Schema.Attribute.RichText;
+    > &
+      Schema.Attribute.Required;
+    marketSummary: Schema.Attribute.Text;
     publishedAt: Schema.Attribute.DateTime;
-    topMovers: Schema.Attribute.Component<'top-mover.top-mover', true>;
+    topMovers: Schema.Attribute.JSON & Schema.Attribute.Required;
+    tradingVolume: Schema.Attribute.BigInteger;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;

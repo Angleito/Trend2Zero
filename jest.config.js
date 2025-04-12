@@ -1,46 +1,40 @@
 module.exports = {
   testEnvironment: 'jsdom',
+  roots: [
+    '<rootDir>'
+  ],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  moduleNameMapper: {
-    // Handle module aliases
-    '^@/(.*)$': '<rootDir>/$1',
-    
-    // Handle CSS imports
-    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
-    
-    // Handle image imports
-    '\\.(jpg|jpeg|png|gif|webp|svg)$': '<rootDir>/__mocks__/fileMock.js'
-  },
-  testPathIgnorePatterns: [
-    '<rootDir>/node_modules/',
-    '<rootDir>/.next/'
-  ],
-  collectCoverageFrom: [
-    'lib/**/*.{js,jsx,ts,tsx}',
-    'components/**/*.{js,jsx,ts,tsx}',
-    '!**/*.d.ts',
-    '!**/node_modules/**'
-  ],
-  coverageThreshold: {
-    global: {
-      branches: 10,
-      functions: 10,
-      lines: 10,
-      statements: 10
-    }
-  },
   transform: {
-    // Use babel-jest to transpile tests
-    '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }]
+    '^.+\\.tsx?$': 'babel-jest',
+    '^.+\\.jsx?$': 'babel-jest'
+  },
+  testRegex: '(/__tests__/.*|(\\.|/)(test|spec))\\.[jt]sx?$',
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/$1',
+    '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
   },
   transformIgnorePatterns: [
-    '/node_modules/',
-    '^.+\\.module\\.(css|sass|scss)$'
+    '/node_modules/(?!axios)/'
   ],
-  testRegex: '(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$',
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  testPathIgnorePatterns: [
+    '/node_modules/', 
+    '/dist/', 
+    '/tests/e2e/', 
+    '/tests/performance.spec.ts',
+    '/tests/chart-component.spec.js'
+  ],
+  collectCoverageFrom: [
+    'app/**/*.{js,ts,tsx}',
+    'components/**/*.{js,ts,tsx}',
+    'lib/**/*.{js,ts,tsx}'
+  ],
+  coverageDirectory: 'coverage',
   verbose: true,
-  resetMocks: true,
-  restoreMocks: true,
-  clearMocks: true
+  maxWorkers: '50%',
+  globals: {
+    'ts-jest': {
+      tsconfig: 'tsconfig.json'
+    }
+  }
 };

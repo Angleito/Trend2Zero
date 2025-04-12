@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
 import TradingViewLightweightChart from '../../../components/TradingViewLightweightChart';
 
+import Image from 'next/image';
+import Link from 'next/link';
 export default function ChartsTestPage() {
   // Sample data for the chart
   const sampleData = [

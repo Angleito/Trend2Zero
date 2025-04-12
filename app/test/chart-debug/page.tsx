@@ -9,6 +9,8 @@ const TradingViewLightweightChart = dynamic(
   { ssr: false }
 );
 
+import Image from 'next/image';
+import Link from 'next/link';
 export default function ChartDebugPage() {
   const [mounted, setMounted] = useState(false);
   const [chartKey, setChartKey] = useState(Date.now());

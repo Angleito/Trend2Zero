@@ -1,0 +1,7 @@
+[
+  {
+    "message": "Refused to evaluate a string as JavaScript because 'unsafe-eval' is not an allowed source of script in the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline'\".\n",
+    "stack": "EvalError: Refused to evaluate a string as JavaScript because 'unsafe-eval' is not an allowed source of script in the following Content Security Policy directive: \"script-src 'self' 'unsafe-inline'\".\n\n    at (app-pages-browser)/./node_modules/next/dist/compiled/@next/react-refresh-utils/dist/runtime.js (http://localhost:3000/_next/static/chunks/main-app.js:50:26)\n    at options.factory (http://localhost:3000/_next/static/chunks/webpack.js:715:31)\n    at __webpack_require__ (http://localhost:3000/_next/static/chunks/webpack.js:37:33)\n    at __webpack_exec__ (http://localhost:3000/_next/static/chunks/main-app.js:1985:61)\n    at http://localhost:3000/_next/static/chunks/main-app.js:1986:37\n    at webpackJsonpCallback (http://localhost:3000/_next/static/chunks/webpack.js:1387:39)\n    at http://localhost:3000/_next/static/chunks/main-app.js:9:61",
+    "timestamp": "2025-04-12T22:50:50.519Z"
+  }
+]

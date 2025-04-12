@@ -1,4 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+// Add module augmentation at the top of the file
+declare module 'next' {
+  export type NextRequest = import('next/server').NextRequest;
+  export type NextResponse = import('next/server').NextResponse;
+}
+
+import type { NextRequest } from 'next';
+import { NextResponse } from 'next/server';
 import ExternalApiService from '../../../lib/services/externalApiService';
 import MongoDbCacheService from '../../../lib/services/mongoDbCacheService';
 
@@ -61,7 +68,6 @@ function validateAndSanitizeParams(params: any): { valid: boolean; sanitized?: a
 
   // Validate endpoint
   if (params.endpoint) {
-    // Only allow specific endpoints
     const allowedEndpoints = ['crypto', 'stocks', 'commodities', 'indices', 'asset', 'historical'];
     if (!allowedEndpoints.includes(params.endpoint)) {
       return { valid: false, error: 'Invalid endpoint' };
@@ -73,28 +79,49 @@ function validateAndSanitizeParams(params: any): { valid: boolean; sanitized?: a
 
   // Validate symbol if provided
   if (params.symbol) {
-    // Only allow alphanumeric symbols with limited special chars
     if (!/^[A-Za-z0-9:._-]{1,20}$/.test(params.symbol)) {
       return { valid: false, error: 'Invalid symbol format' };
     }
-    sanitized.symbol = params.symbol;
+    sanitized.symbol = params.symbol.toUpperCase(); // Normalize to uppercase
   }
 
-  // Validate page and pageSize if provided
-  if (params.page) {
+  // Handle pagination parameters
+  if (params.page !== undefined) {
     const page = parseInt(params.page);
     if (isNaN(page) || page < 1 || page > 100) {
-      return { valid: false, error: 'Invalid page number' };
+      return { valid: false, error: 'Page must be a number between 1 and 100' };
     }
     sanitized.page = page;
+  } else {
+    sanitized.page = 1; // Default to first page
   }
 
-  if (params.pageSize) {
+  if (params.pageSize !== undefined) {
     const pageSize = parseInt(params.pageSize);
     if (isNaN(pageSize) || pageSize < 1 || pageSize > 100) {
-      return { valid: false, error: 'Invalid page size' };
+      return { valid: false, error: 'Page size must be a number between 1 and 100' };
     }
     sanitized.pageSize = pageSize;
+  } else {
+    sanitized.pageSize = 20; // Default page size
+  }
+
+  // Validate days parameter for historical data
+  if (params.endpoint === 'historical') {
+    if (params.days !== undefined) {
+      const days = parseInt(params.days);
+      if (isNaN(days) || days < 1 || days > 365) {
+        return { valid: false, error: 'Days must be a number between 1 and 365' };
+      }
+      sanitized.days = days;
+    } else {
+      sanitized.days = 30; // Default to 30 days
+    }
+  }
+
+  // Ensure symbol is provided for asset and historical endpoints
+  if ((params.endpoint === 'asset' || params.endpoint === 'historical') && !params.symbol) {
+    return { valid: false, error: 'Symbol is required for this endpoint' };
   }
 
   return { valid: true, sanitized };

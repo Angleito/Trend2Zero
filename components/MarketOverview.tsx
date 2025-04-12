@@ -1,6 +1,7 @@
 import React from 'react';
-import { getMarketOverview, MarketOverview as MarketOverviewType } from '../lib/strapi/content';
 import Link from 'next/link';
+import { getMarketOverview, MarketOverview as MarketOverviewType } from '../lib/strapi/content';
+
 
 const MarketOverview: React.FC = () => {
   const [overview, setOverview] = React.useState<MarketOverviewType | null>(null);
@@ -29,8 +30,9 @@ const MarketOverview: React.FC = () => {
     fetchOverview();
 
     // Refresh data every 5 minutes
-    const interval = setInterval(fetchOverview, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+    const refreshInterval = setInterval(fetchOverview, 5 * 60 * 1000);
+    
+    return () => clearInterval(refreshInterval);
   }, []);
 
   if (loading) {

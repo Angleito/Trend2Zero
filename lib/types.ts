@@ -1,5 +1,5 @@
 // Asset Categories
-export type AssetCategory = 'Stocks' | 'Commodities' | 'Indices' | 'Cryptocurrency';
+export type AssetCategory = 'Stocks' | 'Commodities' | 'Indices' | 'Cryptocurrency' | 'Precious Metal';
 
 // Environment type
 export type Environment = 'vercel' | 'strapi' | 'development';
@@ -9,11 +9,12 @@ export interface MarketAsset {
   id?: string;
   symbol: string;
   name?: string;
-  price?: number;
-  change?: number;
-  changePercent?: number;
   type?: AssetCategory;
-  description?: string; // Added to support mock data and diagnostics
+  description?: string;
+  priceInUSD?: number;
+  priceInBTC?: number;
+  change24h?: number;
+  lastUpdated?: string;
 }
 
 // Asset Data Type

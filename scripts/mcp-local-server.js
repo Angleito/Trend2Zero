@@ -17,57 +17,62 @@
 
 const express = require('express');
 const bodyParser = require('body-parser');
+const cors = require('cors');
+const mcpConfig = require('../config/mcp.config');
 
 const app = express();
+app.use(cors());
 app.use(bodyParser.json());
 
-// Mock tool list
-const tools = [
-  {
-    name: "search",
-    description: "Brave Search",
-    parameters: {
-      type: "object",
-      properties: {
-        query: { type: "string", description: "Search query" }
-      },
-      required: ["query"]
-    }
+// Middleware to check API key
+const checkApiKey = (req, res, next) => {
+  const apiKey = req.headers['x-api-key'];
+  if (apiKey !== mcpConfig.server.apiKey) {
+    return res.status(401).json({ error: 'Invalid API key' });
   }
-];
+  next();
+};
 
 // POST /listTools
-app.post('/listTools', (req, res) => {
-  res.json(tools);
+app.post('/listTools', checkApiKey, (req, res) => {
+  res.json(mcpConfig.tools);
 });
 
 // POST /callTool
-app.post('/callTool', (req, res) => {
+app.post('/callTool', checkApiKey, (req, res) => {
   const { name, arguments: args } = req.body || {};
-  if (name === "search") {
-    // Return a static mock result
+  const tool = mcpConfig.tools.find(t => t.name === name);
+  
+  if (!tool) {
+    return res.status(400).json({ error: 'Unknown tool' });
+  }
+
+  if (name === 'search') {
     res.json({
       result: {
-        query: args && args.query,
+        query: args.query,
         results: [
-          { title: "Example Brave Result", url: "https://search.brave.com/", snippet: "This is a mock result from the local MCP server." }
+          { title: 'Search Result', url: 'https://example.com', snippet: 'Example search result' }
         ]
       }
     });
+  } else if (name === 'browser') {
+    res.json({
+      result: {
+        success: true,
+        action: args.action,
+        message: `Browser action '${args.action}' completed successfully`
+      }
+    });
   } else {
-    res.status(400).json({ error: "Unknown tool" });
+    res.status(400).json({ error: 'Tool not implemented' });
   }
 });
 
-// Port config: --port or PORT env
-const argvPort = (() => {
-  const idx = process.argv.indexOf('--port');
-  if (idx !== -1 && process.argv[idx + 1]) return parseInt(process.argv[idx + 1], 10);
-  return null;
-})();
-const port = argvPort || parseInt(process.env.PORT, 10) || 8081;
+const port = mcpConfig.server.port;
+const host = mcpConfig.server.host;
 
-app.listen(port, () => {
-  console.log(`Local MCP server listening on port ${port}`);
+app.listen(port, host, () => {
+  console.log(`MCP server listening at http://${host}:${port}`);
   console.log('Endpoints: POST /listTools, POST /callTool');
 });

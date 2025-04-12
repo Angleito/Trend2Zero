@@ -98,8 +98,5 @@ module.exports = {
   restoreMocks: true,
 
   // Timeout configuration
-  testTimeout: 10000,
-  setupFilesAfterEnv: [
-    '<rootDir>/src/tests/setup.js'
-  ]
+  testTimeout: 10000
 };

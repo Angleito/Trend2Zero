@@ -1,4 +1,4 @@
-import { Suspense } from 'react';
+
 import { MarketDataService } from '../../../lib/services/marketDataService';
 import type { AssetData } from '../../../lib/types';
 

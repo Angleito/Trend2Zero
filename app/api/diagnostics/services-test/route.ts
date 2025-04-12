@@ -1,24 +1,20 @@
 import { NextResponse } from 'next/server';
 import ExternalApiService from '@/lib/services/externalApiService';
+import { AssetData } from '@/lib/types';
 
-interface ServiceResult {
+type ServiceTestResult = {
   status: string;
-  data?: any;
+  data?: AssetData;
   message?: string;
-  mockData?: boolean;
-}
-
-interface DiagnosticResults {
-  coinmarketcap: ServiceResult;
-  alphaVantage: ServiceResult;
-  metalPrice: ServiceResult;
-  environment: Record<string, string>;
-  error?: string;
-  message?: string;
-}
+};
 
 export async function GET() {
-  const results: DiagnosticResults = {
+  const results: {
+    coinmarketcap: ServiceTestResult;
+    alphaVantage: ServiceTestResult;
+    metalPrice: ServiceTestResult;
+    environment: Record<string, string>;
+  } = {
     coinmarketcap: { status: 'not tested' },
     alphaVantage: { status: 'not tested' },
     metalPrice: { status: 'not tested' },
@@ -30,82 +26,71 @@ export async function GET() {
     COINMARKETCAP_API_KEY: process.env.COINMARKETCAP_API_KEY ? 'Set' : 'Not set',
     ALPHA_VANTAGE_API_KEY: process.env.ALPHA_VANTAGE_API_KEY ? 'Set' : 'Not set',
     METAL_PRICE_API_KEY: process.env.METAL_PRICE_API_KEY ? 'Set' : 'Not set',
-    USE_MOCK_DATA: process.env.USE_MOCK_DATA || 'Not set',
-    MOCK_DATA_CACHE_MINUTES: process.env.MOCK_DATA_CACHE_MINUTES || 'Not set'
   };
 
   try {
     // Test CoinMarketCap API with timeout
     try {
       const cmcService = new ExternalApiService();
-      // Use fetchCryptoList instead of fetchCryptoPrices
-      const cmcPromise = cmcService.fetchCryptoList(1, 1);
+      const cmcPromise = cmcService.fetchAssetPrice('BTC');
       const cmcResult = await Promise.race([
         cmcPromise,
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
-      ]);
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+      ]) as AssetData;
       results.coinmarketcap = {
         status: 'success',
-        data: cmcResult,
-        mockData: process.env.USE_MOCK_DATA === 'true'
+        data: cmcResult
       };
-    } catch (error: unknown) {
+    } catch (error) {
       results.coinmarketcap = {
         status: 'error',
-        message: error instanceof Error ? error.message : String(error),
-        mockData: process.env.USE_MOCK_DATA === 'true'
+        message: error instanceof Error ? error.message : 'Unknown error'
       };
     }
 
     // Test Alpha Vantage API with timeout
     try {
       const avService = new ExternalApiService();
-      // Use fetchAssetPrice instead of fetchStockPrice
       const avPromise = avService.fetchAssetPrice('AAPL');
       const avResult = await Promise.race([
         avPromise,
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
-      ]);
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+      ]) as AssetData;
       results.alphaVantage = {
         status: 'success',
-        data: avResult,
-        mockData: process.env.USE_MOCK_DATA === 'true'
+        data: avResult
       };
-    } catch (error: unknown) {
+    } catch (error) {
       results.alphaVantage = {
         status: 'error',
-        message: error instanceof Error ? error.message : String(error),
-        mockData: process.env.USE_MOCK_DATA === 'true'
+        message: error instanceof Error ? error.message : 'Unknown error'
       };
     }
 
     // Test Metal Price API with timeout
     try {
       const mpService = new ExternalApiService();
-      // Use fetchAssetPrice instead of fetchMetalPrice
       const mpPromise = mpService.fetchAssetPrice('XAU'); // Gold
       const mpResult = await Promise.race([
         mpPromise,
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
-      ]);
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+      ]) as AssetData;
       results.metalPrice = {
         status: 'success',
-        data: mpResult,
-        mockData: process.env.USE_MOCK_DATA === 'true'
+        data: mpResult
       };
-    } catch (error: unknown) {
+    } catch (error) {
       results.metalPrice = {
         status: 'error',
-        message: error instanceof Error ? error.message : String(error),
-        mockData: process.env.USE_MOCK_DATA === 'true'
+        message: error instanceof Error ? error.message : 'Unknown error'
       };
     }
 
     return NextResponse.json(results);
-  } catch (error: unknown) {
+  } catch (error) {
     return NextResponse.json({
       error: 'Service test failed',
-      message: error instanceof Error ? error.message : String(error),
+      message: error instanceof Error ? error.message : 'Unknown error',
       environment: results.environment
     }, { status: 500 });
   }

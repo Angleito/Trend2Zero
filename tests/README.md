@@ -1,87 +1,36 @@
-# Trend2Zero Testing Infrastructure
+# Visual Regression Testing
 
 ## Overview
-This directory contains a comprehensive, low-disruption testing infrastructure for the Trend2Zero project, designed to minimize browser interaction and system resource usage.
+This project uses Playwright for visual regression testing of the home page. The tests are designed to:
+- Capture screenshots across different viewport sizes
+- Compare screenshots with reference images
+- Detect console errors
+- Check for layout shifts
+- Ensure page performance and accessibility
 
-## Testing Frameworks
-- **Jest**: Unit and integration testing
-- **Playwright**: End-to-end (E2E) and browser testing
-- **MCP (Model Context Protocol)**: Advanced debugging and logging
+## Running Visual Tests
 
-## Testing Modes
+### Prerequisites
+- Node.js (version 18.0.0 or higher)
+- Playwright installed (`npm install @playwright/test`)
 
-### 1. Minimal Disruption (Recommended)
-```bash
-# Run E2E tests in background
-npm run test:e2e
-```
-- Headless browser testing
-- No visual browser windows
-- Minimal system resource consumption
+### Available Commands
+- `npm run test:visual`: Run visual regression tests
+- `npm run test:visual:update`: Update reference screenshots
+- `npm run test:visual:report`: Open the latest test report
 
-### 2. Verbose Debugging
-```bash
-# Detailed test output
-npm run test:e2e:verbose
-```
-- Provides comprehensive test logs
-- Useful for detailed troubleshooting
-
-### 3. Generate Test Report
-```bash
-# View generated test report
-npm run test:e2e:report
-```
-- Opens HTML test report
-- Detailed test result visualization
-
-## Test Result Locations
-- **Unit Test Coverage**: `test-results/coverage/`
-- **E2E Test Videos**: `test-results/videos/`
-- **Screenshots**: `test-results/screenshots/`
-- **Logs**: `test-results/logs/`
-- **Test Reports**: `test-results/reports/`
-
-## Key Features
-- Headless browser testing
-- Minimal visual interference
-- Comprehensive logging
-- Performance-optimized test execution
-- Automatic server management
-- Cross-browser compatibility
-
-## Logging and Diagnostics
-- Detailed console and network logging
-- Performance metric tracking
-- Automated test report generation
-- Error screenshot capture
-
-## Performance Optimization
-- Headless browser mode
-- Minimal resource usage
-- Background test execution
-- Configurable test parallelization
+## Test Configuration
+- Tested viewports: Mobile, Tablet, Desktop, Large Desktop
+- Screenshot comparison threshold: 1% pixel difference
+- Console error detection
+- Layout shift monitoring
 
 ## Troubleshooting
-1. Check `test-results/logs/` for detailed error information
-2. Review generated HTML reports in `test-results/reports/`
-3. Examine screenshots for visual debugging
-
-## Contributing
-- Write tests in `tests/` directory
-- Follow existing test structure
-- Add meaningful logging
-- Ensure cross-browser compatibility
+- Ensure the development server is running before tests
+- Use `test:visual:update` to regenerate reference screenshots
+- Check the Playwright report for detailed test results
 
 ## Best Practices
-- Keep tests independent and atomic
-- Use descriptive test names
-- Add comprehensive error logging
-- Test both happy paths and edge cases
-
-## Advanced Configuration
-Modify `playwright.config.js` to:
-- Adjust browser settings
-- Configure test timeouts
-- Customize test reporting
-- Fine-tune performance parameters
+- Commit reference screenshots to version control
+- Regularly update reference images to reflect design changes
+- Review test failures carefully to distinguish between actual issues and expected updates

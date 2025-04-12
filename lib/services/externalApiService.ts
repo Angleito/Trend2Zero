@@ -386,34 +386,31 @@ export class ExternalApiService {
       }
 
       // If GLOBAL_QUOTE fails, try CURRENCY_EXCHANGE_RATE endpoint
-      try {
-        const response = await axios.get('https://www.alphavantage.co/query', {
-          params: {
-            function: 'CURRENCY_EXCHANGE_RATE',
-            from_currency: symbol,
-            to_currency: 'USD',
-            apikey: this.alphaVantageApiKey
-          }
-        });
+      const response = await axios.get('https://www.alphavantage.co/query', {
+        params: {
+          function: 'CURRENCY_EXCHANGE_RATE',
+          from_currency: symbol,
+          to_currency: 'USD',
+          apikey: this.alphaVantageApiKey
+        }
+      });
 
+      if (response.data && response.data['Realtime Currency Exchange Rate']) {
         const exchangeData = response.data['Realtime Currency Exchange Rate'];
-        if (exchangeData && exchangeData['5. Exchange Rate']) {
+        if (exchangeData['5. Exchange Rate'] !== undefined) {
           const price = parseFloat(exchangeData['5. Exchange Rate']);
           const bitcoinPrice = await this.getBitcoinPrice();
           const priceInBTC = price / bitcoinPrice;
-
           return {
             symbol,
             price,
-            change: 0, // Exchange rate doesn't provide change data
+            change: 0,
             changePercent: 0,
             priceInBTC,
             priceInUSD: price,
             lastUpdated: new Date().toISOString()
           };
         }
-      } catch (exchangeError) {
-        console.warn(`CURRENCY_EXCHANGE_RATE failed for ${symbol}:`, exchangeError);
       }
 
       // If both methods fail, throw an error

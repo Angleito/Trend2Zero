@@ -1,0 +1,78 @@
+/* Bitcoin-themed components */
+.bitcoin-btn {
+  background-color: #FF9500;
+  color: #FFFFFF;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  transition-property: opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.bitcoin-btn:hover {
+  opacity: 0.9;
+}
+
+.bitcoin-card {
+  background-color: #1A202C;
+  border: 1px solid #2D3748;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  transition-property: box-shadow;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.bitcoin-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.bitcoin-ticker {
+  background-color: #000000;
+  border-bottom: 1px solid #2D3748;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.bitcoin-ticker-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bitcoin-ticker-label {
+  color: #A0AEC0;
+}
+
+.bitcoin-ticker-value {
+  color: #FFFFFF;
+  font-weight: 500;
+}
+
+.bitcoin-ticker-value-up {
+  color: #00C853;
+}
+
+.bitcoin-ticker-value-down {
+  color: #FF3D00;
+}
+
+.asset-category-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  border: 1px solid #2D3748;
+  color: #FFFFFF;
+  transition-property: background-color, border-color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.asset-category-btn-active {
+  background-color: #FF9500;
+  border-color: #FF9500;
+}

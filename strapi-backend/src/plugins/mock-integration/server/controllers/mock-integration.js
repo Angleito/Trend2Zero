@@ -92,7 +92,6 @@ module.exports = createCoreController('plugin::mock-integration.mock-integration
   
   async seedMockData(ctx) {
     try {
-      // Import the mock service dynamically
       const { default: MockIntegrationService } = await import('../../../../../../lib/services/mockIntegrationService');
       const mockService = new MockIntegrationService('strapi');
       
@@ -100,37 +99,48 @@ module.exports = createCoreController('plugin::mock-integration.mock-integration
       const cryptoAssets = await mockService.getMockAssetList('crypto', 1, 10);
       const stockAssets = await mockService.getMockAssetList('stock', 1, 10);
       
-      // Create assets in Strapi
       const results = {
         created: [],
         errors: []
+      };
+
+      // Base prices for realistic data
+      const basePrices = {
+        'BTC': 50000, 'ETH': 3000, 'BNB': 500, 'SOL': 150, 'XRP': 1.20,
+        'AAPL': 175, 'MSFT': 350, 'GOOGL': 2800, 'AMZN': 3500, 'TSLA': 250
       };
       
       // Process crypto assets
       for (const asset of cryptoAssets.data) {
         try {
+          const basePrice = basePrices[asset.symbol] || 100;
+          const priceChange = basePrice * (Math.random() * 0.02 - 0.01); // ±1% change
+          const currentPrice = basePrice + priceChange;
+          const changePercent = (priceChange / basePrice) * 100;
+
           // Check if asset already exists
           const existingAsset = await strapi.entityService.findMany('api::asset.asset', {
             filters: { symbol: asset.symbol }
           });
           
+          const assetData = {
+            name: asset.name,
+            symbol: asset.symbol,
+            assetType: 'crypto',
+            description: asset.description,
+            currentPrice,
+            priceChange,
+            priceChangePercent: changePercent,
+            marketCap: Math.floor(currentPrice * (asset.symbol === 'BTC' ? 19000000 : 1000000000)),
+            volume24h: Math.floor(currentPrice * (asset.symbol === 'BTC' ? 500000 : 100000)),
+            lastUpdated: new Date(),
+            publishedAt: new Date()
+          };
+          
           if (existingAsset && existingAsset.length > 0) {
-            // Update existing asset
             const updated = await strapi.entityService.update('api::asset.asset', existingAsset[0].id, {
-              data: {
-                name: asset.name,
-                symbol: asset.symbol,
-                assetType: asset.type === 'Cryptocurrency' ? 'crypto' : 'stock',
-                description: asset.description,
-                currentPrice: Math.random() * 1000,
-                priceChange: Math.random() * 100 * (Math.random() > 0.5 ? 1 : -1),
-                priceChangePercent: Math.random() * 10 * (Math.random() > 0.5 ? 1 : -1),
-                marketCap: Math.floor(Math.random() * 1000000000),
-                volume24h: Math.floor(Math.random() * 100000000),
-                lastUpdated: new Date()
-              }
+              data: assetData
             });
-            
             results.created.push({
               id: updated.id,
               name: updated.name,
@@ -138,23 +148,9 @@ module.exports = createCoreController('plugin::mock-integration.mock-integration
               action: 'updated'
             });
           } else {
-            // Create new asset
             const created = await strapi.entityService.create('api::asset.asset', {
-              data: {
-                name: asset.name,
-                symbol: asset.symbol,
-                assetType: asset.type === 'Cryptocurrency' ? 'crypto' : 'stock',
-                description: asset.description,
-                currentPrice: Math.random() * 1000,
-                priceChange: Math.random() * 100 * (Math.random() > 0.5 ? 1 : -1),
-                priceChangePercent: Math.random() * 10 * (Math.random() > 0.5 ? 1 : -1),
-                marketCap: Math.floor(Math.random() * 1000000000),
-                volume24h: Math.floor(Math.random() * 100000000),
-                lastUpdated: new Date(),
-                publishedAt: new Date()
-              }
+              data: assetData
             });
-            
             results.created.push({
               id: created.id,
               name: created.name,
@@ -170,31 +166,36 @@ module.exports = createCoreController('plugin::mock-integration.mock-integration
         }
       }
       
-      // Process stock assets
+      // Process stock assets with similar realistic price logic
       for (const asset of stockAssets.data) {
         try {
-          // Check if asset already exists
+          const basePrice = basePrices[asset.symbol] || 100;
+          const priceChange = basePrice * (Math.random() * 0.01 - 0.005); // ±0.5% change for stocks
+          const currentPrice = basePrice + priceChange;
+          const changePercent = (priceChange / basePrice) * 100;
+
           const existingAsset = await strapi.entityService.findMany('api::asset.asset', {
             filters: { symbol: asset.symbol }
           });
           
+          const assetData = {
+            name: asset.name,
+            symbol: asset.symbol,
+            assetType: 'stock',
+            description: asset.description,
+            currentPrice,
+            priceChange,
+            priceChangePercent: changePercent,
+            marketCap: Math.floor(currentPrice * 1000000000),
+            volume24h: Math.floor(currentPrice * 10000000),
+            lastUpdated: new Date(),
+            publishedAt: new Date()
+          };
+
           if (existingAsset && existingAsset.length > 0) {
-            // Update existing asset
             const updated = await strapi.entityService.update('api::asset.asset', existingAsset[0].id, {
-              data: {
-                name: asset.name,
-                symbol: asset.symbol,
-                assetType: 'stock',
-                description: asset.description,
-                currentPrice: Math.random() * 1000,
-                priceChange: Math.random() * 100 * (Math.random() > 0.5 ? 1 : -1),
-                priceChangePercent: Math.random() * 10 * (Math.random() > 0.5 ? 1 : -1),
-                marketCap: Math.floor(Math.random() * 1000000000),
-                volume24h: Math.floor(Math.random() * 100000000),
-                lastUpdated: new Date()
-              }
+              data: assetData
             });
-            
             results.created.push({
               id: updated.id,
               name: updated.name,
@@ -202,23 +203,9 @@ module.exports = createCoreController('plugin::mock-integration.mock-integration
               action: 'updated'
             });
           } else {
-            // Create new asset
             const created = await strapi.entityService.create('api::asset.asset', {
-              data: {
-                name: asset.name,
-                symbol: asset.symbol,
-                assetType: 'stock',
-                description: asset.description,
-                currentPrice: Math.random() * 1000,
-                priceChange: Math.random() * 100 * (Math.random() > 0.5 ? 1 : -1),
-                priceChangePercent: Math.random() * 10 * (Math.random() > 0.5 ? 1 : -1),
-                marketCap: Math.floor(Math.random() * 1000000000),
-                volume24h: Math.floor(Math.random() * 100000000),
-                lastUpdated: new Date(),
-                publishedAt: new Date()
-              }
+              data: assetData
             });
-            
             results.created.push({
               id: created.id,
               name: created.name,
@@ -234,36 +221,38 @@ module.exports = createCoreController('plugin::mock-integration.mock-integration
         }
       }
       
-      // Create historical data for BTC
+      // Create historical data for assets
       try {
-        const btcAsset = await strapi.entityService.findMany('api::asset.asset', {
-          filters: { symbol: 'BTC' }
-        });
-        
-        if (btcAsset && btcAsset.length > 0) {
-          const historicalData = await mockService.getMockHistoricalData('BTC', 30);
+        for (const symbol of Object.keys(basePrices)) {
+          const asset = await strapi.entityService.findMany('api::asset.asset', {
+            filters: { symbol }
+          });
           
-          for (const dataPoint of historicalData) {
-            await strapi.entityService.create('api::historical-data.historical-data', {
-              data: {
-                date: new Date(dataPoint.date),
-                open: dataPoint.open,
-                high: dataPoint.high,
-                low: dataPoint.low,
-                close: dataPoint.close,
-                volume: dataPoint.volume,
-                asset: btcAsset[0].id
-              }
+          if (asset && asset.length > 0) {
+            const historicalData = await mockService.getMockHistoricalData(symbol, 30);
+            
+            for (const dataPoint of historicalData) {
+              await strapi.entityService.create('api::historical-data.historical-data', {
+                data: {
+                  date: new Date(dataPoint.date),
+                  open: dataPoint.open,
+                  high: dataPoint.high,
+                  low: dataPoint.low,
+                  close: dataPoint.close,
+                  volume: dataPoint.volume,
+                  asset: asset[0].id
+                }
+              });
+            }
+            
+            results.created.push({
+              message: `Created ${historicalData.length} historical data points for ${symbol}`
             });
           }
-          
-          results.created.push({
-            message: `Created ${historicalData.length} historical data points for BTC`
-          });
         }
       } catch (error) {
         results.errors.push({
-          message: 'Error creating historical data for BTC',
+          message: 'Error creating historical data',
           error: error.message
         });
       }

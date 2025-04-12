@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
 import StickyHeader from '../../components/StickyHeader';
-import Link from 'next/link';
+
 import StrapiContent from '../../components/StrapiContent';
 import { BlogPost } from '../../lib/strapi/content';
 
+import Image from 'next/image';
+import Link from 'next/link';
 export default function BlogPage() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">

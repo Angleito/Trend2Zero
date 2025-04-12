@@ -1,0 +1,29 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "types": ["jest", "node"],
+    "moduleResolution": "node",
+    "module": "commonjs",
+    "allowJs": true,
+    "noEmit": true,
+    "isolatedModules": false,
+    "baseUrl": "../",
+    "paths": {
+      "@/*": ["./*"],
+      "@models/*": ["models/*"],
+      "@controllers/*": ["controllers/*"],
+      "@services/*": ["services/*"],
+      "@utils/*": ["utils/*"],
+      "@tests/*": ["tests/*"]
+    }
+  },
+  "include": [
+    "../**/*.test.ts",
+    "../**/*.spec.ts",
+    "./**/*.ts",
+    "../**/__tests__/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

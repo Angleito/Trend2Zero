@@ -4,9 +4,10 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   // Use Web Crypto API for generating nonce
   const nonce = btoa(crypto.getRandomValues(new Uint8Array(16)).join(''));
+  
   const cspHeader = `
     default-src 'self';
-    script-src 'self' 'unsafe-inline';
+    script-src 'self' 'unsafe-inline' 'nonce-${nonce}';
     style-src 'self' 'unsafe-inline';
     img-src 'self' data:;
     connect-src 'self' https://www.alphavantage.co;

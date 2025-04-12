@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { MarketDataService } from '../lib/services/marketDataService';
 import type { MarketAsset } from '../lib/types';
-import Link from 'next/link';
 
 interface AssetSearchProps {
   onAssetSelect?: (asset: MarketAsset) => void;

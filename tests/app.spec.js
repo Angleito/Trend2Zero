@@ -1,32 +1,30 @@
 const { test, expect } = require('@playwright/test');
 const path = require('path');
 const fs = require('fs');
-const axios = require('axios');
+const { testConfig } = require('./test-config');
 
 // Utility function to log test details
 function logTestDetails(testName, details) {
-  const logDir = path.join(__dirname, '..', 'test-results', 'logs');
-  const logFile = path.join(logDir, 'test-diagnostics.log');
-
   const logEntry = JSON.stringify({
     timestamp: new Date().toISOString(),
     test: testName,
     details: details
   }, null, 2) + '\n';
 
-  fs.appendFileSync(logFile, logEntry);
-  console.log(`[TEST DIAGNOSTIC] ${testName}:`, details);
+  // Write to test-specific log file
+  const logPath = testConfig.getLogPath(`${testName.replace(/\s+/g, '-').toLowerCase()}`);
+  fs.appendFileSync(logPath, logEntry);
 }
 
 // Utility function to check server availability
-async function isServerAvailable(url, maxRetries = 5) {
+async function isServerAvailable(url, maxRetries = 5, context) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const response = await axios.get(url, {
+      const response = await context.request.get(url, {
         timeout: 5000,
-        validateStatus: (status) => status >= 200 && status < 400
+        failOnStatusCode: false
       });
-      return true;
+      return response.ok();
     } catch (error) {
       if (attempt === maxRetries) {
         logTestDetails('Server Availability Check', {
@@ -42,12 +40,53 @@ async function isServerAvailable(url, maxRetries = 5) {
   return false;
 }
 
+// Utility function to ensure directory exists
+function ensureDirectoryExists(dirPath) {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+}
+
 // Test suite for website functionality
+test.describe('Basic App Tests', () => {
+  test.beforeAll(() => {
+    // Ensure screenshots directory exists
+    const screenshotsDir = path.join(process.cwd(), 'test-results', 'screenshots');
+    ensureDirectoryExists(screenshotsDir);
+  });
+
+  test('basic navigation test', async ({ page }) => {
+    try {
+      // Navigate to test page
+      await page.goto('/test-page');
+      await page.waitForLoadState('networkidle');
+
+      // Take screenshot after page load
+      await page.screenshot({
+        path: testConfig.getScreenshotPath('test-page-navigation'),
+        fullPage: true
+      });
+
+      // Basic checks
+      const heading = await page.getByRole('heading').first();
+      expect(heading).toBeTruthy();
+
+      logTestDetails('Basic Navigation', {
+        url: page.url(),
+        title: await page.title()
+      });
+    } catch (error) {
+      console.error('Test failed:', error);
+      throw error;
+    }
+  });
+});
+
 test.describe.skip('Trend2Zero Website Diagnostics', () => {
   // Ensure server is available before tests
-  test.beforeAll(async () => {
+  test.beforeAll(async ({ context }) => {
     const serverUrl = 'http://localhost:3000';
-    const isAvailable = await isServerAvailable(serverUrl);
+    const isAvailable = await isServerAvailable(serverUrl, 5, context);
 
     if (!isAvailable) {
       logTestDetails('Server Startup', {

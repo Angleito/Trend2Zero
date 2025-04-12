@@ -3,73 +3,66 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-rgb: 0, 0, 0;
-  --bitcoin-orange: 255, 149, 0;
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
 }
 
 body {
   color: rgb(var(--foreground-rgb));
-  background-color: rgb(var(--background-rgb));
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgb(var(--background-end-rgb))
+  ) rgb(var(--background-start-rgb));
 }
 
-/* Bitcoin-themed components */
-@layer components {
-  .bitcoin-btn {
-    @apply bg-[#FF9500] text-white px-4 py-2 rounded-md hover:opacity-90 transition-opacity;
-  }
+/* Custom global styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-  .bitcoin-card {
-    @apply bg-gray-900 border border-gray-800 rounded-lg p-6 hover:shadow-lg transition-shadow;
-  }
+/* Responsive typography */
+html {
+  font-size: 16px;
+}
 
-  .bitcoin-ticker {
-    @apply bg-black border-b border-gray-800 py-2 px-4 text-sm flex items-center space-x-4 overflow-x-auto whitespace-nowrap;
-  }
-
-  .bitcoin-ticker-item {
-    @apply flex items-center space-x-2;
-  }
-
-  .bitcoin-ticker-label {
-    @apply text-gray-400;
-  }
-
-  .bitcoin-ticker-value {
-    @apply text-white font-medium;
-  }
-
-  .bitcoin-ticker-value-up {
-    @apply text-[#00C853];
-  }
-
-  .bitcoin-ticker-value-down {
-    @apply text-[#FF3D00];
-  }
-
-  .asset-category-btn {
-    @apply px-4 py-2 rounded-md border border-gray-800 text-white transition-colors;
-  }
-
-  .asset-category-btn-active {
-    @apply bg-[#FF9500] border-[#FF9500];
+@media (max-width: 768px) {
+  html {
+    font-size: 14px;
   }
 }
 
-/* Custom dark theme scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
+/* Accessibility and focus states */
+*:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
 }
 
-::-webkit-scrollbar-track {
-  background: #111111;
+/* Error and loading states */
+.error-container {
+  @apply flex items-center justify-center min-h-screen text-red-500;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #333333;
-  border-radius: 4px;
+.loading-spinner {
+  @apply animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #FF9500;
+/* Utility classes for common patterns */
+.container {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+.section-heading {
+  @apply text-2xl font-bold text-gray-900 dark:text-white mb-4;
 }

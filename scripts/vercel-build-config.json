@@ -1,0 +1,30 @@
+{
+  "testEnvironments": {
+    "puppeteer": {
+      "headless": true,
+      "timeout": 30000,
+      "browserOptions": {
+        "defaultViewport": {
+          "width": 1280,
+          "height": 720
+        }
+      }
+    },
+    "playwright": {
+      "browsers": ["chromium", "firefox", "webkit"],
+      "timeout": 60000,
+      "reportFormats": ["html", "json"]
+    }
+  },
+  "performanceThresholds": {
+    "firstContentfulPaint": 1500,
+    "speedIndex": 1800,
+    "timeToInteractive": 3500,
+    "totalBlockingTime": 300
+  },
+  "debugOptions": {
+    "screenshotOnFailure": true,
+    "videoRecording": true,
+    "networkLogging": true
+  }
+}

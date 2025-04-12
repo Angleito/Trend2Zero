@@ -4,7 +4,8 @@
   "info": {
     "singularName": "market-overview",
     "pluralName": "market-overviews",
-    "displayName": "Market Overview"
+    "displayName": "Market Overview",
+    "description": "Market overview data including indices and top movers"
   },
   "options": {
     "draftAndPublish": true
@@ -17,25 +18,34 @@
         "closed",
         "pre-market",
         "after-hours"
-      ]
+      ],
+      "required": true
     },
     "lastUpdated": {
-      "type": "datetime"
+      "type": "datetime",
+      "required": true
     },
     "marketSummary": {
-      "type": "richtext"
+      "type": "text"
     },
     "indices": {
-      "displayName": "Indices",
-      "type": "component",
-      "repeatable": true,
-      "component": "index.indicies"
+      "type": "json",
+      "required": true
     },
     "topMovers": {
-      "displayName": "TopMover",
-      "type": "component",
-      "repeatable": true,
-      "component": "top-mover.top-mover"
+      "type": "json",
+      "required": true
+    },
+    "tradingVolume": {
+      "type": "biginteger"
+    },
+    "marketSentiment": {
+      "type": "enumeration",
+      "enum": [
+        "bullish",
+        "bearish",
+        "neutral"
+      ]
     }
   }
 }

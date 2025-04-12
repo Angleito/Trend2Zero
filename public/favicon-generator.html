@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Favicon Generator</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            background-color: #f5f5f5;
+        }
+        canvas {
+            border: 1px solid #ddd;
+            background-color: #fff;
+            margin: 1rem 0;
+        }
+        .controls {
+            margin-bottom: 1rem;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        .preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .preview-item {
+            text-align: center;
+        }
+        .preview-item img {
+            border: 1px solid #ddd;
+            background-color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <h1>Bitcoin Favicon Generator</h1>
+    
+    <div class="controls">
+        <button id="generateFavicon">Generate Favicon</button>
+        <button id="downloadAll">Download All</button>
+    </div>
+    
+    <canvas id="canvas" width="512" height="512"></canvas>
+    
+    <div class="preview" id="preview"></div>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const preview = document.getElementById('preview');
+        
+        // Draw Bitcoin logo
+        function drawBitcoinLogo() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Background
+            ctx.fillStyle = '#F7931A'; // Bitcoin orange
+            ctx.beginPath();
+            ctx.arc(canvas.width/2, canvas.height/2, canvas.width/2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Bitcoin symbol
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 300px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('₿', canvas.width/2, canvas.height/2);
+        }
+        
+        // Generate different sizes
+        function generateSizes() {
+            preview.innerHTML = '';
+            
+            const sizes = [16, 32, 48, 64, 128, 192, 256];
+            
+            sizes.forEach(size => {
+                const smallCanvas = document.createElement('canvas');
+                smallCanvas.width = size;
+                smallCanvas.height = size;
+                const smallCtx = smallCanvas.getContext('2d');
+                
+                smallCtx.drawImage(canvas, 0, 0, size, size);
+                
+                const dataUrl = smallCanvas.toDataURL('image/png');
+                
+                const previewItem = document.createElement('div');
+                previewItem.className = 'preview-item';
+                
+                const img = document.createElement('img');
+                img.src = dataUrl;
+                img.width = size;
+                img.height = size;
+                
+                const label = document.createElement('div');
+                label.textContent = `${size}x${size}`;
+                
+                previewItem.appendChild(img);
+                previewItem.appendChild(label);
+                preview.appendChild(previewItem);
+            });
+        }
+        
+        // Download all sizes
+        function downloadAll() {
+            const sizes = [16, 32, 48, 64, 128, 192, 256];
+            
+            sizes.forEach(size => {
+                const smallCanvas = document.createElement('canvas');
+                smallCanvas.width = size;
+                smallCanvas.height = size;
+                const smallCtx = smallCanvas.getContext('2d');
+                
+                smallCtx.drawImage(canvas, 0, 0, size, size);
+                
+                const dataUrl = smallCanvas.toDataURL('image/png');
+                
+                const link = document.createElement('a');
+                link.download = `favicon-${size}x${size}.png`;
+                link.href = dataUrl;
+                link.click();
+            });
+            
+            // Also download favicon.ico format
+            const link = document.createElement('a');
+            link.download = 'favicon.ico';
+            link.href = canvas.toDataURL('image/x-icon');
+            link.click();
+        }
+        
+        // Event listeners
+        document.getElementById('generateFavicon').addEventListener('click', () => {
+            drawBitcoinLogo();
+            generateSizes();
+        });
+        
+        document.getElementById('downloadAll').addEventListener('click', downloadAll);
+        
+        // Initial draw
+        drawBitcoinLogo();
+        generateSizes();
+    </script>
+</body>
+</html>
