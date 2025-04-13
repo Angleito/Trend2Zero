@@ -1,4 +1,3 @@
-
 import { MarketDataService } from '../../../lib/services/marketDataService';
 import type { AssetData } from '../../../lib/types';
 
@@ -37,8 +36,10 @@ function ErrorState({ symbol }: { symbol: string }) {
   );
 }
 
-export default async function AssetDetailPage({ params }: { params: { symbol: string } }) {
-  const symbol = params.symbol;
+type AssetDetailPageProps = { params: { symbol: string } };
+
+export default async function AssetDetailPage(props: AssetDetailPageProps) {
+  const { symbol } = props.params;
   const assetData = await fetchAssetData(symbol);
 
   if (!assetData) {

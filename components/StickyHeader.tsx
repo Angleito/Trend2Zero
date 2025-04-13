@@ -6,11 +6,11 @@
  * See tests/browser-test.js for examples.
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import BitcoinTicker from './BitcoinTicker';
 
-const StickyHeader: React.FC = () => {
+const StickyHeader = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 

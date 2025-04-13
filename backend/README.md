@@ -1,80 +1,64 @@
-# Trend2Zero Backend Testing Guide
+# Trend2Zero Backend
 
-## Test Configuration
+## Overview
+This backend service provides market data collection, historical data storage, and API endpoints for the Trend2Zero application.
 
-This backend uses Jest for testing, with a focus on robust and comprehensive test coverage.
+## Features
+- Daily market data collection
+- Historical price tracking
+- MongoDB-based data storage
+- Scheduled data retrieval jobs
 
-### Test Types
-- Unit Tests
-- Integration Tests
-- Service Tests
+## Project Structure
+```
+backend/
+├── src/
+│   ├── controllers/
+│   ├── jobs/
+│   ├── middleware/
+│   ├── models/
+│   ├── routes/
+│   ├── services/
+│   └── utils/
+├── package.json
+└── README.md
+```
+
+## Setup and Installation
 
 ### Prerequisites
-- Node.js 18.0.0 or higher
-- MongoDB (local or in-memory for testing)
+- Node.js (v14+)
+- MongoDB
 
-### Setup
+### Environment Variables
+Create a `.env` file with the following variables:
+```
+MONGODB_URI=mongodb://localhost:27017/trend2zero
+PORT=3001
+COINMARKETCAP_API_KEY=your_coinmarketcap_api_key
+```
 
-1. Install Dependencies
+### Installation
 ```bash
 npm install
 ```
 
-2. Environment Configuration
-- Copy `.env.example` to `.env`
-- Create `.env.test` for test-specific configurations
+### Running the Server
+- Development: `npm run dev`
+- Production: `npm start`
 
-### Running Tests
+## API Endpoints
 
-#### All Tests
-```bash
-npm test
-```
+### Historical Data
+- `GET /api/historical-data/:symbol` - Retrieve historical data for a specific symbol
+- `GET /api/historical-data?symbols=BTC,ETH` - Retrieve data for multiple symbols
+- `GET /api/historical-data?category=Crypto` - Retrieve data by asset category
 
-#### Watch Mode (Development)
-```bash
-npm run test:watch
-```
+## Data Collection
+A scheduled job runs daily at midnight to collect and store market data for various assets.
 
-#### Coverage Report
-```bash
-npm run test:coverage
-```
+## Logging
+Utilizes Winston for comprehensive logging of server activities and errors.
 
-#### Continuous Integration
-```bash
-npm run test:ci
-```
-
-### Test Configuration Details
-
-#### Test Environment
-- Uses `mongodb-memory-server` for isolated database testing
-- Generates comprehensive logs in `test-logs/`
-- Provides coverage reports
-
-#### Logging
-Logs are generated in `test-logs/`:
-- `combined.log`: All test logs
-- `error.log`: Error-specific logs
-- `teardown-error.log`: Teardown process errors
-
-### Best Practices
-- Write tests for all new features
-- Aim for >70% code coverage
-- Use meaningful test descriptions
-- Mock external dependencies
-
-### Troubleshooting
-- Ensure MongoDB is installed
-- Check Node.js version compatibility
-- Review test logs for detailed error information
-
-### Coverage Thresholds
-- Branches: 50%
-- Functions: 50%
-- Lines: 50%
-- Statements: 50%
-
-## Contributing
-Please follow the project's testing guidelines when adding new tests.
+## Testing
+Run tests with: `npm test`

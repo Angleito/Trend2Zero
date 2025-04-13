@@ -20,18 +20,22 @@ module.exports = {
   // Transform configuration
   transform: {
     '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { configFile: './babel.config.js' }],
-    'node_modules/mongodb.*\\.ts$': '<rootDir>/src/tests/transformers/mongodbTransformer.js'
+    'node_modules/mongodb.*\\.ts$': '<rootDir>/src/tests/transformers/mongodbTransformer.js',
+    '^.+\\.js$': ['babel-jest', { presets: ['@babel/preset-env'] }]
   },
 
   // Configure how to transform node_modules
   transformIgnorePatterns: [
-    'node_modules/(?!(mongodb|mongoose|@babel/runtime|@babel/runtime-corejs3)/)'
+    'node_modules/(?!(mongodb|mongoose|@babel/runtime|@babel/runtime-corejs3)/)',
+    '/node_modules/(?!node-fetch|data-uri-to-buffer|fetch-blob|formdata-polyfill)'
   ],
 
   // Test path patterns
   testMatch: [
     '<rootDir>/src/**/__tests__/**/*.[jt]s?(x)',
-    '<rootDir>/src/**/?(*.)+(spec|test).[jt]s?(x)'
+    '<rootDir>/src/**/?(*.)+(spec|test).[jt]s?(x)',
+    '<rootDir>/src/tests/**/*.test.js',
+    '<rootDir>/src/tests/**/*.spec.js'
   ],
 
   // Coverage configuration
@@ -42,7 +46,10 @@ module.exports = {
     'src/**/*.{js,jsx,ts,tsx}',
     '!src/**/*.d.ts',
     '!src/tests/**',
-    '!**/node_modules/**'
+    '!**/node_modules/**',
+    'src/**/*.js',
+    '!src/**/*.test.js',
+    '!src/tests/**/*'
   ],
   coverageThreshold: {
     global: {
@@ -68,7 +75,8 @@ module.exports = {
     'ts-jest': {
       tsconfig: 'tsconfig.json',
       diagnostics: false
-    }
+    },
+    NODE_ENV: 'test'
   },
 
   // Performance and optimization
@@ -98,5 +106,8 @@ module.exports = {
   restoreMocks: true,
 
   // Timeout configuration
-  testTimeout: 10000
+  testTimeout: 10000,
+
+  // Module path ignore patterns
+  modulePathIgnorePatterns: ['<rootDir>/dist/']
 };

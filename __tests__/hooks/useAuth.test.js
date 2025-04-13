@@ -1,246 +1,193 @@
+import { render, act, waitFor } from '@testing-library/react';
+import { useAuth, AuthProvider } from '../../hooks/useAuth';
 import React from 'react';
-import { render, act, screen, waitFor } from '@testing-library/react';
-import { AuthProvider, useAuth } from '../mocks/AuthContext';
-import * as authService from '../../lib/api/authService';
-import * as apiClient from '../../lib/api/apiClient';
 
-// Mock external dependencies
+// Mock auth service
 jest.mock('../../lib/api/authService', () => ({
-  signup: jest.fn(),
-  login: jest.fn(),
-  logout: jest.fn(),
-  getCurrentUser: jest.fn(),
-  updateUserInfo: jest.fn(),
-  updatePassword: jest.fn(),
-  deleteAccount: jest.fn()
+    login: jest.fn(),
+    signup: jest.fn(),
+    logout: jest.fn(),
+    getCurrentUser: jest.fn()
 }));
 
-jest.mock('../../lib/api/apiClient', () => ({
-  isAuthenticated: jest.fn()
-}));
+const TestComponent = ({ onMount }) => {
+    const auth = useAuth();
+    React.useEffect(() => {
+        if (onMount) onMount(auth);
+    }, [auth, onMount]);
+    
+    return (
+        <div data-testid="auth-context-wrapper">
+            {auth.user && <div data-testid="user-logged-in">{auth.user.email}</div>}
+            {auth.error && <div data-testid="auth-error">{auth.error}</div>}
+        </div>
+    );
+};
 
-jest.mock('next/router', () => ({
-  useRouter: () => ({
-    push: jest.fn(),
-    replace: jest.fn()
-  })
-}));
+const renderWithAuth = (ui, { providerProps } = {}) => {
+    return render(
+        <AuthProvider {...providerProps}>{ui}</AuthProvider>
+    );
+};
 
 describe('useAuth', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    apiClient.isAuthenticated.mockReturnValue(false);
-  });
-
-  const renderWithAuthProvider = (initialState = {}) => {
-    return render(
-      <AuthProvider initialState={initialState}>
-        <div data-testid="auth-context-wrapper" />
-      </AuthProvider>
-    );
-  };
-
-  const setupTest = async (renderFn, checkFn) => {
-    let renderResult;
-    
-    await act(async () => {
-      renderResult = renderFn();
+    beforeEach(() => {
+        localStorage.clear();
+        jest.clearAllMocks();
     });
 
-    await act(async () => {
-      await waitFor(() => {
-        const authContextWrapper = screen.getByTestId('auth-context-wrapper');
-        expect(authContextWrapper).toBeInTheDocument();
-      }, { timeout: 2000 });
+    const mockCredentials = {
+        email: 'test@example.com',
+        password: 'password123'
+    };
+
+    const mockUserData = {
+        name: 'Test User',
+        email: 'test@example.com',
+        password: 'password123',
+        passwordConfirm: 'password123'
+    };
+
+    it('provides auth context', async () => {
+        let authData;
+        renderWithAuth(
+            <TestComponent
+                onMount={(data) => {
+                    authData = data;
+                }}
+            />
+        );
+
+        await waitFor(() => {
+            expect(authData).toBeDefined();
+            expect(authData.login).toBeDefined();
+            expect(authData.signup).toBeDefined();
+            expect(authData.logout).toBeDefined();
+        });
     });
 
-    if (checkFn) {
-      await act(async () => {
-        await checkFn();
-      });
-    }
+    it('handles successful signup', async () => {
+        const mockUser = { ...mockUserData, id: '123' };
+        jest.spyOn(require('../../lib/api/authService'), 'signup')
+            .mockResolvedValueOnce(mockUser);
 
-    return renderResult;
-  };
-
-  it('initializes with correct default state', async () => {
-    await setupTest(() => renderWithAuthProvider());
-  });
-
-  it('handles successful signup', async () => {
-    const mockUserData = { 
-      email: 'test@example.com', 
-      password: 'password123' 
-    };
-    const mockResponse = { 
-      data: { 
-        user: { 
-          id: 'user-123', 
-          email: mockUserData.email 
-        } 
-      } 
-    };
-
-    authService.signup.mockResolvedValue(mockResponse);
-
-    await setupTest(
-      () => renderWithAuthProvider(),
-      async () => {
-        const TestCheckComponent = () => {
-          const { user, signup } = useAuth();
-          
-          React.useEffect(() => {
-            const performSignup = async () => {
-              await signup(mockUserData);
-            };
-            performSignup();
-          }, [signup]);
-
-          return user ? <div data-testid="user-signed-up">{user.email}</div> : null;
-        };
-
-        render(
-          <AuthProvider>
-            <TestCheckComponent />
-          </AuthProvider>
+        let authData;
+        renderWithAuth(
+            <TestComponent
+                onMount={(data) => {
+                    authData = data;
+                }}
+            />
         );
 
+        await act(async () => {
+            await authData.signup(mockUserData);
+        });
+
         await waitFor(() => {
-          const signedUpUser = screen.getByTestId('user-signed-up');
-          expect(signedUpUser).toHaveTextContent(mockUserData.email);
-        }, { timeout: 2000 });
-      }
-    );
-  });
+            expect(authData.user).toEqual(mockUser);
+            expect(authData.error).toBeNull();
+            expect(localStorage.getItem('token')).toBeDefined();
+        });
+    });
 
-  it('handles signup failure', async () => {
-    const mockUserData = { 
-      email: '', 
-      password: 'password123' 
-    };
-    const mockError = new Error('Signup failed');
-    mockError.response = { 
-      data: { message: 'Invalid signup credentials' } 
-    };
+    it('handles successful login', async () => {
+        const mockUser = { ...mockCredentials, id: '123' };
+        jest.spyOn(require('../../lib/api/authService'), 'login')
+            .mockResolvedValueOnce({ user: mockUser, token: 'test-token' });
 
-    authService.signup.mockRejectedValue(mockError);
-
-    await setupTest(
-      () => renderWithAuthProvider(),
-      async () => {
-        const TestCheckComponent = () => {
-          const { error, signup } = useAuth();
-          
-          React.useEffect(() => {
-            const performSignup = async () => {
-              try {
-                await signup(mockUserData);
-              } catch (err) {
-                // Error is expected
-              }
-            };
-            performSignup();
-          }, [signup]);
-
-          return error ? <div data-testid="signup-error">{error}</div> : null;
-        };
-
-        render(
-          <AuthProvider>
-            <TestCheckComponent />
-          </AuthProvider>
+        let authData;
+        renderWithAuth(
+            <TestComponent
+                onMount={(data) => {
+                    authData = data;
+                }}
+            />
         );
 
+        await act(async () => {
+            await authData.login(mockCredentials);
+        });
+
         await waitFor(() => {
-          const signupError = screen.getByTestId('signup-error');
-          expect(signupError).toBeInTheDocument();
-        }, { timeout: 2000 });
-      }
-    );
-  });
+            expect(authData.user).toEqual(mockUser);
+            expect(authData.error).toBeNull();
+            expect(localStorage.getItem('token')).toBe('test-token');
+        });
+    });
 
-  it('handles successful login', async () => {
-    const mockCredentials = { 
-      email: 'test@example.com', 
-      password: 'password123' 
-    };
-    const mockResponse = { 
-      data: { 
-        user: { 
-          id: 'user-123', 
-          email: mockCredentials.email 
-        } 
-      } 
-    };
+    it('handles logout', async () => {
+        const mockUser = { ...mockCredentials, id: '123' };
+        localStorage.setItem('token', 'test-token');
+        localStorage.setItem('user', JSON.stringify(mockUser));
 
-    authService.login.mockResolvedValue(mockResponse);
-
-    await setupTest(
-      () => renderWithAuthProvider(),
-      async () => {
-        const TestCheckComponent = () => {
-          const { user, login } = useAuth();
-          
-          React.useEffect(() => {
-            const performLogin = async () => {
-              await login(mockCredentials);
-            };
-            performLogin();
-          }, [login]);
-
-          return user ? <div data-testid="user-logged-in">{user.email}</div> : null;
-        };
-
-        render(
-          <AuthProvider>
-            <TestCheckComponent />
-          </AuthProvider>
+        let authData;
+        renderWithAuth(
+            <TestComponent
+                onMount={(data) => {
+                    authData = data;
+                }}
+            />
         );
 
+        await act(async () => {
+            await authData.logout();
+        });
+
         await waitFor(() => {
-          const loggedInUser = screen.getByTestId('user-logged-in');
-          expect(loggedInUser).toHaveTextContent(mockCredentials.email);
-        }, { timeout: 2000 });
-      }
-    );
-  });
+            expect(authData.user).toBeNull();
+            expect(localStorage.getItem('token')).toBeNull();
+            expect(localStorage.getItem('user')).toBeNull();
+        });
+    });
 
-  it('handles logout', async () => {
-    const initialUser = { 
-      id: 'user-123', 
-      email: 'test@example.com' 
-    };
+    it('handles login errors', async () => {
+        const error = new Error('Invalid credentials');
+        jest.spyOn(require('../../lib/api/authService'), 'login')
+            .mockRejectedValueOnce(error);
 
-    await setupTest(
-      () => renderWithAuthProvider({ 
-        user: initialUser, 
-        loading: false 
-      }),
-      async () => {
-        const TestCheckComponent = () => {
-          const { user, logout } = useAuth();
-          
-          React.useEffect(() => {
-            const performLogout = async () => {
-              await logout();
-            };
-            performLogout();
-          }, [logout]);
-
-          return !user ? <div data-testid="user-logged-out">Logged out</div> : null;
-        };
-
-        render(
-          <AuthProvider initialState={{ user: initialUser }}>
-            <TestCheckComponent />
-          </AuthProvider>
+        let authData;
+        renderWithAuth(
+            <TestComponent
+                onMount={(data) => {
+                    authData = data;
+                }}
+            />
         );
 
+        await act(async () => {
+            await authData.login(mockCredentials);
+        });
+
         await waitFor(() => {
-          const loggedOutIndicator = screen.getByTestId('user-logged-out');
-          expect(loggedOutIndicator).toBeInTheDocument();
-        }, { timeout: 2000 });
-      }
-    );
-  });
+            expect(authData.error).toBe(error.message);
+            expect(authData.user).toBeNull();
+            expect(localStorage.getItem('token')).toBeNull();
+        });
+    });
+
+    it('handles signup errors', async () => {
+        const error = new Error('Email already exists');
+        jest.spyOn(require('../../lib/api/authService'), 'signup')
+            .mockRejectedValueOnce(error);
+
+        let authData;
+        renderWithAuth(
+            <TestComponent
+                onMount={(data) => {
+                    authData = data;
+                }}
+            />
+        );
+
+        await act(async () => {
+            await authData.signup(mockUserData);
+        });
+
+        await waitFor(() => {
+            expect(authData.error).toBe(error.message);
+            expect(authData.user).toBeNull();
+            expect(localStorage.getItem('token')).toBeNull();
+        });
+    });
 });

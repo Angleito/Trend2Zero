@@ -1,38 +1,40 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React, { Component, ErrorInfo } from 'react';
+import { ErrorBoundaryProps, ErrorBoundaryState } from '../../lib/types';
 
-interface ErrorBoundaryProps {
-  children: React.ReactNode;
-}
-
-export class ErrorBoundary extends React.Component<ErrorBoundaryProps, { hasError: boolean }> {
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { 
+      hasError: false,
+      error: undefined
+    };
   }
 
-  static getDerivedStateFromError(_: Error) {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { 
+      hasError: true,
+      error 
+    };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('Uncaught error:', error, errorInfo);
+    
+    // Optional error logging or reporting
+    if (this.props.onError) {
+      this.props.onError(error, errorInfo);
+    }
   }
 
   render() {
     if (this.state.hasError) {
-      return (
-        <div className="error-container">
-          <div>
-            <h1>Oops! Something went wrong</h1>
-            <button 
-              onClick={() => window.location.reload()}
-              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
-            >
-              Reload Page
-            </button>
-          </div>
+      // Render fallback UI
+      return this.props.fallback || (
+        <div role="alert" className="error-boundary">
+          <h1>Something went wrong.</h1>
+          <p>{this.state.error?.message || 'An unexpected error occurred.'}</p>
         </div>
       );
     }
@@ -40,3 +42,5 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, { hasErro
     return this.props.children;
   }
 }
+
+export default ErrorBoundary;

@@ -1,9 +1,9 @@
-#!/bin/bash
+#!/usr/bin/env zsh
 
 # Script to run all tests in the project
 # Usage: ./scripts/run-all-tests.sh
 
-set -e # Exit immediately if a command exits with a non-zero status
+setopt ERR_EXIT # Exit immediately if a command exits with a non-zero status
 
 echo "🧪 Running all tests for Trend2Zero project..."
 

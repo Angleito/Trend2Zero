@@ -113,6 +113,43 @@ trend2zero dev
 trend2zero performance
 ```
 
+## Cryptocurrency Data Providers
+
+Trend2Zero uses multiple cryptocurrency data providers for enhanced reliability:
+
+### Integrated Services
+- **CoinMarketCap API**: Primary data source for cryptocurrency prices and information
+- **CoinGecko API**: Secondary data source for load balancing and fallback support
+
+### Load Balancing Features
+- Automatic request distribution between CoinMarketCap and CoinGecko
+- Rate limit detection and provider switching
+- Fallback mechanisms when primary provider fails
+- Configurable provider weights via environment variables
+
+### Configuration
+Set up your API keys in the `.env` file:
+```bash
+COINMARKETCAP_API_KEY=your_coinmarketcap_api_key_here
+COINGECKO_API_KEY=your_coingecko_api_key_here # Optional for free tier
+```
+
+Additional configuration options:
+```bash
+# Provider weights (higher number = more requests)
+COINMARKETCAP_WEIGHT=7
+COINGECKO_WEIGHT=3
+
+# Rate limiting settings
+RATE_LIMIT_RESET_INTERVAL=60000 # milliseconds
+```
+
+### Benefits
+- Increased system reliability
+- Improved handling of rate limits
+- Better distribution of API requests
+- Enhanced data availability
+
 ## Contributing
 
 Please read the `CONTRIBUTING.md` file for details on our code of conduct and the process for submitting pull requests.

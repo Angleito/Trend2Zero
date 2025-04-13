@@ -1,38 +1,59 @@
 const express = require('express');
-const dotenv = require('dotenv');
+const mongoose = require('mongoose');
 const cors = require('cors');
+const historicalDataJob = require('./jobs/historicalDataJob');
+const historicalDataRoutes = require('./routes/historicalDataRoutes');
 const logger = require('./utils/logger');
-
-// Load env vars
-dotenv.config();
+require('dotenv').config();
 
 const app = express();
 
-// Body parser
+// Middleware
+app.use(cors());
 app.use(express.json());
 
-// Enable CORS
-app.use(cors());
-
 // Routes
-app.use('/api/stocks', require('./routes/stocksRoutes'));
-app.use('/api/crypto', require('./routes/cryptoRoutes'));
-app.use('/api/market-data', require('./routes/marketDataRoutes'));
-app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/historical-data', historicalDataRoutes);
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-    logger.error(err.stack);
-    res.status(500).send('Something broke!');
+// MongoDB connection
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => {
+  logger.info('Connected to MongoDB successfully');
+  
+  // Start historical data collection job
+  historicalDataJob();
+})
+.catch((error) => {
+  logger.error('MongoDB connection error:', error);
+  process.exit(1);
 });
 
-// Export app for testing
-module.exports = app;
+// Global error handler
+app.use((err, req, res, next) => {
+  logger.error(err.stack);
+  res.status(500).json({
+    error: 'Something went wrong',
+    message: err.message
+  });
+});
 
-// Only start server if not in test environment
-if (process.env.NODE_ENV !== 'test') {
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
-        logger.info(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+const PORT = process.env.PORT || 3001;
+const server = app.listen(PORT, () => {
+  logger.info(`Backend server running on port ${PORT}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received. Shutting down gracefully');
+  server.close(() => {
+    mongoose.connection.close(false, () => {
+      logger.info('MongoDB connection closed');
+      process.exit(0);
     });
-}
+  });
+});
+
+module.exports = app;

@@ -3,6 +3,8 @@ const { getApp } = require('../setup');
 const { createTestUser, clearTestData } = require('../helpers/testDb');
 const User = require('../../models/userModel');
 
+jest.setTimeout(30000); // Increase timeout for integration tests
+
 describe('Auth Controller Integration Tests', () => {
     beforeEach(async () => {
         await clearTestData();

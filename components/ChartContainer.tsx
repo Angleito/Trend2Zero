@@ -6,7 +6,7 @@
  * See tests/browser-test.js for examples.
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import dynamic from 'next/dynamic';
 
 // Dynamically import chart components to avoid SSR issues
@@ -26,12 +26,12 @@ interface ChartContainerProps {
   interval?: '1d' | '1w' | '1m';
 }
 
-const ChartContainer: React.FC<ChartContainerProps> = ({
+const ChartContainer = ({
   symbol,
   height = 400,
   theme = 'dark',
   interval = '1d',
-}) => {
+}: ChartContainerProps) => {
   const [chartType, setChartType] = useState<'lightweight' | 'highcharts'>('lightweight');
   const [timeRange, setTimeRange] = useState<'30d' | '90d' | '1y' | '5y'>('30d');
 

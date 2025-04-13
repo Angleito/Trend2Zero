@@ -1,42 +1,21 @@
-// Asset Categories
-export type AssetCategory = 'Stocks' | 'Commodities' | 'Indices' | 'Cryptocurrency' | 'Precious Metal';
+import React from 'react';
 
-// Environment type
-export type Environment = 'vercel' | 'strapi' | 'development';
+// Asset and Market Data Types
+export type AssetCategory = 'cryptocurrency' | 'stocks' | 'metals' | 'indices';
 
-// Market Asset Type
-export interface MarketAsset {
-  id?: string;
-  symbol: string;
-  name?: string;
-  type?: AssetCategory;
-  description?: string;
-  priceInUSD?: number;
-  priceInBTC?: number;
-  change24h?: number;
-  lastUpdated?: string;
+export interface OHLCDataPoint {
+  timestamp?: number;
+  date?: Date;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume?: number;
 }
 
-// Asset Data Type
-export interface AssetData {
-  id?: string;
-  symbol: string;
-  name?: string;
-  description?: string;
-  type?: AssetCategory;
-  currentPrice?: number;
-  price: number;
-  change: number;
-  changePercent: number;
-  priceInBTC: number;
-  priceInUSD: number;
-  lastUpdated?: string;
-  historicalData?: HistoricalDataPoint[];
-}
-
-// Historical Data Point
 export interface HistoricalDataPoint {
-  date: string | Date;
+  timestamp?: number;
+  date?: Date;
   price: number;
   open?: number;
   high?: number;
@@ -45,7 +24,48 @@ export interface HistoricalDataPoint {
   volume?: number;
 }
 
-// Market Data Hook Type
+export interface AssetPrice {
+  id: string;
+  symbol: string;
+  name: string;
+  type: AssetCategory;
+  price: number;
+  change: number;
+  changePercent: number;
+  priceInBTC: number;
+  priceInUSD: number;
+  lastUpdated: string;
+}
+
+export interface MarketAsset {
+  id: string;
+  symbol: string;
+  name: string;
+  type: AssetCategory;
+  description?: string;
+  logo?: string;
+}
+
+export interface AssetData extends MarketAsset {
+  currentPrice?: number;
+  historicalData?: HistoricalDataPoint[];
+  price?: number;
+  change?: number;
+  changePercent?: number;
+  priceInBTC?: number;
+  priceInUSD?: number;
+  lastUpdated?: string;
+}
+
+export interface MarketDataOptions {
+  symbol?: string | null;
+  type?: string | null;
+  searchQuery?: string | null;
+  autoRefresh?: boolean;
+  refreshInterval?: number;
+  limit?: number;
+}
+
 export interface MarketData {
   asset: AssetData | null;
   price: number | null;
@@ -55,109 +75,61 @@ export interface MarketData {
   loading: boolean;
   error: string | null;
   refetch: () => void;
+  assets: MarketAsset[]; // Added to match the usage in page.tsx
 }
 
-// Market Data Hook Options
-export interface MarketDataOptions {
-  symbol?: string | null;
-  type?: AssetCategory | null;
-  searchQuery?: string | null;
-  autoRefresh?: boolean;
-  refreshInterval?: number;
-  limit?: number;
+// Error Boundary Types
+export interface ErrorBoundaryProps {
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+  onError?: (error: Error, info: React.ErrorInfo) => void;
+}
+
+export interface ErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
 }
 
 // Utility function to create a default asset
-export function createDefaultAsset(partialAsset: Partial<AssetData> = {}): AssetData {
+export function createDefaultAsset(asset: Partial<AssetData>): AssetData {
   return {
-    symbol: partialAsset.symbol || '',
-    price: partialAsset.price || 0,
-    change: partialAsset.change || 0,
-    changePercent: partialAsset.changePercent || 0,
-    priceInBTC: partialAsset.priceInBTC || 0,
-    priceInUSD: partialAsset.priceInUSD || 0,
-    id: partialAsset.id,
-    name: partialAsset.name,
-    description: partialAsset.description,
-    type: partialAsset.type,
-    currentPrice: partialAsset.currentPrice,
-    historicalData: partialAsset.historicalData || []
+    id: asset.id || '',
+    symbol: asset.symbol || '',
+    name: asset.name || '',
+    type: asset.type || 'cryptocurrency',
+    description: asset.description || '',
+    logo: asset.logo || '',
+    currentPrice: asset.currentPrice,
+    historicalData: asset.historicalData,
+    price: asset.price,
+    change: asset.change,
+    changePercent: asset.changePercent,
+    priceInBTC: asset.priceInBTC,
+    priceInUSD: asset.priceInUSD,
+    lastUpdated: asset.lastUpdated
   };
 }
 
-export type AlphaVantageStockResponse = {
-  'Global Quote': {
-    '01. symbol': string;
-    '05. price': string;
-    '09. change': string;
-    '10. change percent': string;
-    [key: string]: any;
-  };
-};
-
-export type AlphaVantageHistoricalResponse = {
-  'Time Series (Daily)': {
-    [date: string]: {
-      '1. open': string;
-      '2. high': string;
-      '3. low': string;
-      '4. close': string;
-      '5. volume': string;
+// Utility function to convert various data point formats
+export function normalizeHistoricalDataPoint(point: any): HistoricalDataPoint {
+  // Handle different input formats
+  if (Array.isArray(point)) {
+    // [timestamp, price] format
+    return {
+      timestamp: point[0],
+      price: point[1]
     };
-  };
-  [key: string]: any;
-};
+  }
 
-export type CurrencyExchangeRate = {
-  fromCurrencyCode: string;
-  fromCurrencyName: string;
-  toCurrencyCode: string;
-  toCurrencyName: string;
-  exchangeRate: number;
-  lastRefreshed: string;
-  timeZone: string;
-  [key: string]: any;
-};
-
-export type AlphaVantageExchangeRateResponse = {
-  'Realtime Currency Exchange Rate': {
-    [key: string]: string;
-  };
-  [key: string]: any;
-};
-
-export type AlphaVantageCryptoResponse = {
-  'Realtime Crypto Currency Quote': {
-    [key: string]: string;
-  };
-  [key: string]: any;
-};
-
-// Mock integration service configuration
-export interface MockIntegrationConfig {
-  apiBaseUrl: string;
-  strapiBaseUrl: string;
-  cacheEnabled: boolean;
-  cacheDuration: number;
-  mockDataEnabled: boolean;
-}
-
-// Mock integration service test result
-export interface ServiceTestResult {
-  status: string;
-  url?: string;
-  message?: string;
-  error?: string;
-}
-
-// Mock integration service test results
-export interface ServiceTestResults {
-  environment: Environment;
-  timestamp: string;
-  services: {
-    vercelApi?: ServiceTestResult;
-    strapiApi?: ServiceTestResult;
-    database?: ServiceTestResult;
-    [key: string]: ServiceTestResult | undefined;
+  // Handle object with multiple possible properties
+  return {
+    timestamp: point.timestamp || (point.date ? point.date.getTime() : undefined),
+    date: point.date instanceof Date ? point.date : (point.timestamp ? new Date(point.timestamp) : undefined),
+    price: point.price || point.close || 0,
+    open: point.open,
+    high: point.high,
+    low: point.low,
+    close: point.close,
+    volume: point.volume
   };
 }

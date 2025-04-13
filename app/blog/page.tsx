@@ -1,16 +1,22 @@
 'use client';
 
-import StickyHeader from '../../components/StickyHeader';
-
+import { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import StrapiContent from '../../components/StrapiContent';
 import { BlogPost } from '../../lib/strapi/content';
-
-import Image from 'next/image';
 import Link from 'next/link';
+
+// Dynamically import StickyHeader with no SSR
+const StickyHeader = dynamic(() => import('../../components/StickyHeader'), {
+  ssr: false,
+});
+
 export default function BlogPage() {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
-      <StickyHeader />
+      <Suspense fallback={<div className="h-16 bg-transparent" />}>
+        <StickyHeader />
+      </Suspense>
 
       <main className="flex-grow p-6">
         <div className="container mx-auto max-w-4xl">

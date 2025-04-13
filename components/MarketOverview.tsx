@@ -1,14 +1,14 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getMarketOverview, MarketOverview as MarketOverviewType } from '../lib/strapi/content';
 
 
-const MarketOverview: React.FC = () => {
-  const [overview, setOverview] = React.useState<MarketOverviewType | null>(null);
-  const [loading, setLoading] = React.useState<boolean>(true);
-  const [error, setError] = React.useState<string | null>(null);
+const MarketOverview = () => {
+  const [overview, setOverview] = useState<MarketOverviewType | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchOverview = async () => {
       try {
         setLoading(true);

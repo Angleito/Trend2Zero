@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import Link from 'next/link';
 import { MarketDataService } from '../lib/services/marketDataService';
 import type { MarketAsset } from '../lib/types';
@@ -9,7 +9,7 @@ interface AssetSearchProps {
   onAssetSelect?: (asset: MarketAsset) => void;
 }
 
-const AssetSearch: React.FC<AssetSearchProps> = ({ onAssetSelect }) => {
+const AssetSearch = ({ onAssetSelect }: AssetSearchProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<MarketAsset[]>([]);
   const [loading, setLoading] = useState(false);
@@ -68,7 +68,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({ onAssetSelect }) => {
     return () => clearTimeout(debounceTimer);
   }, [searchTerm]);
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
   };
 

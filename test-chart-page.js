@@ -3,7 +3,7 @@ const { chromium } = require('playwright');
 (async () => {
   // Launch the browser
   const browser = await chromium.launch({
-    headless: false // Set to true for headless mode
+    headless: true // Set to true for headless mode
   });
   
   // Create a new page

@@ -9,22 +9,24 @@
 import Link from 'next/link';
 import React, { useState, useEffect } from 'react';
 import { MarketDataService } from '../lib/services/marketDataService';
-import type { MarketAsset, AssetData, AssetCategory } from '../lib/types';
+import type { MarketAsset, AssetCategory } from '../lib/types';
 
 
 interface AssetPriceTableProps {
   category?: AssetCategory;
   limit?: number;
   showCategory?: boolean;
+  assets?: MarketAsset[];
 }
 
 const AssetPriceTable: React.FC<AssetPriceTableProps> = ({
   category,
   limit = 20,
   showCategory = false,
+  assets: propAssets = [],
 }) => {
-  const [assets, setAssets] = useState<MarketAsset[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [assets, setAssets] = useState<MarketAsset[]>(propAssets);
+  const [loading, setLoading] = useState(propAssets.length === 0);
   const [error, setError] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<{
     key: string;
@@ -35,50 +37,53 @@ const AssetPriceTable: React.FC<AssetPriceTableProps> = ({
   });
 
   useEffect(() => {
-    const fetchAssets = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const marketService = new MarketDataService();
-        
-        // First try to fetch data with retries
-        let retries = 3;
-        let assetList: MarketAsset[] = [];
-        
-        while (retries > 0) {
-          try {
-            assetList = await marketService.listAvailableAssets({
-              category,
-              pageSize: limit
-            });
-            break;
-          } catch (fetchError) {
-            console.warn(`Asset fetch attempt failed (${retries} retries left):`, fetchError);
-            retries--;
-            if (retries > 0) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
+    // If no assets passed via props, fetch them
+    if (propAssets.length === 0) {
+      const fetchAssets = async () => {
+        try {
+          setLoading(true);
+          setError(null);
+          const marketService = new MarketDataService();
+          
+          // First try to fetch data with retries
+          let retries = 3;
+          let assetList: MarketAsset[] = [];
+          
+          while (retries > 0) {
+            try {
+              assetList = await marketService.listAvailableAssets({
+                category,
+                pageSize: limit
+              });
+              break;
+            } catch (fetchError) {
+              console.warn(`Asset fetch attempt failed (${retries} retries left):`, fetchError);
+              retries--;
+              if (retries > 0) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              }
             }
           }
+
+          // If we still don't have data, try using mock data
+          if (assetList.length === 0) {
+            console.log('Falling back to mock data');
+            assetList = marketService.getMockAssets(category, limit);
+          }
+
+          setAssets(assetList);
+          setError(null);
+        } catch (error) {
+          console.error('Error fetching assets:', error);
+          setError('Failed to load market data. Please try again later.');
+        } finally {
+          setLoading(false);
         }
+      };
 
-        // If we still don't have data, try using mock data
-        if (assetList.length === 0) {
-          console.log('Falling back to mock data');
-          assetList = marketService.getMockAssets(category, limit);
-        }
-
-        setAssets(assetList);
-        setError(null);
-      } catch (error) {
-        console.error('Error fetching assets:', error);
-        setError('Failed to load market data. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAssets();
-  }, [category, limit]);
+      fetchAssets();
+    }
+  }, [category, limit, propAssets.length]);
 
   // Show loading state
   if (loading) {

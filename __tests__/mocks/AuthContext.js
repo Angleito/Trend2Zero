@@ -1,74 +1,65 @@
-import React from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
-const mockUser = {
-  id: '123',
-  email: 'test@example.com',
-  name: 'Test User'
+const AuthContext = createContext();
+
+const mockAuthState = {
+    isAuthenticated: false,
+    user: null,
+    loading: false,
+    error: null
 };
 
-const mockAuthContext = {
-  user: null,
-  isAuthenticated: false,
-  login: jest.fn(),
-  signup: jest.fn(),
-  logout: jest.fn(),
-  error: null
+const mockAuthActions = {
+    login: jest.fn(),
+    logout: jest.fn(),
+    register: jest.fn(),
+    resetPassword: jest.fn(),
+    updateProfile: jest.fn(),
+    clearError: jest.fn()
 };
 
-const useAuth = (initialState = {}) => {
-  const [user, setUser] = React.useState(() => {
-    if (initialState && initialState.user) {
-      return initialState.user;
+export const AuthProvider = ({ children }) => {
+    const [state, _setState] = useState(mockAuthState);
+
+    const value = {
+        ...state,
+        ...mockAuthActions
+    };
+
+    return (
+        <AuthContext.Provider value={value}>
+            {children}
+        </AuthContext.Provider>
+    );
+};
+
+export const useAuth = () => {
+    const context = useContext(AuthContext);
+    if (context === undefined) {
+        throw new Error('useAuth must be used within an AuthProvider');
     }
-    return null;
-  });
+    return context;
+};
 
-  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
-  const [error, setError] = React.useState(null);
-
-  const login = jest.fn(async (credentials) => {
-    try {
-      setUser(mockUser);
-      setIsAuthenticated(true);
-      setError(null);
-    } catch (err) {
-      setError(err);
-      setIsAuthenticated(false);
-    }
-  });
-
-  const signup = jest.fn(async (userData) => {
-    try {
-      setUser(mockUser);
-      setIsAuthenticated(true);
-      setError(null);
-    } catch (err) {
-      setError(err);
-      setIsAuthenticated(false);
-    }
-  });
-
-  const logout = jest.fn(() => {
-    setUser(null);
-    setIsAuthenticated(false);
-    setError(null);
-  });
-
-  return { user, isAuthenticated, login, signup, logout, error };
+export const resetAuthMocks = () => {
+    Object.keys(mockAuthActions).forEach(key => {
+        mockAuthActions[key].mockReset();
+    });
 };
 
 // Minimal test to ensure mock works
 describe('AuthContext Mock', () => {
   it('should have a valid mock implementation', () => {
-    const { user, isAuthenticated, login, signup, logout, error } = useAuth();
+    const { user, isAuthenticated, login, register, logout, error } = useAuth();
     
     expect(user).toBe(null);
     expect(isAuthenticated).toBe(false);
     expect(error).toBe(null);
     expect(login).toBeInstanceOf(Function);
-    expect(signup).toBeInstanceOf(Function);
+    expect(register).toBeInstanceOf(Function);
     expect(logout).toBeInstanceOf(Function);
   });
 });
 
-export { useAuth, mockUser, mockAuthContext };
+export { mockAuthState, mockAuthActions };
+export default AuthContext;

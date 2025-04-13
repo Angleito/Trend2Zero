@@ -19,45 +19,73 @@ declare global {
   var mongoose: MongooseCache | undefined;
 }
 
-/**
- * Global is used here to maintain a cached connection across hot reloads
- * in development. This prevents connections growing exponentially
- * during API Route usage.
- */
+// Connection states as constants
+export const ConnectionState = {
+  DISCONNECTED: 0,
+  CONNECTED: 1,
+  CONNECTING: 2,
+  DISCONNECTING: 3
+};
+
+// Ensure global is used to maintain a cached connection across hot reloads
 let cached: MongooseCache = (globalThis as CustomGlobal).mongoose ?? { conn: null, promise: null };
 
 // Ensure global.mongoose is set
 (globalThis as CustomGlobal).mongoose = cached;
 
-async function dbConnect(): Promise<mongoose.Connection> {
+async function dbConnect(retries = 3, delay = 1000): Promise<mongoose.Connection> {
   // If connection already exists, return it
   if (cached.conn) {
+    console.log('[MongoDB] Reusing existing connection');
     return cached.conn;
   }
 
-  // If no existing promise, create a new connection
-  if (!cached.promise) {
-    const opts = {
-      bufferCommands: false,
-    };
+  // Connection options with enhanced configuration
+  const opts = {
+    bufferCommands: false,
+    serverSelectionTimeoutMS: 5000, // 5 seconds server selection timeout
+    socketTimeoutMS: 45000, // 45 seconds socket timeout
+    family: 4 // Use IPv4, helps with some network configurations
+  };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {
-      console.log('Connected to MongoDB');
-      return mongooseInstance;
-    });
+  // Retry connection with exponential backoff
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      console.log(`[MongoDB] Connection attempt ${attempt}/${retries}`);
+
+      if (!cached.promise) {
+        cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {
+          console.log('[MongoDB] Successfully connected');
+          return mongooseInstance;
+        });
+      }
+
+      const mongooseInstance = await cached.promise;
+      cached.conn = mongooseInstance.connection;
+
+      // Additional connection state logging
+      cached.conn.on('connected', () => console.log('[MongoDB] Connection established'));
+      cached.conn.on('error', (err) => console.error('[MongoDB] Connection error:', err));
+      cached.conn.on('disconnected', () => console.warn('[MongoDB] Disconnected'));
+
+      return cached.conn;
+    } catch (error) {
+      console.error(`[MongoDB] Connection attempt ${attempt} failed:`, error);
+      
+      // Reset promise for next attempt
+      cached.promise = null;
+
+      // Exponential backoff
+      if (attempt < retries) {
+        await new Promise(resolve => setTimeout(resolve, delay * attempt));
+      } else {
+        console.error('[MongoDB] All connection attempts failed');
+        throw error;
+      }
+    }
   }
-  
-  try {
-    // Await the connection promise and store the connection
-    const mongooseInstance = await cached.promise;
-    cached.conn = mongooseInstance.connection;
-    return cached.conn;
-  } catch (e) {
-    // Reset promise on connection failure
-    cached.promise = null;
-    console.error('Error connecting to MongoDB:', e);
-    throw e;
-  }
+
+  throw new Error('[MongoDB] Unable to establish connection');
 }
 
 export default dbConnect;

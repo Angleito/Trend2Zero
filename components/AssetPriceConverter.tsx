@@ -6,7 +6,7 @@
  * See tests/browser-test.js for examples.
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import { MarketDataService } from '../lib/services/marketDataService';
 import type { AssetData } from '../lib/types';
 
@@ -14,7 +14,7 @@ interface AssetPriceConverterProps {
   assetSymbol: string;
 }
 
-const AssetPriceConverter: React.FC<AssetPriceConverterProps> = ({ assetSymbol }) => {
+const AssetPriceConverter = ({ assetSymbol }: AssetPriceConverterProps) => {
   const [assetData, setAssetData] = useState<AssetData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +40,7 @@ const AssetPriceConverter: React.FC<AssetPriceConverterProps> = ({ assetSymbol }
     fetchAssetData();
   }, [assetSymbol]);
 
-  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAmountChange = (e: ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
     if (!isNaN(value) && value >= 0) {
       setAmount(value);

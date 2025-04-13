@@ -1,13 +1,13 @@
-#!/bin/bash
+#!/usr/bin/env zsh
 
 # Comprehensive Test Runner for Trend2Zero
 
 # Exit on first error
-set -e
+setopt ERR_EXIT
 
 # Timestamp for logging
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/.."
+BASE_DIR="${0:A:h}/.."
 LOG_DIR="$BASE_DIR/test-results/logs"
 REPORT_DIR="$BASE_DIR/test-results/reports"
 
@@ -37,7 +37,7 @@ log() {
         *)         color="$NC" ;;
     esac
 
-    echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] ${color}[$level]${NC} $message" | tee -a "$FULL_LOG_FILE"
+    print -P "[$(date +'%Y-%m-%d %H:%M:%S')] ${color}[$level]${NC} $message" | tee -a "$FULL_LOG_FILE"
 }
 
 # Function to cleanup processes
@@ -51,21 +51,21 @@ cleanup() {
 }
 
 # Trap signals to ensure cleanup
-trap cleanup EXIT SIGINT SIGTERM ERR
+trap cleanup EXIT INT TERM
 
 # Validate required tools
 validate_dependencies() {
-    local missing_deps=()
-    
+    local -a missing_deps
+
     # Check for required commands
     for cmd in npm node npx; do
-        if ! command -v "$cmd" &> /dev/null; then
-            missing_deps+=("$cmd")
+        if (( ! $+commands[$cmd] )); then
+            missing_deps+=$cmd
         fi
     done
 
-    if [ ${#missing_deps[@]} -ne 0 ]; then
-        log "ERROR" "Missing dependencies: ${missing_deps[*]}"
+    if (( $#missing_deps )); then
+        log "ERROR" "Missing dependencies: ${(j:, :)missing_deps}"
         exit 1
     fi
 }

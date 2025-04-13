@@ -21,6 +21,9 @@ const initialState: Omit<BitcoinState, 'updateBitcoinData' | 'resetBitcoinData'>
   lastUpdated: 0
 };
 
+// Check if window is defined (client-side)
+const isClient = typeof window !== 'undefined';
+
 export const useBitcoinStore = create<BitcoinState>()(
   persist(
     (set) => ({
@@ -41,7 +44,11 @@ export const useBitcoinStore = create<BitcoinState>()(
     }),
     {
       name: 'bitcoin-storage',
-      storage: createJSONStorage(() => localStorage)
+      storage: isClient ? createJSONStorage(() => localStorage) : createJSONStorage(() => ({
+        getItem: () => null,
+        setItem: () => {},
+        removeItem: () => {}
+      }))
     }
   )
 );

@@ -6,7 +6,7 @@ jest.mock('../../lib/api/apiClient', () => ({
   get: jest.fn()
 }));
 
-describe('Market Data API Service', () => {
+describe('Market Data Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -50,47 +50,25 @@ describe('Market Data API Service', () => {
 
   describe('getAssetBySymbol', () => {
     it('calls the correct endpoint with symbol', async () => {
-      // Mock response
-      const mockResponse = {
-        data: {
-          status: 'success',
-          data: {
-            asset: { symbol: 'BTC', name: 'Bitcoin' }
-          }
-        }
-      };
-      apiClient.get.mockResolvedValue(mockResponse);
+      const mockData = { symbol: 'BTC', name: 'Bitcoin' };
+      apiClient.get.mockResolvedValue({ data: mockData });
 
-      // Call the function
       const result = await marketDataService.getAssetBySymbol('BTC');
-
-      // Assertions
+      
       expect(apiClient.get).toHaveBeenCalledWith('/market-data/assets/BTC');
-      expect(result).toEqual(mockResponse.data);
+      expect(result).toEqual(mockData);
     });
   });
 
   describe('getAssetPrice', () => {
     it('calls the correct endpoint with symbol', async () => {
-      // Mock response
-      const mockResponse = {
-        data: {
-          status: 'success',
-          data: {
-            symbol: 'BTC',
-            priceInUSD: 50000,
-            priceInBTC: 1
-          }
-        }
-      };
-      apiClient.get.mockResolvedValue(mockResponse);
+      const mockData = { price: 50000, change24h: 1000 };
+      apiClient.get.mockResolvedValue({ data: mockData });
 
-      // Call the function
       const result = await marketDataService.getAssetPrice('BTC');
-
-      // Assertions
+      
       expect(apiClient.get).toHaveBeenCalledWith('/market-data/price/BTC');
-      expect(result).toEqual(mockResponse.data);
+      expect(result).toEqual(mockData);
     });
   });
 
@@ -122,56 +100,30 @@ describe('Market Data API Service', () => {
   });
 
   describe('searchAssets', () => {
-    it('calls the correct endpoint with query parameters', async () => {
-      // Mock response
-      const mockResponse = {
-        data: {
-          status: 'success',
-          data: {
-            assets: [
-              { symbol: 'BTC', name: 'Bitcoin' },
-              { symbol: 'BCH', name: 'Bitcoin Cash' }
-            ]
-          }
-        }
-      };
-      apiClient.get.mockResolvedValue(mockResponse);
+    it('calls the correct endpoint with search parameters', async () => {
+      const mockResults = [{ symbol: 'BTC', name: 'Bitcoin' }];
+      apiClient.get.mockResolvedValue({ data: mockResults });
 
-      // Call the function
       const result = await marketDataService.searchAssets('bitcoin', 'crypto', 5);
-
-      // Assertions
-      expect(apiClient.get).toHaveBeenCalledWith('/market-data/assets/search', {
+      
+      expect(apiClient.get).toHaveBeenCalledWith('/market-data/search', {
         params: { query: 'bitcoin', type: 'crypto', limit: 5 }
       });
-      expect(result).toEqual(mockResponse.data);
+      expect(result).toEqual(mockResults);
     });
   });
 
   describe('getPopularAssets', () => {
     it('calls the correct endpoint with limit', async () => {
-      // Mock response
-      const mockResponse = {
-        data: {
-          status: 'success',
-          data: {
-            assets: [
-              { symbol: 'BTC', name: 'Bitcoin' },
-              { symbol: 'ETH', name: 'Ethereum' }
-            ]
-          }
-        }
-      };
-      apiClient.get.mockResolvedValue(mockResponse);
+      const mockAssets = [{ symbol: 'BTC', name: 'Bitcoin' }];
+      apiClient.get.mockResolvedValue({ data: mockAssets });
 
-      // Call the function
       const result = await marketDataService.getPopularAssets(10);
-
-      // Assertions
-      expect(apiClient.get).toHaveBeenCalledWith('/market-data/assets/popular', {
+      
+      expect(apiClient.get).toHaveBeenCalledWith('/market-data/popular', {
         params: { limit: 10 }
       });
-      expect(result).toEqual(mockResponse.data);
+      expect(result).toEqual(mockAssets);
     });
   });
 
@@ -199,6 +151,36 @@ describe('Market Data API Service', () => {
         params: { limit: 10 }
       });
       expect(result).toEqual(mockResponse.data);
+    });
+  });
+
+  describe('getAssetHistory', () => {
+    it('calls the correct endpoint with parameters', async () => {
+      const mockHistory = [{ timestamp: '2023-01-01', price: 50000 }];
+      apiClient.get.mockResolvedValue({ data: mockHistory });
+
+      const result = await marketDataService.getAssetHistory('BTC', { days: 30, interval: '1d' });
+      
+      expect(apiClient.get).toHaveBeenCalledWith('/market-data/history/BTC', {
+        params: { days: 30, interval: '1d' }
+      });
+      expect(result).toEqual(mockHistory);
+    });
+  });
+
+  describe('error handling', () => {
+    it('throws errors from API client', async () => {
+      const error = new Error('API Error');
+      apiClient.get.mockRejectedValue(error);
+
+      await expect(marketDataService.getAssetBySymbol('BTC')).rejects.toThrow('API Error');
+    });
+
+    it('handles null responses', async () => {
+      apiClient.get.mockResolvedValue({ data: null });
+
+      const result = await marketDataService.getAssetBySymbol('BTC');
+      expect(result).toBeNull();
     });
   });
 });

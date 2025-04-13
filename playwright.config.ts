@@ -42,7 +42,7 @@ export default defineConfig({
         screenshot: 'on',
         launchOptions: {
           slowMo: 100, // Add slight delay to reduce race conditions
-          headless: false
+          headless: true
         }
       },
     },
@@ -53,7 +53,7 @@ export default defineConfig({
         screenshot: 'on',
         launchOptions: {
           slowMo: 100,
-          headless: false
+          headless: true
         }
       },
     }

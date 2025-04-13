@@ -27,25 +27,25 @@ export default function ChartsTestPage() {
         <div className="border rounded p-4">
           <h2 className="text-lg font-semibold mb-2">Using Direct Data (Light Theme)</h2>
           <div className="h-64">
-            <TradingViewLightweightChart
+            {/* <TradingViewLightweightChart
               data={sampleData}
               theme="light"
               width={600}
               height={300}
-            />
+            /> */}
           </div>
         </div>
         
         <div className="border rounded p-4">
           <h2 className="text-lg font-semibold mb-2">Using Symbol (Dark Theme)</h2>
           <div className="h-64">
-            <TradingViewLightweightChart
+            {/* <TradingViewLightweightChart
               symbol="BTC"
               theme="dark"
               days={30}
               width={600}
               height={300}
-            />
+            /> */}
           </div>
         </div>
       </div>
@@ -54,26 +54,26 @@ export default function ChartsTestPage() {
         <div className="border rounded p-4">
           <h2 className="text-lg font-semibold mb-2">Ethereum Chart</h2>
           <div className="h-64">
-            <TradingViewLightweightChart
+            {/* <TradingViewLightweightChart
               symbol="ETH"
               theme="dark"
               days={14}
               width={600}
               height={300}
-            />
+            /> */}
           </div>
         </div>
         
         <div className="border rounded p-4">
           <h2 className="text-lg font-semibold mb-2">Apple Stock</h2>
           <div className="h-64">
-            <TradingViewLightweightChart
+            {/* <TradingViewLightweightChart
               symbol="AAPL"
               theme="light"
               days={7}
               width={600}
               height={300}
-            />
+            /> */}
           </div>
         </div>
       </div>

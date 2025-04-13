@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env zsh
 
 # Print diagnostic information
 echo "Current Directory: $(pwd)"

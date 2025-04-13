@@ -1,16 +1,16 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
 import { getAssetBySymbol, Asset } from '../lib/strapi/content';
 
 interface AssetDisplayProps {
   symbol: string;
 }
 
-const AssetDisplay: React.FC<AssetDisplayProps> = ({ symbol }) => {
-  const [asset, setAsset] = React.useState<Asset | null>(null);
-  const [loading, setLoading] = React.useState<boolean>(true);
-  const [error, setError] = React.useState<string | null>(null);
+const AssetDisplay = ({ symbol }: AssetDisplayProps) => {
+  const [asset, setAsset] = useState<Asset | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchAsset = async () => {
       try {
         setLoading(true);

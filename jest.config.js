@@ -1,40 +1,49 @@
-module.exports = {
-  testEnvironment: 'jsdom',
-  roots: [
-    '<rootDir>'
-  ],
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  transform: {
-    '^.+\\.tsx?$': 'babel-jest',
-    '^.+\\.jsx?$': 'babel-jest'
-  },
-  testRegex: '(/__tests__/.*|(\\.|/)(test|spec))\\.[jt]sx?$',
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/$1',
-    '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
-  },
-  transformIgnorePatterns: [
-    '/node_modules/(?!axios)/'
-  ],
-  testPathIgnorePatterns: [
-    '/node_modules/', 
-    '/dist/', 
-    '/tests/e2e/', 
-    '/tests/performance.spec.ts',
-    '/tests/chart-component.spec.js'
-  ],
-  collectCoverageFrom: [
-    'app/**/*.{js,ts,tsx}',
-    'components/**/*.{js,ts,tsx}',
-    'lib/**/*.{js,ts,tsx}'
-  ],
-  coverageDirectory: 'coverage',
-  verbose: true,
-  maxWorkers: '50%',
-  globals: {
-    'ts-jest': {
-      tsconfig: 'tsconfig.json'
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+import nextJest from 'next/jest.js'; // Add .js extension for proper ESM resolution
+
+const createJestConfig = nextJest({
+    dir: './',
+});
+
+const customJestConfig = {
+    setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+    testEnvironment: 'jest-environment-jsdom',
+    modulePaths: ['<rootDir>'],
+    testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/', '<rootDir>/playwright/'],
+    moduleNameMapper: {
+        '^@/components/(.*)$': '<rootDir>/components/$1',
+        '^@/pages/(.*)$': '<rootDir>/pages/$1',
+        '^@/lib/(.*)$': '<rootDir>/lib/$1',
+        '^@/styles/(.*)$': '<rootDir>/styles/$1',
+        '^@/context/(.*)$': '<rootDir>/context/$1',
+        '^@/utils/(.*)$': '<rootDir>/utils/$1'
+    },
+    testMatch: [
+        '**/__tests__/**/*.[jt]s?(x)',
+        '**/?(*.)+(spec|test).[jt]s?(x)' // Uncomment this line
+    ],
+    transform: {
+        '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }]
+    },
+    transformIgnorePatterns: [
+        '/node_modules/',
+        '^.+\\.module\\.(css|sass|scss)$',
+    ],
+    collectCoverageFrom: [
+        '**/*.{js,jsx,ts,tsx}',
+        '!**/*.d.ts',
+        '!**/node_modules/**',
+        '!**/.next/**',
+        '!**/coverage/**',
+        '!**/*.config.js',
+        '!**/playwright/**'
+    ],
+    globals: {
+        'ts-jest': {
+            tsconfig: '<rootDir>/tsconfig.json'
+        }
     }
-  }
 };
+
+export default createJestConfig(customJestConfig);

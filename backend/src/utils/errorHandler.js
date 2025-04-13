@@ -80,7 +80,7 @@ class ErrorHandler {
     return new AppError('Your token has expired. Please log in again.', 401);
   }
 
-  static globalErrorHandler(err, req, res, next) {
+  static globalErrorHandler(err, req, res, _next) {
     err.statusCode = err.statusCode || 500;
     err.status = err.status || 'error';
 

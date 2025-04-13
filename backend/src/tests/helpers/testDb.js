@@ -1,5 +1,8 @@
 import mongoose from 'mongoose';
 import logger from '../../utils/logger';
+const { MongoMemoryServer } = require('mongodb-memory-server');
+
+let mongoServer;
 
 export const setupDatabase = async () => {
   try {
@@ -21,4 +24,33 @@ export const setupDatabase = async () => {
   }
 };
 
+const setupTestDatabase = async () => {
+    mongoServer = await MongoMemoryServer.create();
+    const mongoUri = mongoServer.getUri();
+    await mongoose.connect(mongoUri, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true
+    });
+};
+
+const clearTestData = async () => {
+    const collections = mongoose.connection.collections;
+    for (const key in collections) {
+        await collections[key].deleteMany();
+    }
+};
+
+const closeTestDatabase = async () => {
+    await mongoose.connection.close();
+    if (mongoServer) {
+        await mongoServer.stop();
+    }
+};
+
 export default setupDatabase;
+
+module.exports = {
+    setupTestDatabase,
+    clearTestData,
+    closeTestDatabase
+};

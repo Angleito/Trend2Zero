@@ -1,17 +1,17 @@
-import React from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { getBlogPosts, getBlogPostBySlug, BlogPost } from '../lib/strapi/content';
 
 interface StrapiContentProps {
   slug?: string;
-  children?: (posts: BlogPost[]) => React.ReactNode;
+  children?: (posts: BlogPost[]) => ReactNode;
 }
 
-const StrapiContent: React.FC<StrapiContentProps> = ({ slug, children }) => {
-  const [content, setContent] = React.useState<BlogPost[]>([]);
-  const [loading, setLoading] = React.useState<boolean>(true);
-  const [error, setError] = React.useState<string | null>(null);
+const StrapiContent = ({ slug, children }: StrapiContentProps) => {
+  const [content, setContent] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchContent = async () => {
       try {
         setLoading(true);

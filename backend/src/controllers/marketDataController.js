@@ -1,26 +1,113 @@
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 const marketDataService = require('../services/marketDataService');
+const cache = require('../utils/cache');
 
-exports.searchAssets = catchAsync(async (req, res) => {
-    const { q } = req.query;
-    if (!q) {
-        throw new AppError('Query parameter is required', 400);
+const CACHE_TTL = 300; // 5 minutes
+
+exports.getMarketData = async (req, res, next) => {
+    try {
+        const { symbol } = req.params;
+        const cacheKey = `market-data-${symbol}`;
+        
+        let data = cache.get(cacheKey);
+        if (!data) {
+            data = await marketDataService.getMarketData(symbol);
+            cache.set(cacheKey, data, CACHE_TTL);
+        }
+        
+        res.status(200).json({ data });
+    } catch (error) {
+        next(new AppError('Error fetching market data', 500));
     }
-    const results = await marketDataService.searchAssets(q);
-    res.status(200).json({
-        status: 'success',
-        data: results
-    });
-});
+};
 
-exports.getPopularAssets = catchAsync(async (req, res) => {
-    const assets = await marketDataService.getPopularAssets();
-    res.status(200).json({
-        status: 'success',
-        data: assets
-    });
-});
+exports.searchAssets = async (req, res, next) => {
+    try {
+        const { query, type = 'crypto', limit = 5 } = req.query;
+        const cacheKey = `search-${query}-${type}-${limit}`;
+        
+        let results = cache.get(cacheKey);
+        if (!results) {
+            results = await marketDataService.searchAssets(query, type, limit);
+            cache.set(cacheKey, results, CACHE_TTL);
+        }
+        
+        res.status(200).json({ data: results });
+    } catch (error) {
+        next(new AppError('Error searching assets', 500));
+    }
+};
+
+exports.getPopularAssets = async (req, res, next) => {
+    try {
+        const { limit = 10 } = req.query;
+        const cacheKey = `popular-assets-${limit}`;
+        
+        let assets = cache.get(cacheKey);
+        if (!assets) {
+            assets = await marketDataService.getPopularAssets(limit);
+            cache.set(cacheKey, assets, CACHE_TTL);
+        }
+        
+        res.status(200).json({ data: assets });
+    } catch (error) {
+        next(new AppError('Error fetching popular assets', 500));
+    }
+};
+
+exports.getAssetsByType = async (req, res, next) => {
+    try {
+        const { type } = req.params;
+        const { limit = 10 } = req.query;
+        const cacheKey = `assets-type-${type}-${limit}`;
+        
+        let assets = cache.get(cacheKey);
+        if (!assets) {
+            assets = await marketDataService.getAssetsByType(type, limit);
+            cache.set(cacheKey, assets, CACHE_TTL);
+        }
+        
+        res.status(200).json({ data: assets });
+    } catch (error) {
+        next(new AppError('Error fetching assets by type', 500));
+    }
+};
+
+exports.getAssetHistory = async (req, res, next) => {
+    try {
+        const { symbol } = req.params;
+        const { days = 30, interval = '1d' } = req.query;
+        const cacheKey = `asset-history-${symbol}-${days}-${interval}`;
+        
+        let history = cache.get(cacheKey);
+        if (!history) {
+            history = await marketDataService.getAssetHistory(symbol, { days, interval });
+            cache.set(cacheKey, history, CACHE_TTL);
+        }
+        
+        res.status(200).json({ data: history });
+    } catch (error) {
+        next(new AppError('Error fetching asset history', 500));
+    }
+};
+
+exports.getAssetBySymbol = async (req, res, next) => {
+    try {
+        const { symbol } = req.params;
+        const cacheKey = `asset-${symbol}`;
+        
+        let asset = cache.get(cacheKey);
+        if (!asset) {
+            asset = await marketDataService.getAssetBySymbol(symbol);
+            cache.set(cacheKey, asset, CACHE_TTL);
+        }
+        
+        res.status(200).json({ data: asset });
+    } catch (error) {
+        next(new AppError('Error fetching asset', 500));
+    }
+};
 
 exports.getAssetPrice = catchAsync(async (req, res) => {
     const { symbol } = req.params;

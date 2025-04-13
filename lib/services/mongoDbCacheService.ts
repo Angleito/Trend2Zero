@@ -1,26 +1,72 @@
-import dbConnect from '../db/mongodb';
-import { AssetPrice, HistoricalData, AssetList, IAssetPrice, IHistoricalData, IAssetList } from '../db/models/assetCache';
+import dbConnect, { ConnectionState } from '../db/mongodb';
+import { AssetPrice, HistoricalData, AssetList, CryptoDetection, IAssetPrice, IHistoricalData, IAssetList, ICryptoDetection } from '../db/models/assetCache';
 import { AssetCategory, AssetData, HistoricalDataPoint, MarketAsset } from '../types';
+import mongoose from 'mongoose';
+
+// Custom error for MongoDB connection issues
+class MongoDBConnectionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'MongoDBConnectionError';
+  }
+}
+
+// Fallback data interface for SSR scenarios
+interface FallbackData {
+  data: any;
+  isCached: boolean;
+}
 
 /**
  * MongoDB Cache Service
  * 
- * This service handles caching market data in MongoDB
- * and retrieving cached data when API calls fail.
+ * Enhanced service for handling market data caching with robust 
+ * connection state management and SSR support
  */
 export class MongoDbCacheService {
   private cacheExpiryTime: number;
+  private maxRetries: number;
+  private retryDelay: number;
 
   constructor() {
     // Cache expiry time in milliseconds (default: 1 hour)
     this.cacheExpiryTime = 60 * 60 * 1000;
+    // Maximum connection retries
+    this.maxRetries = 3;
+    // Retry delay between connection attempts (ms)
+    this.retryDelay = 1000;
   }
 
   /**
-   * Connect to MongoDB
+   * Advanced connection method with retry and state management
    */
-  private async connect() {
-    await dbConnect();
+  private async connect(): Promise<mongoose.Connection> {
+    let retries = 0;
+    while (retries < this.maxRetries) {
+      try {
+        const connection = await dbConnect();
+        
+        // Check connection state
+        if (connection.readyState !== ConnectionState.CONNECTED) {
+          throw new MongoDBConnectionError('Database not in connected state');
+        }
+        
+        return connection;
+      } catch (error) {
+        retries++;
+        console.warn(`MongoDB connection attempt ${retries} failed:`, error);
+        
+        if (retries >= this.maxRetries) {
+          console.error('Failed to connect to MongoDB after maximum retries');
+          throw new MongoDBConnectionError('Persistent connection failure');
+        }
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, this.retryDelay));
+      }
+    }
+    
+    throw new MongoDBConnectionError('Unexpected connection failure');
   }
 
   /**
@@ -33,13 +79,44 @@ export class MongoDbCacheService {
   }
 
   /**
-   * Cache asset list data
+   * Safely execute database operations with connection state checks
    */
-  async cacheAssetList(category: string, page: number, pageSize: number, data: any): Promise<void> {
+  private async safeExecute<T>(
+    operation: () => Promise<T>, 
+    fallbackData?: any
+  ): Promise<T | FallbackData> {
     try {
+      // Attempt to connect
       await this.connect();
+      
+      // Execute the database operation
+      return await operation();
+    } catch (error) {
+      console.error('Database operation failed:', error);
+      
+      // Provide SSR-friendly fallback if available
+      if (fallbackData) {
+        return {
+          data: fallbackData,
+          isCached: false
+        };
+      }
+      
+      // Rethrow if no fallback
+      throw error;
+    }
+  }
 
-      // Check if cache exists
+  /**
+   * Cache asset list data with enhanced error handling
+   */
+  async cacheAssetList(
+    category: string, 
+    page: number, 
+    pageSize: number, 
+    data: any
+  ): Promise<void> {
+    await this.safeExecute(async () => {
       const existingCache = await AssetList.findOne({
         category,
         page,
@@ -47,12 +124,10 @@ export class MongoDbCacheService {
       });
 
       if (existingCache) {
-        // Update existing cache
         existingCache.data = data.data;
         existingCache.pagination = data.pagination;
         await existingCache.save();
       } else {
-        // Create new cache
         await AssetList.create({
           category,
           page,
@@ -61,52 +136,49 @@ export class MongoDbCacheService {
           pagination: data.pagination
         });
       }
-    } catch (error) {
-      console.error('Error caching asset list:', error);
-    }
+    });
   }
 
   /**
-   * Get cached asset list data
+   * Get cached asset list with SSR support and connection state management
    */
-  async getCachedAssetList(category: string, page: number, pageSize: number): Promise<any | null> {
-    try {
-      await this.connect();
-
-      // Find cache
+  async getCachedAssetList(
+    category: string, 
+    page: number, 
+    pageSize: number
+  ): Promise<FallbackData | null> {
+    return this.safeExecute(async () => {
       const cache = await AssetList.findOne({
         category,
         page,
         pageSize
       }).sort({ updatedAt: -1 });
 
-      // Return null if cache doesn't exist or is expired
       if (!cache || !this.isCacheValid(cache.updatedAt)) {
         return null;
       }
 
       return {
-        data: cache.data,
-        pagination: cache.pagination
+        data: {
+          data: cache.data,
+          pagination: cache.pagination
+        },
+        isCached: true
       };
-    } catch (error) {
-      console.error('Error getting cached asset list:', error);
-      return null;
-    }
+    }) as Promise<FallbackData | null>;
   }
 
   /**
-   * Cache asset price data
+   * Cache asset price data with enhanced error handling
    */
-  async cacheAssetPrice(symbol: string, data: AssetData): Promise<void> {
-    try {
-      await this.connect();
-
-      // Check if cache exists
+  async cacheAssetPrice(
+    symbol: string, 
+    data: AssetData
+  ): Promise<void> {
+    await this.safeExecute(async () => {
       const existingCache = await AssetPrice.findOne({ symbol });
 
       if (existingCache) {
-        // Update existing cache
         existingCache.price = data.price;
         existingCache.change = data.change;
         existingCache.changePercent = data.changePercent;
@@ -115,7 +187,6 @@ export class MongoDbCacheService {
         existingCache.lastUpdated = data.lastUpdated;
         await existingCache.save();
       } else {
-        // Create new cache
         await AssetPrice.create({
           symbol: data.symbol,
           price: data.price,
@@ -126,53 +197,50 @@ export class MongoDbCacheService {
           lastUpdated: data.lastUpdated
         });
       }
-    } catch (error) {
-      console.error('Error caching asset price:', error);
-    }
+    });
   }
 
   /**
-   * Get cached asset price data
+   * Get cached asset price with SSR support and connection state management
    */
-  async getCachedAssetPrice(symbol: string): Promise<AssetData | null> {
-    try {
-      await this.connect();
-
-      // Find cache
+  async getCachedAssetPrice(
+    symbol: string, 
+    fallbackPrice?: AssetData
+  ): Promise<FallbackData | null> {
+    return this.safeExecute(async () => {
       const cache = await AssetPrice.findOne({ symbol }).sort({ updatedAt: -1 });
 
-      // Return null if cache doesn't exist or is expired
       if (!cache || !this.isCacheValid(cache.updatedAt)) {
         return null;
       }
 
       return {
-        symbol: cache.symbol,
-        price: cache.price,
-        change: cache.change,
-        changePercent: cache.changePercent,
-        priceInBTC: cache.priceInBTC,
-        priceInUSD: cache.priceInUSD,
-        lastUpdated: cache.lastUpdated
+        data: {
+          symbol: cache.symbol,
+          price: cache.price,
+          change: cache.change,
+          changePercent: cache.changePercent,
+          priceInBTC: cache.priceInBTC,
+          priceInUSD: cache.priceInUSD,
+          lastUpdated: cache.lastUpdated
+        },
+        isCached: true
       };
-    } catch (error) {
-      console.error('Error getting cached asset price:', error);
-      return null;
-    }
+    }, fallbackPrice) as Promise<FallbackData | null>;
   }
 
   /**
-   * Cache historical data
+   * Cache historical data with enhanced error handling
    */
-  async cacheHistoricalData(symbol: string, days: number, data: HistoricalDataPoint[]): Promise<void> {
-    try {
-      await this.connect();
-
-      // Check if cache exists
+  async cacheHistoricalData(
+    symbol: string, 
+    days: number, 
+    data: HistoricalDataPoint[]
+  ): Promise<void> {
+    await this.safeExecute(async () => {
       const existingCache = await HistoricalData.findOne({ symbol, days });
 
       if (existingCache) {
-        // Update existing cache
         existingCache.data = data.map(point => ({
           date: point.date,
           price: point.price,
@@ -184,7 +252,6 @@ export class MongoDbCacheService {
         }));
         await existingCache.save();
       } else {
-        // Create new cache
         await HistoricalData.create({
           symbol,
           days,
@@ -199,47 +266,112 @@ export class MongoDbCacheService {
           }))
         });
       }
-    } catch (error) {
-      console.error('Error caching historical data:', error);
-    }
+    });
   }
 
   /**
-   * Get cached historical data
+   * Get cached historical data with SSR support and connection state management
    */
-  async getCachedHistoricalData(symbol: string, days: number): Promise<HistoricalDataPoint[] | null> {
-    try {
-      await this.connect();
-
-      // Find cache
+  async getCachedHistoricalData(
+    symbol: string, 
+    days: number, 
+    fallbackData?: HistoricalDataPoint[]
+  ): Promise<FallbackData | null> {
+    return this.safeExecute(async () => {
       const cache = await HistoricalData.findOne({ symbol, days }).sort({ updatedAt: -1 });
 
-      // Return null if cache doesn't exist or is expired
       if (!cache || !this.isCacheValid(cache.updatedAt)) {
         return null;
       }
 
-      return cache.data.map((point: {
-        date: Date;
-        price: number;
-        open?: number;
-        high?: number;
-        low?: number;
-        close?: number;
-        volume?: number;
-      }) => ({
-        date: point.date,
-        price: point.price,
-        open: point.open,
-        high: point.high,
-        low: point.low,
-        close: point.close,
-        volume: point.volume
-      }));
-    } catch (error) {
-      console.error('Error getting cached historical data:', error);
-      return null;
+      return {
+        data: cache.data.map((point: {
+          date: Date;
+          price: number;
+          open?: number;
+          high?: number;
+          low?: number;
+          close?: number;
+          volume?: number;
+        }) => ({
+          date: point.date,
+          price: point.price,
+          open: point.open,
+          high: point.high,
+          low: point.low,
+          close: point.close,
+          volume: point.volume
+        })),
+        isCached: true
+      };
+    }, fallbackData) as Promise<FallbackData | null>;
+  }
+
+  /**
+   * Cache cryptocurrency detection results
+   * @param address Contract address or wallet address to check
+   * @param network Blockchain network (e.g., 'ethereum', 'bitcoin')
+   * @param detectionResult The detection analysis results
+   */
+  async cacheCryptoDetection(
+    address: string,
+    network: string,
+    detectionResult: {
+      isCryptocurrency: boolean;
+      confidence: number;
+      metadata?: {
+        symbol?: string;
+        name?: string;
+        type?: string;
+        contractAddress?: string;
+        blockchain?: string;
+      };
     }
+  ): Promise<void> {
+    await this.safeExecute(async () => {
+      const existingCache = await CryptoDetection.findOne({
+        address,
+        network
+      });
+
+      if (existingCache) {
+        existingCache.detectionResult = detectionResult;
+        await existingCache.save();
+      } else {
+        await CryptoDetection.create({
+          address,
+          network,
+          detectionResult
+        });
+      }
+    });
+  }
+
+  /**
+   * Get cached cryptocurrency detection result
+   * @param address Contract address or wallet address to check
+   * @param network Blockchain network
+   * @returns Detection result or null if not found or expired
+   */
+  async getCachedCryptoDetection(
+    address: string,
+    network: string
+  ): Promise<FallbackData | null> {
+    return this.safeExecute(async () => {
+      const cache = await CryptoDetection.findOne({
+        address,
+        network
+      });
+
+      if (cache && this.isCacheValid(cache.updatedAt)) {
+        return {
+          data: cache.detectionResult,
+          isCached: true
+        };
+      }
+      
+      return null;
+    }, null);
   }
 }
 

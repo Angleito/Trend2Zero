@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import {
   createChart,
   ColorType,
@@ -50,14 +50,14 @@ export interface TradingViewLightweightChartProps {
   height?: number;
 }
 
-const TradingViewLightweightChart: React.FC<TradingViewLightweightChartProps> = ({
+const TradingViewLightweightChart = ({
   data,
   symbol,
   theme = 'dark',
   days = 30,
   width = 600,
   height = 300,
-}) => {
+}: TradingViewLightweightChartProps) => {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);

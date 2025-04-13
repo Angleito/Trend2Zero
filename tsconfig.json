@@ -24,10 +24,12 @@
     ],
     "paths": {
       "@/*": ["./*"]
-    }
+    },
+    "types": ["node", "jest", "@testing-library/jest-dom"]
   },
   "include": [
     "next-env.d.ts",
+    "jest.d.ts",
     ".next/types/**/*.ts",
     "**/*.ts",
     "**/*.tsx"

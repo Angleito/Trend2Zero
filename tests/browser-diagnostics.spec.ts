@@ -1,83 +1,186 @@
 import { test, expect } from '@playwright/test';
+import fs from 'fs';
+import path from 'path';
 
-test('Comprehensive Bitcoin Price Diagnostics', async ({ page }) => {
-  // Capture and log console messages
-  const consoleLogs: string[] = [];
-  const networkRequests: string[] = [];
-  const networkErrors: string[] = [];
+// Utility function to log diagnostics
+const logDiagnostics = (diagnostics: any, filename: string) => {
+  const logPath = path.resolve(__dirname, `diagnostics-${filename}.json`);
+  fs.writeFileSync(logPath, JSON.stringify(diagnostics, null, 2));
+  console.log(`Diagnostics logged to ${logPath}`);
+};
 
-  // Console logging
+test('Comprehensive Bitcoin Price Diagnostics', async ({ page, context }, testInfo) => {
+  // Configure extended timeout for more robust testing
+  test.setTimeout(30000);
+
+  // Capture and log console messages with enhanced tracking
+  const consoleLogs: { type: string; message: string; timestamp: number }[] = [];
+  const networkRequests: { url: string; method: string; timestamp: number }[] = [];
+  const networkErrors: { url: string; error: string; timestamp: number }[] = [];
+
+  // Enhanced console logging with more context
   page.on('console', msg => {
-    const logEntry = `${msg.type()}: ${msg.text()}`;
+    const logEntry = {
+      type: msg.type(),
+      message: msg.text(),
+      timestamp: Date.now()
+    };
     consoleLogs.push(logEntry);
-    console.log('Console Log:', logEntry);
+    console.log(`Console Log [${logEntry.type}]:`, logEntry.message);
   });
 
-  // Network request tracking with more detailed logging
+  // Comprehensive network request tracking
   page.on('request', request => {
-    const url = request.url();
-    networkRequests.push(url);
-    console.log('Network Request:', url);
+    const requestEntry = {
+      url: request.url(),
+      method: request.method(),
+      timestamp: Date.now()
+    };
+    networkRequests.push(requestEntry);
+    console.log('Network Request:', requestEntry.url);
 
-    request.response().catch(error => {
-      console.error('Network Request Error:', url, error);
-      networkErrors.push(`${url}: ${error.message}`);
+    // Detailed error handling for network requests
+    request.response().catch((error: Error) => {
+      const errorEntry = {
+        url: request.url(),
+        error: error.message,
+        timestamp: Date.now()
+      };
+      networkErrors.push(errorEntry);
+      console.error('Network Request Error:', errorEntry);
     });
   });
 
-  // Navigate to the application
-  await page.goto('http://localhost:3000');
-
-  // Wait for page to load
-  await page.waitForTimeout(2000);
-
-  // Manually trigger the API call
-  await page.evaluate(() => {
-    console.log('Manually triggering Bitcoin API call');
-    fetch('/api/crypto?endpoint=bitcoin-price')
-      .then(response => response.json())
-      .then(data => console.log('Bitcoin API response:', data))
-      .catch(error => console.error('Bitcoin API error:', error));
+  // Add error page handler for capturing page errors
+  page.on('pageerror', (error: Error) => {
+    console.error('Page Error:', error);
+    networkErrors.push({
+      url: page.url(),
+      error: error.message,
+      timestamp: Date.now()
+    });
   });
 
-  // Wait for the API call to complete
-  await page.waitForTimeout(3000);
+  // Environment-based conditional test execution
+  const isProduction = process.env.NODE_ENV === 'production';
+  if (isProduction) {
+    console.log('Running in production environment with additional safeguards');
+  }
 
-  // Detailed Bitcoin price fetching diagnostics
+  // Navigate to the application with extended timeout and error handling
+  try {
+    await page.goto('http://localhost:3000', { 
+      waitUntil: 'networkidle',
+      timeout: 10000 
+    });
+  } catch (navError: unknown) {
+    const errorMessage = navError instanceof Error ? navError.message : String(navError);
+    console.error('Navigation Error:', errorMessage);
+    throw new Error(`Failed to navigate: ${errorMessage}`);
+  }
+
+  // Add data-testid for error message elements
+  await page.evaluate(() => {
+    const errorElements = document.querySelectorAll('.error, .error-message');
+    errorElements.forEach((el, index) => {
+      el.setAttribute('data-testid', `error-message-${index}`);
+    });
+  });
+
+  // Manually trigger the API call with enhanced error handling
+  const apiCallDiagnostics = await page.evaluate(async () => {
+    try {
+      const response = await fetch('/api/crypto?endpoint=bitcoin-price');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Bitcoin API response:', data);
+      
+      return {
+        status: response.status,
+        data: data,
+        success: true
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Bitcoin API error:', errorMessage);
+      return {
+        status: 'error',
+        message: errorMessage,
+        success: false
+      };
+    }
+  });
+
+  // Detailed Bitcoin price fetching diagnostics with fallback mechanisms
   const bitcoinTickerLogs = await page.evaluate(() => {
     const bitcoinTicker = document.querySelector('.bitcoin-ticker');
+    
+    if (!bitcoinTicker) {
+      return {
+        exists: false,
+        error: 'Bitcoin ticker element not found',
+        fallbackSelectors: [
+          '#bitcoin-price', 
+          '[data-testid="bitcoin-ticker"]',
+          '.price-display'
+        ]
+      };
+    }
+
     return {
-      exists: !!bitcoinTicker,
+      exists: true,
       text: bitcoinTicker?.textContent || 'No text found',
       price: bitcoinTicker?.querySelector('p')?.textContent || 'No price found',
-      innerHTML: bitcoinTicker?.innerHTML || 'No inner HTML'
+      innerHTML: bitcoinTicker?.innerHTML || 'No inner HTML',
+      dataAttributes: {
+        testId: bitcoinTicker.getAttribute('data-testid'),
+        priceSource: bitcoinTicker.getAttribute('data-price-source')
+      }
     };
   });
 
-  // Log detailed diagnostics
-  console.log('Bitcoin Ticker Diagnostics:', bitcoinTickerLogs);
-  console.log('Console Logs:', consoleLogs);
-  console.log('Network Requests:', networkRequests);
-  console.log('Network Errors:', networkErrors);
+  // Comprehensive diagnostics logging
+  const diagnostics = {
+    bitcoinTickerLogs,
+    apiCallDiagnostics,
+    consoleLogs,
+    networkRequests,
+    networkErrors,
+    timestamp: new Date().toISOString()
+  };
 
-  // Assertions
-  expect(bitcoinTickerLogs.exists).toBeTruthy();
+  // Log diagnostics to file for further investigation
+  logDiagnostics(diagnostics, testInfo.title.replace(/\s+/g, '-').toLowerCase());
+
+  // Assertions with more detailed error messages
+  expect(bitcoinTickerLogs.exists, 
+    `Bitcoin ticker not found. Fallback selectors: ${bitcoinTickerLogs.fallbackSelectors?.join(', ')}`
+  ).toBeTruthy();
 
   // Check for Bitcoin price API calls
-  const bitcoinApiCalls = networkRequests.filter(url =>
-    url.includes('/api/crypto') && url.includes('endpoint=bitcoin-price')
+  const bitcoinApiCalls = networkRequests.filter(req =>
+    req.url.includes('/api/crypto') && req.url.includes('endpoint=bitcoin-price')
   );
 
-  // If no API calls found, log all network requests for debugging
-  if (bitcoinApiCalls.length === 0) {
-    console.error('No Bitcoin price API calls found. All network requests:', networkRequests);
-  }
+  // Detailed API call validation
+  expect(
+    bitcoinApiCalls.length, 
+    'No Bitcoin price API calls found. Check network configuration and API endpoint.'
+  ).toBeGreaterThan(0);
 
-  // Check that the API call was made
-  expect(bitcoinApiCalls.length).toBeGreaterThan(0);
+  // Validate API call success
+  expect(
+    apiCallDiagnostics.success, 
+    `API call failed: ${apiCallDiagnostics.message}`
+  ).toBeTruthy();
 
   // Validate no network errors
-  expect(networkErrors.length).toBe(0);
-
-  // We're not checking for console errors since we're using mock data
+  expect(
+    networkErrors.length, 
+    `Network errors detected: ${JSON.stringify(networkErrors)}`
+  ).toBe(0);
 });

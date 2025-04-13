@@ -6,7 +6,7 @@
  * See tests/browser-test.js for examples.
  */
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Highcharts from 'highcharts/highstock';
 import HighchartsReact from 'highcharts-react-official';
 import { MarketDataService } from '../lib/services/marketDataService';
@@ -46,11 +46,11 @@ interface HighchartsViewProps {
   days?: number;
 }
 
-const HighchartsView: React.FC<HighchartsViewProps> = ({
+const HighchartsView = ({
   symbol,
   theme = 'dark',
   days = 30,
-}) => {
+}: HighchartsViewProps) => {
   const [chartOptions, setChartOptions] = useState<Highcharts.Options>({
     chart: {
       backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',

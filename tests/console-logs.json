@@ -1,32 +1,77 @@
 [
   {
-    "type": "error",
-    "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
-    "timestamp": "2025-04-13T00:55:40.730Z"
+    "type": "info",
+    "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+    "timestamp": "2025-04-13T14:25:21.693Z"
+  },
+  {
+    "type": "log",
+    "text": "[MarketDataService] Initializing service",
+    "timestamp": "2025-04-13T14:25:21.734Z"
+  },
+  {
+    "type": "log",
+    "text": "[SecureMarketDataService] Initializing service",
+    "timestamp": "2025-04-13T14:25:21.734Z"
+  },
+  {
+    "type": "warning",
+    "text": "COINMARKETCAP_API_KEY not found in environment variables. Falling back to mock data.",
+    "timestamp": "2025-04-13T14:25:21.855Z"
+  },
+  {
+    "type": "warning",
+    "text": "No specific mock data for [object Object], returning generic mock.",
+    "timestamp": "2025-04-13T14:25:21.855Z"
+  },
+  {
+    "type": "warning",
+    "text": "COINMARKETCAP_API_KEY not found in environment variables. Falling back to mock data.",
+    "timestamp": "2025-04-13T14:25:21.856Z"
+  },
+  {
+    "type": "warning",
+    "text": "No specific mock data for [object Object], returning generic mock.",
+    "timestamp": "2025-04-13T14:25:21.857Z"
+  },
+  {
+    "type": "log",
+    "text": "Fetching Bitcoin price...",
+    "timestamp": "2025-04-13T14:25:21.858Z"
+  },
+  {
+    "type": "log",
+    "text": "Bitcoin API response: {symbol: BTC, price: 67890.12, change: 1234.56, changePercent: 2.34, priceInBTC: 1}",
+    "timestamp": "2025-04-13T14:25:22.047Z"
   },
   {
     "type": "error",
     "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
-    "timestamp": "2025-04-13T00:55:40.756Z"
+    "timestamp": "2025-04-13T14:25:22.847Z"
+  },
+  {
+    "type": "error",
+    "text": "API Error in getHistoricalData",
+    "timestamp": "2025-04-13T14:25:22.849Z"
+  },
+  {
+    "type": "error",
+    "text": "Axios Error Details: {message: Request failed with status code 500, status: 500, data: Object}",
+    "timestamp": "2025-04-13T14:25:22.849Z"
   },
   {
     "type": "error",
     "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
-    "timestamp": "2025-04-13T00:55:40.761Z"
+    "timestamp": "2025-04-13T14:25:23.667Z"
   },
   {
     "type": "error",
-    "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
-    "timestamp": "2025-04-13T00:55:40.761Z"
+    "text": "API Error in getHistoricalData",
+    "timestamp": "2025-04-13T14:25:23.668Z"
   },
   {
     "type": "error",
-    "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
-    "timestamp": "2025-04-13T00:55:40.761Z"
-  },
-  {
-    "type": "error",
-    "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
-    "timestamp": "2025-04-13T00:55:40.761Z"
+    "text": "Axios Error Details: {message: Request failed with status code 500, status: 500, data: Object}",
+    "timestamp": "2025-04-13T14:25:23.668Z"
   }
 ]

@@ -1,188 +1,101 @@
-import React from 'react';
-import { render, act, screen, waitFor } from '@testing-library/react';
-import { useMarketData } from '../../lib/hooks/useMarketData';
+import { renderHook, act } from '@testing-library/react-hooks';
+import { useMarketData } from '../../hooks/useMarketData';
 import * as marketDataService from '../../lib/api/marketDataService';
 
-// Mock the market data service
-jest.mock('../../lib/api/marketDataService', () => ({
-  getAssetBySymbol: jest.fn(),
-  getAssetPrice: jest.fn(),
-  getHistoricalData: jest.fn(),
-  getPopularAssets: jest.fn(),
-  getAssetsByType: jest.fn(),
-  searchAssets: jest.fn()
-}));
+jest.mock('../../lib/api/marketDataService');
 
-// Test component to interact with useMarketData hook
-const TestComponent = ({ options, testFn }) => {
-  const marketData = useMarketData(options);
-  React.useEffect(() => {
-    testFn(marketData);
-  }, [marketData]);
-
-  return null;
-};
-
-describe('Market Data Hooks', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  describe('useMarketData', () => {
-    it('initializes with correct default state', async () => {
-      const mockTestFn = jest.fn();
-
-      render(
-        <TestComponent 
-          options={{}} 
-          testFn={mockTestFn} 
-        />
-      );
-
-      await waitFor(() => {
-        expect(mockTestFn).toHaveBeenCalledWith(
-          expect.objectContaining({
-            asset: null,
-            price: null,
-            historicalData: null,
-            popularAssets: expect.any(Array),
-            searchResults: expect.any(Array),
-            loading: false,
-            error: null
-          })
-        );
-      });
+describe('useMarketData', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
     });
 
-    it('fetches market data for a specific symbol', async () => {
-      const mockAsset = { id: 'test-asset', symbol: 'TEST' };
-      const mockPrice = { price: 100, change: 5 };
-      const mockHistoricalData = [{ date: '2023-01-01', price: 95 }];
+    const mockData = {
+        symbol: 'BTC',
+        price: 50000,
+        change24h: 2.5
+    };
 
-      marketDataService.getAssetBySymbol.mockResolvedValue({ data: { asset: mockAsset } });
-      marketDataService.getAssetPrice.mockResolvedValue({ data: mockPrice });
-      marketDataService.getHistoricalData.mockResolvedValue({ data: mockHistoricalData });
-      marketDataService.getPopularAssets.mockResolvedValue({ data: { assets: [] } });
+    it('fetches market data on mount', async () => {
+        marketDataService.getMarketData.mockResolvedValueOnce(mockData);
 
-      const mockTestFn = jest.fn();
-
-      render(
-        <TestComponent 
-          options={{ symbol: 'TEST' }} 
-          testFn={mockTestFn} 
-        />
-      );
-
-      await waitFor(() => {
-        expect(mockTestFn).toHaveBeenCalledWith(
-          expect.objectContaining({
-            asset: mockAsset,
-            price: mockPrice,
-            historicalData: mockHistoricalData,
-            loading: false,
-            error: null
-          })
+        const { result, waitForNextUpdate } = renderHook(() => 
+            useMarketData('BTC')
         );
-      });
 
-      expect(marketDataService.getAssetBySymbol).toHaveBeenCalledWith('TEST');
-      expect(marketDataService.getAssetPrice).toHaveBeenCalledWith('TEST');
-      expect(marketDataService.getHistoricalData).toHaveBeenCalledWith('TEST');
+        expect(result.current.loading).toBe(true);
+        expect(result.current.data).toBeNull();
+
+        await waitForNextUpdate();
+
+        expect(result.current.loading).toBe(false);
+        expect(result.current.data).toEqual(mockData);
+        expect(result.current.error).toBeNull();
+        expect(marketDataService.getMarketData).toHaveBeenCalledWith('BTC');
     });
 
-    it('handles errors during market data fetch', async () => {
-      const mockError = new Error('Fetch failed');
-      mockError.response = { data: { message: 'Network error' } };
+    it('handles errors during fetch', async () => {
+        const error = new Error('Failed to fetch');
+        marketDataService.getMarketData.mockRejectedValueOnce(error);
 
-      marketDataService.getAssetBySymbol.mockRejectedValue(mockError);
-      marketDataService.getAssetPrice.mockRejectedValue(mockError);
-      marketDataService.getHistoricalData.mockRejectedValue(mockError);
-      marketDataService.getPopularAssets.mockRejectedValue(mockError);
-
-      const mockTestFn = jest.fn();
-
-      render(
-        <TestComponent 
-          options={{ symbol: 'TEST' }} 
-          testFn={mockTestFn} 
-        />
-      );
-
-      await waitFor(() => {
-        expect(mockTestFn).toHaveBeenCalledWith(
-          expect.objectContaining({
-            asset: null,
-            price: null,
-            historicalData: null,
-            loading: false,
-            error: 'Network error'
-          })
+        const { result, waitForNextUpdate } = renderHook(() => 
+            useMarketData('BTC')
         );
-      });
+
+        expect(result.current.loading).toBe(true);
+
+        await waitForNextUpdate();
+
+        expect(result.current.loading).toBe(false);
+        expect(result.current.data).toBeNull();
+        expect(result.current.error).toBe(error.message);
     });
 
-    it('fetches popular assets', async () => {
-      const mockPopularAssets = [
-        { id: 'asset1', symbol: 'BTC' },
-        { id: 'asset2', symbol: 'ETH' }
-      ];
+    it('refreshes data when refresh is called', async () => {
+        const updatedData = { ...mockData, price: 51000 };
+        marketDataService.getMarketData
+            .mockResolvedValueOnce(mockData)
+            .mockResolvedValueOnce(updatedData);
 
-      marketDataService.getPopularAssets.mockResolvedValue({ data: { assets: mockPopularAssets } });
-      marketDataService.getAssetBySymbol.mockRejectedValue(new Error('No symbol'));
-      marketDataService.getAssetPrice.mockRejectedValue(new Error('No price'));
-      marketDataService.getHistoricalData.mockRejectedValue(new Error('No historical data'));
-
-      const mockTestFn = jest.fn();
-
-      render(
-        <TestComponent 
-          options={{ limit: 2 }} 
-          testFn={mockTestFn} 
-        />
-      );
-
-      await waitFor(() => {
-        expect(mockTestFn).toHaveBeenCalledWith(
-          expect.objectContaining({
-            popularAssets: mockPopularAssets,
-            loading: false,
-            error: null
-          })
+        const { result, waitForNextUpdate } = renderHook(() => 
+            useMarketData('BTC')
         );
-      });
 
-      expect(marketDataService.getPopularAssets).toHaveBeenCalledWith(2);
+        await waitForNextUpdate();
+        expect(result.current.data).toEqual(mockData);
+
+        await act(async () => {
+            await result.current.refresh();
+        });
+
+        expect(result.current.data).toEqual(updatedData);
+        expect(marketDataService.getMarketData).toHaveBeenCalledTimes(2);
     });
 
-    it('performs asset search', async () => {
-      const mockSearchResults = [
-        { id: 'search1', symbol: 'SEARCH1' },
-        { id: 'search2', symbol: 'SEARCH2' }
-      ];
+    it('updates data periodically when refreshInterval is set', async () => {
+        jest.useFakeTimers();
+        marketDataService.getMarketData
+            .mockResolvedValueOnce(mockData)
+            .mockResolvedValueOnce({ ...mockData, price: 51000 });
 
-      marketDataService.searchAssets.mockResolvedValue({ data: { assets: mockSearchResults } });
-      marketDataService.getPopularAssets.mockResolvedValue({ data: { assets: [] } });
-
-      const mockTestFn = jest.fn();
-
-      render(
-        <TestComponent 
-          options={{ searchQuery: 'test' }} 
-          testFn={mockTestFn} 
-        />
-      );
-
-      await waitFor(() => {
-        expect(mockTestFn).toHaveBeenCalledWith(
-          expect.objectContaining({
-            searchResults: mockSearchResults,
-            loading: false,
-            error: null
-          })
+        const { result, waitForNextUpdate } = renderHook(() => 
+            useMarketData('BTC', { refreshInterval: 5000 })
         );
-      });
 
-      expect(marketDataService.searchAssets).toHaveBeenCalledWith('test');
+        await waitForNextUpdate();
+        expect(result.current.data).toEqual(mockData);
+
+        act(() => {
+            jest.advanceTimersByTime(5000);
+        });
+
+        await waitForNextUpdate();
+        expect(result.current.data).toEqual({ ...mockData, price: 51000 });
+        
+        jest.useRealTimers();
     });
-  });
+
+    it('does not fetch initially when initialFetch is false', () => {
+        renderHook(() => useMarketData('BTC', { initialFetch: false }));
+        expect(marketDataService.getMarketData).not.toHaveBeenCalled();
+    });
 });
