@@ -1,5 +1,5 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
+#!/usr/bin/env zsh
 
-# Temporarily commenting out browser diagnostics
+# Temporarily skip browser diagnostics until we fix the MCP integration
 # node scripts/browser-diagnostics.js
+exit 0

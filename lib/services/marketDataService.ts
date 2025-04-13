@@ -38,6 +38,40 @@ export class MarketDataService {
    * Get asset price in BTC
    */
   async getAssetPriceInBTC(assetSymbol: string): Promise<AssetData | null> {
+    if (this.useMockData) {
+      const mockPrices: Record<string, AssetData> = {
+        'BTC': {
+          symbol: 'BTC',
+          price: 67890.12,
+          change: 1234.56,
+          changePercent: 2.34,
+          priceInBTC: 1.0,
+          priceInUSD: 67890.12,
+          lastUpdated: new Date().toISOString()
+        },
+        'ETH': {
+          symbol: 'ETH',
+          price: 3456.78,
+          change: 123.45,
+          changePercent: 1.5,
+          priceInBTC: 0.05,
+          priceInUSD: 3456.78,
+          lastUpdated: new Date().toISOString()
+        },
+        'AAPL': {
+          symbol: 'AAPL',
+          price: 180.50,
+          change: 2.75,
+          changePercent: 1.2,
+          priceInBTC: 0.0025,
+          priceInUSD: 180.50,
+          lastUpdated: new Date().toISOString()
+        }
+      };
+
+      return mockPrices[assetSymbol] || null;
+    }
+
     return this.secureService.getAssetPriceInBTC(assetSymbol);
   }
 
@@ -45,6 +79,41 @@ export class MarketDataService {
    * Get historical price data for an asset
    */
   async getHistoricalData(symbol: string, days: number = 30): Promise<HistoricalDataPoint[]> {
+    if (this.useMockData) {
+      // Generate mock historical data
+      const result: HistoricalDataPoint[] = [];
+      const today = new Date();
+      let basePrice = 100;
+      
+      if (symbol === 'BTC') basePrice = 60000;
+      else if (symbol === 'ETH') basePrice = 3000;
+      else if (symbol === 'AAPL') basePrice = 180;
+      else if (symbol === 'GOOGL') basePrice = 125;
+      else if (symbol === 'XAU') basePrice = 2000;
+
+      for (let i = days; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        
+        const randomFactor = 0.98 + Math.random() * 0.04;
+        const price = basePrice * randomFactor;
+        
+        result.push({
+          date,
+          price,
+          open: price * 0.99,
+          high: price * 1.01,
+          low: price * 0.98,
+          close: price,
+          volume: Math.floor(Math.random() * 1000000)
+        });
+        
+        basePrice = price;
+      }
+
+      return result;
+    }
+
     return this.secureService.getHistoricalData(symbol, days);
   }
 

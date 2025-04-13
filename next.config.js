@@ -1,16 +1,4 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  reactStrictMode: true,
-  output: 'standalone',
-  webpack: (config, { isServer }) => {
-    config.resolve.fallback = { 
-      fs: false, 
-      net: false, 
-      tls: false 
-    };
+// This file exists only to satisfy ESLint and other tools that expect a next.config.js file
+// The actual configuration is in next.config.cjs (CommonJS) and next.config.mjs (ES modules)
 
-    return config;
-  }
-};
-
-module.exports = nextConfig;
+export { default } from './next.config.mjs';

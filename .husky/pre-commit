@@ -1,3 +1,27 @@
-#!/usr/bin/env sh
-# Temporarily commenting out tests to allow commit
-# npm run test:playwright
+#!/usr/bin/env zsh
+
+set -e
+echo "Running pre-commit checks..."
+
+# Function to handle errors
+handle_error() {
+    echo "Error: Pre-commit check failed"
+    echo "Stage: $1"
+    echo "Exit code: $2"
+    exit 1
+}
+
+# Only lint modified files
+echo "Running linting on changed files..."
+CHANGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(js|jsx|ts|tsx|cjs|mjs)$' || echo "")
+if [ -n "$CHANGED_FILES" ]; then
+    echo "Files to lint: $CHANGED_FILES"
+    echo "Running ESLint with debug output..."
+    NODE_ENV=development npx eslint --debug --quiet $CHANGED_FILES || handle_error "linting" $?
+fi
+
+# Run fast unit tests
+echo "Running fast unit tests..."
+NODE_ENV=test npm run test -- --bail --ci --passWithNoTests || handle_error "tests" $?
+
+echo "All pre-commit checks passed!"

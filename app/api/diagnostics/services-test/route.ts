@@ -1,20 +1,22 @@
 import { NextResponse } from 'next/server';
 import ExternalApiService from '@/lib/services/externalApiService';
-import { AssetData } from '@/lib/types';
 
+// Define a type for the results object
 type ServiceTestResult = {
   status: string;
-  data?: AssetData;
+  data?: any;
   message?: string;
 };
 
+type ServiceTestResults = {
+  coinmarketcap: ServiceTestResult;
+  alphaVantage: ServiceTestResult;
+  metalPrice: ServiceTestResult;
+  environment: Record<string, string>;
+};
+
 export async function GET() {
-  const results: {
-    coinmarketcap: ServiceTestResult;
-    alphaVantage: ServiceTestResult;
-    metalPrice: ServiceTestResult;
-    environment: Record<string, string>;
-  } = {
+  const results: ServiceTestResults = {
     coinmarketcap: { status: 'not tested' },
     alphaVantage: { status: 'not tested' },
     metalPrice: { status: 'not tested' },
@@ -32,11 +34,11 @@ export async function GET() {
     // Test CoinMarketCap API with timeout
     try {
       const cmcService = new ExternalApiService();
-      const cmcPromise = cmcService.fetchAssetPrice('BTC');
+      const cmcPromise = cmcService.fetchCryptoList(1, 1);
       const cmcResult = await Promise.race([
         cmcPromise,
         new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
-      ]) as AssetData;
+      ]);
       results.coinmarketcap = {
         status: 'success',
         data: cmcResult
@@ -51,11 +53,11 @@ export async function GET() {
     // Test Alpha Vantage API with timeout
     try {
       const avService = new ExternalApiService();
-      const avPromise = avService.fetchAssetPrice('AAPL');
+      const avPromise = avService.fetchStockList(1, 1);
       const avResult = await Promise.race([
         avPromise,
         new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
-      ]) as AssetData;
+      ]);
       results.alphaVantage = {
         status: 'success',
         data: avResult
@@ -70,11 +72,11 @@ export async function GET() {
     // Test Metal Price API with timeout
     try {
       const mpService = new ExternalApiService();
-      const mpPromise = mpService.fetchAssetPrice('XAU'); // Gold
+      const mpPromise = mpService.fetchCommoditiesList(1, 1);
       const mpResult = await Promise.race([
         mpPromise,
         new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
-      ]) as AssetData;
+      ]);
       results.metalPrice = {
         status: 'success',
         data: mpResult

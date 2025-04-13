@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 
-// Fallback data for static generation
-const FALLBACK_CRYPTO_DATA = {
+// Mock data for development and static generation
+const MOCK_CRYPTO_DATA = {
   price: 50000,
   last_updated: new Date().toISOString(),
   raw_data: {
@@ -23,22 +23,20 @@ export async function GET(request: NextRequest) {
     }, { status: 400 });
   }
 
-  // Check if running in production
-  if (process.env.NODE_ENV === 'production') {
-    // Return fallback data for static generation
-    return NextResponse.json(FALLBACK_CRYPTO_DATA);
+  // Check if we should use mock data
+  if (process.env.USE_MOCK_DATA === 'true') {
+    console.log('Using mock Bitcoin price data');
+    return NextResponse.json(MOCK_CRYPTO_DATA);
   }
 
-  // For development, attempt to fetch real data if API key is available
   try {
     const apiKey = process.env.COINMARKETCAP_API_KEY;
 
     if (!apiKey) {
-      console.warn('CoinMarketCap API key is missing. Using fallback data.');
-      return NextResponse.json(FALLBACK_CRYPTO_DATA);
+      console.warn('CoinMarketCap API key is missing. Using mock data.');
+      return NextResponse.json(MOCK_CRYPTO_DATA);
     }
 
-    // Fetch real-time data from CoinMarketCap
     const response = await axios.get('https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest', {
       params: { symbol: 'BTC', convert: 'USD' },
       headers: { 'X-CMC_PRO_API_KEY': apiKey }
@@ -59,7 +57,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(processedData);
   } catch (error) {
     console.error('Error fetching crypto data:', error);
-    return NextResponse.json(FALLBACK_CRYPTO_DATA);
+    return NextResponse.json(MOCK_CRYPTO_DATA);
   }
 }
 
