@@ -30,10 +30,6 @@
     "NEXT_PUBLIC_VERCEL_ENV": "production",
     "NEXT_CACHE_HANDLER_PATH": "./cache-handler.js"
   },
-  "buildSettings": {
-    "maxDuration": 60,
-    "timeout": 60
-  },
   "outputDirectory": ".next",
   "performance": {
     "maxConcurrentBuilds": 4,
