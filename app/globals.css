@@ -51,7 +51,7 @@ html {
 
 /* Error and loading states */
 .error-container {
-  @apply flex items-center justify-center min-h-screen text-red-500;
+  @apply flex items-center justify-center min-h-screen;
 }
 
 .loading-spinner {
