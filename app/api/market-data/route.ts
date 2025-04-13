@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import MarketDataService from '@/lib/services/marketDataService';
+import MarketDataService from '@/lib/api/marketDataService';
 import { AssetCategory } from '@/lib/types';
 
 export async function GET(request: NextRequest) {

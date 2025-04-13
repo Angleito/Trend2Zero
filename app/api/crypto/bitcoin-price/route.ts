@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { MarketDataService } from '@/lib/services/marketDataService';
+import { MarketDataService } from '@/lib/api/marketDataService';
 
 // Fallback Bitcoin price data for static generation
 const FALLBACK_BITCOIN_PRICE = {
