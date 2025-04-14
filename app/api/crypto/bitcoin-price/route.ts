@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAssetPrice } from '@/lib/api/marketDataService';
+import axios from 'axios';
 
 // Fallback Bitcoin price data for static generation
 const FALLBACK_BITCOIN_PRICE = {
@@ -12,11 +12,47 @@ const FALLBACK_BITCOIN_PRICE = {
   lastUpdated: new Date().toISOString()
 };
 
+// Inline implementation of getAssetPrice
+async function getAssetPrice(symbol) {
+  try {
+    // First try to call our own API
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+    
+    if (apiUrl) {
+      const response = await axios.get(`${apiUrl}/market-data/price/${symbol}`);
+      return response.data;
+    }
+    
+    // If no API URL, fall back to CoinGecko directly
+    const cgResponse = await axios.get(
+      `https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true`
+    );
+    
+    if (cgResponse.data && cgResponse.data.bitcoin) {
+      return {
+        symbol: 'BTC',
+        price: cgResponse.data.bitcoin.usd,
+        change: cgResponse.data.bitcoin.usd_24h_change || 0,
+        changePercent: cgResponse.data.bitcoin.usd_24h_change || 0,
+        priceInUSD: cgResponse.data.bitcoin.usd,
+        priceInBTC: 1.0,
+        lastUpdated: new Date().toISOString()
+      };
+    }
+    
+    // Return fallback as last resort
+    return FALLBACK_BITCOIN_PRICE;
+  } catch (error) {
+    console.error('Error fetching asset price:', error);
+    return FALLBACK_BITCOIN_PRICE;
+  }
+}
+
 export async function GET() {
   try {
     console.log('[API] /api/crypto/bitcoin-price called');
     const btcData = await getAssetPrice('BTC');
-    console.log('[API] MarketDataService.getAssetPrice returned:', btcData);
+    console.log('[API] getAssetPrice returned:', btcData);
 
     if (btcData) {
       return NextResponse.json(btcData);
