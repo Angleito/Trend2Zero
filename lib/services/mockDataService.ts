@@ -231,6 +231,8 @@ export class MockDataService {
       const volume = Math.round(baseVolume * (0.8 + Math.random() * 0.4));
 
       result.push({
+        timestamp: date.getTime(),
+        value: close,
         date: new Date(date),
         price: parseFloat(price.toFixed(2)),
         open: parseFloat(open.toFixed(2)),

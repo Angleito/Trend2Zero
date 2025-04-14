@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import jwt, { SignOptions } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { User, IUser } from '../models/userModel';
 import logger from '../utils/logger';
 
@@ -26,7 +26,7 @@ const generateTestToken = (user: IUser): string => {
     expiresIn: '1h' as const,  // Explicitly cast to match StringValue
   };
 
-  const options: SignOptions = {
+  const options = {
     expiresIn: payload.expiresIn,
   };
 
