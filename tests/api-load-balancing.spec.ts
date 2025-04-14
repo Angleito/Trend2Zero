@@ -62,7 +62,7 @@ test.describe('API Load Balancing Tests', () => {
     // Check if we have the expected number of days worth of data
     // (Allow some flexibility as API might return slightly more/less data points)
     const uniqueDays = new Set(
-      data.map(point => new Date(point.date).toISOString().split('T')[0])
+      data.map((point: any) => new Date(point.date).toISOString().split('T')[0])
     ).size;
     
     expect(uniqueDays).toBeGreaterThanOrEqual(Math.min(5, days));

@@ -51,16 +51,16 @@ test.describe('Cryptocurrency Display Tests', () => {
     // Check which of our expected top symbols are present
     for (const symbol of topCryptoSymbols) {
       if (displayedSymbols.includes(symbol)) {
-        results.found.push(symbol);
+        (results.found as any[]).push(symbol);
       } else {
-        results.missing.push(symbol);
+        (results.missing as any[]).push(symbol);
       }
     }
     
     // Check for any unexpected symbols
     for (const symbol of displayedSymbols) {
       if (symbol && !topCryptoSymbols.includes(symbol) && !symbol.includes('...')) {
-        results.unexpected.push(symbol);
+        (results.unexpected as any[]).push(symbol);
       }
     }
     

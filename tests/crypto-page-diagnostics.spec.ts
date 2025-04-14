@@ -38,12 +38,12 @@ test('Analyze Crypto Page Structure', async ({ page }) => {
   // Analyze DOM structure - first look for cryptocurrency related elements
   const pageStructure = await page.evaluate(() => {
     // Helper function to get a simplified representation of an element
-    const getElementInfo = (element) => {
+    const getElementInfo = (element: Element) => {
       if (!element) return null;
       
       const attributes = {};
       for (const attr of element.attributes) {
-        attributes[attr.name] = attr.value;
+        (attributes as any)[attr.name] = attr.value;
       }
       
       return {
@@ -107,12 +107,10 @@ test('Analyze Crypto Page Structure', async ({ page }) => {
     for (let i = 0; i < Math.min(pageStructure.potentialCryptoSections.length, 5); i++) {
       try {
         const section = pageStructure.potentialCryptoSections[i];
-        if (section.id) {
-          await page.locator(`#${section.id}`).screenshot({ 
-            path: `screenshots/crypto-section-${i}-by-id.png` 
-          });
-        } else if (section.className) {
-          const className = section.className.split(' ')[0];
+        if (section && section.id) {
+          await page.locator(`#${section?.id}`).screenshot({ path: `screenshots/crypto-section-${i}-by-id.png` });
+        } else if (section && section.className) {
+          const className = section?.className?.split(' ')[0];
           await page.locator(`.${className}`).first().screenshot({ 
             path: `screenshots/crypto-section-${i}-by-class.png` 
           });
@@ -132,13 +130,13 @@ test('Analyze Crypto Page Structure', async ({ page }) => {
       document.body, 
       NodeFilter.SHOW_TEXT, 
       null, 
-      false
+      // Removed extra argument to fix TS2554 error
     );
     
     const cryptoTexts = [];
     let node;
     while(node = walker.nextNode()) {
-      const text = node.textContent.trim();
+      const text = node.textContent ? node.textContent.trim() : '';
       if (text && cryptoKeywords.some(keyword => text.includes(keyword))) {
         cryptoTexts.push({
           text: text.substring(0, 100), // Limit length

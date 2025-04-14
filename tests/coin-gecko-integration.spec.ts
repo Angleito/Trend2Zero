@@ -28,8 +28,10 @@ test.describe('CoinGecko API Integration Tests', () => {
     
     // The price should be a numeric value with $ prefix
     expect(priceText).toBeTruthy();
-    const priceNumber = parseFloat(priceText.replace(/[^0-9.-]+/g, ''));
-    expect(priceNumber).toBeGreaterThan(0);
+    if (priceText) {
+  expect(parseFloat(priceText.replace(/[^0-9.-]+/g, ''))).toBeGreaterThan(0);
+}
+
     
     // Check if change percentage is displayed
     const changeElement = await page.locator('[data-testid="price-change"]');
@@ -65,8 +67,8 @@ test.describe('CoinGecko API Integration Tests', () => {
     expect(priceText).toBeTruthy();
     
     // Check the network requests to verify CoinGecko was called
-    const requests = page.request.all();
-    const coinGeckoRequests = requests.filter(req => 
+    const requests = (page.request as any).all();
+    const coinGeckoRequests = requests.filter((req: any) => 
       req.url().includes('coingecko.com') || req.url().includes('api/market-data')
     );
     expect(coinGeckoRequests.length).toBeGreaterThan(0);

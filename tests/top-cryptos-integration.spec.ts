@@ -40,14 +40,14 @@ test.describe('Top Cryptocurrencies Integration Tests', () => {
           if (hasRequiredProps) {
             console.log(`✅ ${symbol.padEnd(6)} → $${data.price.toFixed(2)}`);
             results.successful++;
-            results.symbols[symbol] = {
+            (results.symbols as Record<string, any>)[symbol] = {
               success: true,
               price: data.price
             };
           } else {
             console.log(`❌ ${symbol.padEnd(6)} → Invalid data structure`);
             results.failed++;
-            results.symbols[symbol] = {
+            (results.symbols as Record<string, any>)[symbol] = {
               success: false,
               error: 'Invalid data structure'
             };
@@ -55,17 +55,21 @@ test.describe('Top Cryptocurrencies Integration Tests', () => {
         } else {
           console.log(`❌ ${symbol.padEnd(6)} → Status ${response.status()}`);
           results.failed++;
-          results.symbols[symbol] = {
+          (results.symbols as Record<string, any>)[symbol] = {
             success: false,
             error: `API returned ${response.status()}`
           };
         }
       } catch (error) {
-        console.log(`❌ ${symbol.padEnd(6)} → Error: ${error.message}`);
+        if (error instanceof Error) {
+  console.log(`❌ ${symbol.padEnd(6)} → Error: ${error.message}`);
+} else {
+  console.log(`❌ ${symbol.padEnd(6)} → Error: Unknown error`);
+}
         results.failed++;
-        results.symbols[symbol] = {
+        (results.symbols as Record<string, any>)[symbol] = {
           success: false,
-          error: error.message
+          error: error instanceof Error ? error.message : String(error)
         };
       }
       
@@ -82,8 +86,8 @@ test.describe('Top Cryptocurrencies Integration Tests', () => {
     if (results.failed > 0) {
       console.log('\nFailed Cryptocurrencies:');
       for (const symbol in results.symbols) {
-        if (!results.symbols[symbol].success) {
-          console.log(`- ${symbol}: ${results.symbols[symbol].error}`);
+        if (!(results.symbols as Record<string, any>)[symbol].success) {
+          console.log(`- ${symbol}: ${(results.symbols as Record<string, any>)[symbol].error}`);
         }
       }
     }
@@ -132,7 +136,11 @@ test.describe('Top Cryptocurrencies Integration Tests', () => {
           throw new Error('Neither chart nor error message found');
         }
       } catch (error) {
-        console.log(`❌ ${symbol} chart test failed: ${error.message}`);
+        if (error instanceof Error) {
+  console.log(`❌ ${symbol} chart test failed: ${error.message}`);
+} else {
+  console.log(`❌ ${symbol} chart test failed: Unknown error`);
+}
       }
       
       // Add delay between tests
