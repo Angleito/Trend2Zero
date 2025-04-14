@@ -125,58 +125,58 @@ export class MockIntegrationService {
     switch (assetType) {
       case 'crypto':
         assets = [
-          { symbol: 'BTC', name: 'Bitcoin', type: 'Cryptocurrency', description: 'Digital gold' },
-          { symbol: 'ETH', name: 'Ethereum', type: 'Cryptocurrency', description: 'Smart contract platform' },
-          { symbol: 'BNB', name: 'Binance Coin', type: 'Cryptocurrency', description: 'Exchange token' },
-          { symbol: 'SOL', name: 'Solana', type: 'Cryptocurrency', description: 'Smart contract platform' },
-          { symbol: 'XRP', name: 'Ripple', type: 'Cryptocurrency', description: 'Payment protocol' },
-          { symbol: 'ADA', name: 'Cardano', type: 'Cryptocurrency', description: 'Smart contract platform' },
-          { symbol: 'DOGE', name: 'Dogecoin', type: 'Cryptocurrency', description: 'Meme coin' },
-          { symbol: 'DOT', name: 'Polkadot', type: 'Cryptocurrency', description: 'Interoperability protocol' },
-          { symbol: 'AVAX', name: 'Avalanche', type: 'Cryptocurrency', description: 'Smart contract platform' },
-          { symbol: 'MATIC', name: 'Polygon', type: 'Cryptocurrency', description: 'Ethereum scaling solution' }
+          { symbol: 'BTC', name: 'Bitcoin', type: 'Cryptocurrency', price: 65000, change: 1500, changePercent: 2.3 },
+          { symbol: 'ETH', name: 'Ethereum', type: 'Cryptocurrency', price: 3500, change: 120, changePercent: 1.5 },
+          { symbol: 'BNB', name: 'Binance Coin', type: 'Cryptocurrency', price: 500, change: 10, changePercent: 2.0 },
+          { symbol: 'SOL', name: 'Solana', type: 'Cryptocurrency', price: 150, change: 3, changePercent: 2.1 },
+          { symbol: 'XRP', name: 'Ripple', type: 'Cryptocurrency', price: 1.2, change: 0.02, changePercent: 1.7 },
+          { symbol: 'ADA', name: 'Cardano', type: 'Cryptocurrency', price: 2.5, change: 0.05, changePercent: 2.0 },
+          { symbol: 'DOGE', name: 'Dogecoin', type: 'Cryptocurrency', price: 0.15, change: 0.01, changePercent: 1.8 },
+          { symbol: 'DOT', name: 'Polkadot', type: 'Cryptocurrency', price: 20, change: 0.4, changePercent: 2.0 },
+          { symbol: 'AVAX', name: 'Avalanche', type: 'Cryptocurrency', price: 35, change: 0.7, changePercent: 2.0 },
+          { symbol: 'MATIC', name: 'Polygon', type: 'Cryptocurrency', price: 1.5, change: 0.03, changePercent: 2.0 }
         ];
         break;
       case 'stock':
         assets = [
-          { symbol: 'AAPL', name: 'Apple Inc', type: 'Stocks', description: 'Technology company' },
-          { symbol: 'MSFT', name: 'Microsoft Corporation', type: 'Stocks', description: 'Software company' },
-          { symbol: 'GOOGL', name: 'Alphabet Inc', type: 'Stocks', description: 'Internet services' },
-          { symbol: 'AMZN', name: 'Amazon.com Inc', type: 'Stocks', description: 'E-commerce company' },
-          { symbol: 'TSLA', name: 'Tesla Inc', type: 'Stocks', description: 'Electric vehicle manufacturer' },
-          { symbol: 'META', name: 'Meta Platforms Inc', type: 'Stocks', description: 'Social media company' },
-          { symbol: 'NVDA', name: 'NVIDIA Corporation', type: 'Stocks', description: 'Semiconductor company' },
-          { symbol: 'JPM', name: 'JPMorgan Chase & Co', type: 'Stocks', description: 'Banking company' },
-          { symbol: 'V', name: 'Visa Inc', type: 'Stocks', description: 'Financial services' },
-          { symbol: 'JNJ', name: 'Johnson & Johnson', type: 'Stocks', description: 'Healthcare company' }
+          { symbol: 'AAPL', name: 'Apple Inc', type: 'Stocks', price: 175, change: 2, changePercent: 1.2 },
+          { symbol: 'MSFT', name: 'Microsoft Corporation', type: 'Stocks', price: 350, change: 4, changePercent: 1.1 },
+          { symbol: 'GOOGL', name: 'Alphabet Inc', type: 'Stocks', price: 2800, change: 30, changePercent: 1.1 },
+          { symbol: 'AMZN', name: 'Amazon.com Inc', type: 'Stocks', price: 3500, change: 40, changePercent: 1.2 },
+          { symbol: 'TSLA', name: 'Tesla Inc', type: 'Stocks', price: 250, change: 5, changePercent: 2.0 },
+          { symbol: 'META', name: 'Meta Platforms Inc', type: 'Stocks', price: 480, change: 8, changePercent: 1.7 },
+          { symbol: 'NVDA', name: 'NVIDIA Corporation', type: 'Stocks', price: 880, change: 20, changePercent: 2.3 },
+          { symbol: 'JPM', name: 'JPMorgan Chase & Co', type: 'Stocks', price: 180, change: 2, changePercent: 1.1 },
+          { symbol: 'V', name: 'Visa Inc', type: 'Stocks', price: 270, change: 3, changePercent: 1.2 },
+          { symbol: 'JNJ', name: 'Johnson & Johnson', type: 'Stocks', price: 155, change: 1, changePercent: 0.7 }
         ];
         break;
       case 'commodity':
         assets = [
-          { symbol: 'GC', name: 'Gold', type: 'Commodities', description: 'Precious metal' },
-          { symbol: 'SI', name: 'Silver', type: 'Commodities', description: 'Precious metal' },
-          { symbol: 'PL', name: 'Platinum', type: 'Commodities', description: 'Precious metal' },
-          { symbol: 'PA', name: 'Palladium', type: 'Commodities', description: 'Precious metal' },
-          { symbol: 'HG', name: 'Copper', type: 'Commodities', description: 'Industrial metal' },
-          { symbol: 'CL', name: 'Crude Oil', type: 'Commodities', description: 'Energy' },
-          { symbol: 'NG', name: 'Natural Gas', type: 'Commodities', description: 'Energy' },
-          { symbol: 'ZC', name: 'Corn', type: 'Commodities', description: 'Agriculture' },
-          { symbol: 'ZW', name: 'Wheat', type: 'Commodities', description: 'Agriculture' },
-          { symbol: 'ZS', name: 'Soybeans', type: 'Commodities', description: 'Agriculture' }
+          { symbol: 'GC', name: 'Gold', type: 'Commodities', price: 2000, change: 10, changePercent: 0.5 },
+          { symbol: 'SI', name: 'Silver', type: 'Commodities', price: 25, change: 0.1, changePercent: 0.4 },
+          { symbol: 'PL', name: 'Platinum', type: 'Commodities', price: 950, change: 5, changePercent: 0.6 },
+          { symbol: 'PA', name: 'Palladium', type: 'Commodities', price: 1200, change: 8, changePercent: 0.7 },
+          { symbol: 'HG', name: 'Copper', type: 'Commodities', price: 4.5, change: 0.02, changePercent: 0.4 },
+          { symbol: 'CL', name: 'Crude Oil', type: 'Commodities', price: 85, change: 1, changePercent: 1.2 },
+          { symbol: 'NG', name: 'Natural Gas', type: 'Commodities', price: 3.5, change: 0.05, changePercent: 1.4 },
+          { symbol: 'ZC', name: 'Corn', type: 'Commodities', price: 600, change: 5, changePercent: 0.8 },
+          { symbol: 'ZW', name: 'Wheat', type: 'Commodities', price: 700, change: 6, changePercent: 0.9 },
+          { symbol: 'ZS', name: 'Soybeans', type: 'Commodities', price: 1400, change: 8, changePercent: 0.6 }
         ];
         break;
       case 'index':
         assets = [
-          { symbol: 'SPX', name: 'S&P 500', type: 'Indices', description: 'US large-cap stocks' },
-          { symbol: 'DJI', name: 'Dow Jones Industrial Average', type: 'Indices', description: 'US blue-chip stocks' },
-          { symbol: 'IXIC', name: 'NASDAQ Composite', type: 'Indices', description: 'US technology stocks' },
-          { symbol: 'RUT', name: 'Russell 2000', type: 'Indices', description: 'US small-cap stocks' },
-          { symbol: 'FTSE', name: 'FTSE 100', type: 'Indices', description: 'UK large-cap stocks' },
-          { symbol: 'DAX', name: 'DAX', type: 'Indices', description: 'German stocks' },
-          { symbol: 'CAC', name: 'CAC 40', type: 'Indices', description: 'French stocks' },
-          { symbol: 'N225', name: 'Nikkei 225', type: 'Indices', description: 'Japanese stocks' },
-          { symbol: 'HSI', name: 'Hang Seng', type: 'Indices', description: 'Hong Kong stocks' },
-          { symbol: 'SSEC', name: 'Shanghai Composite', type: 'Indices', description: 'Chinese stocks' }
+          { symbol: 'SPX', name: 'S&P 500', type: 'Indices', price: 4200, change: 30, changePercent: 0.7 },
+          { symbol: 'DJI', name: 'Dow Jones Industrial Average', type: 'Indices', price: 34000, change: 200, changePercent: 0.6 },
+          { symbol: 'IXIC', name: 'NASDAQ Composite', type: 'Indices', price: 14000, change: 120, changePercent: 0.9 },
+          { symbol: 'RUT', name: 'Russell 2000', type: 'Indices', price: 2000, change: 15, changePercent: 0.75 },
+          { symbol: 'FTSE', name: 'FTSE 100', type: 'Indices', price: 7500, change: 50, changePercent: 0.67 },
+          { symbol: 'DAX', name: 'DAX', type: 'Indices', price: 16000, change: 100, changePercent: 0.63 },
+          { symbol: 'CAC', name: 'CAC 40', type: 'Indices', price: 7000, change: 60, changePercent: 0.86 },
+          { symbol: 'N225', name: 'Nikkei 225', type: 'Indices', price: 30000, change: 200, changePercent: 0.7 },
+          { symbol: 'HSI', name: 'Hang Seng', type: 'Indices', price: 25000, change: 180, changePercent: 0.72 },
+          { symbol: 'SSEC', name: 'Shanghai Composite', type: 'Indices', price: 3500, change: 25, changePercent: 0.71 }
         ];
         break;
     }
