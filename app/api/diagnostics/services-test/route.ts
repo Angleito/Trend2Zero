@@ -1,6 +1,72 @@
-
 import { NextResponse } from 'next/server';
-import ExternalApiService from '@/lib/services/externalApiService';
+import axios from 'axios';
+
+// Inline simplified ExternalApiService to avoid import issues
+class ExternalApiService {
+  async fetchCryptoPrices(symbols = ['BTC']) {
+    try {
+      if (!process.env.COINMARKETCAP_API_KEY) {
+        return { error: 'API key not configured' };
+      }
+      
+      const response = await axios.get('https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest', {
+        headers: {
+          'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY
+        },
+        params: {
+          symbol: symbols.join(',')
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching crypto prices:', error);
+      return { error: error.message || 'Unknown error' };
+    }
+  }
+  
+  async fetchStockPrice(symbol = 'AAPL') {
+    try {
+      if (!process.env.ALPHA_VANTAGE_API_KEY) {
+        return { error: 'API key not configured' };
+      }
+      
+      const response = await axios.get('https://www.alphavantage.co/query', {
+        params: {
+          function: 'GLOBAL_QUOTE',
+          symbol,
+          apikey: process.env.ALPHA_VANTAGE_API_KEY
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching stock price:', error);
+      return { error: error.message || 'Unknown error' };
+    }
+  }
+  
+  async fetchMetalPrice(symbol = 'XAU') {
+    try {
+      if (!process.env.METAL_PRICE_API_KEY) {
+        return { error: 'API key not configured' };
+      }
+      
+      const response = await axios.get(`https://api.metalpriceapi.com/v1/latest`, {
+        params: {
+          api_key: process.env.METAL_PRICE_API_KEY,
+          base: 'USD',
+          currencies: symbol
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching metal price:', error);
+      return { error: error.message || 'Unknown error' };
+    }
+  }
+}
 
 export async function GET() {
   const results = {
