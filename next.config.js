@@ -1,4 +1,21 @@
-// This file exists only to satisfy ESLint and other tools that expect a next.config.js file
-// The actual configuration is in next.config.cjs (CommonJS)
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  webpack: (config) => {
+    // Important: return the modified config
+    config.resolve.fallback = { 
+      fs: false, 
+      net: false, 
+      tls: false 
+    };
+    return config;
+  },
+  // Explicitly set output mode and server configuration
+  output: 'standalone',
+  env: {
+    // Ensure PORT is a string
+    PORT: process.env.NEXT_PUBLIC_PORT || '3000' 
+  }
+};
 
-export { default } from './next.config.cjs';
+export default nextConfig;
