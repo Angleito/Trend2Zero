@@ -12,7 +12,7 @@ const nextConfig = {
   // Explicitly set output mode and server configuration
   output: 'standalone',
   env: {
-    PORT: process.env.NEXT_PUBLIC_PORT || 3000
+    PORT: process.env.NEXT_PUBLIC_PORT || '3000'
   }
 };
 
