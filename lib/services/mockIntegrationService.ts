@@ -97,6 +97,8 @@ export class MockIntegrationService {
         1000000 + Math.random() * 500000;
 
       result.push({
+        timestamp: date.getTime(),
+        value: close,
         date: new Date(date),
         price: parseFloat(price.toFixed(2)),
         open: parseFloat(open.toFixed(2)),
