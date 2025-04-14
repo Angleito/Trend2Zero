@@ -40,13 +40,13 @@ const AssetSearch = ({ onAssetSelect }: AssetSearchProps) => {
 
       setLoading(true);
       try {
-        const marketService = new MarketDataService();
+        const marketService = new marketDataService();
         const assets = await marketService.listAvailableAssets({
           pageSize: 10,
           keywords: searchTerm
         });
 
-        const filteredResults = assets.filter(asset =>
+        const filteredResults = assets.filter((asset: MarketAsset) =>
           (asset.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
           asset.symbol.toLowerCase().includes(searchTerm.toLowerCase())
         );
