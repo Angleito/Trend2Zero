@@ -17,13 +17,13 @@ const TOP_CRYPTOCURRENCIES = [
 ];
 
 export default function TrackerPage() {
-  const [selectedCategory, setSelectedCategory] = useState<AssetCategory | 'All'>('All');
+  const [selectedCategory, setSelectedCategory] = useState<AssetCategory | null>(null);
   const [mockDataWarning, setMockDataWarning] = useState(false);
 
-  const categories: (AssetCategory | 'All')[] = ['All', 'Stocks', 'Commodities', 'Indices', 'Cryptocurrency'];
+  const categories: AssetCategory[] = ['stocks', 'indices', 'cryptocurrency', 'metals'];
 
   const marketData = useMarketData({
-    type: selectedCategory === 'All' ? null : selectedCategory,
+    type: selectedCategory,
     limit: 50
   });
 
@@ -114,18 +114,18 @@ export default function TrackerPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 mt-6">
                 <div className="md:col-span-2 overflow-x-auto">
                   <div className="flex space-x-4 pb-2">
-                    {categories.map((category) => (
+                    {[...categories, null].map((category) => (
                       <button
-                        key={category}
+                        key={category || 'all'}
                         onClick={() => setSelectedCategory(category)}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                           selectedCategory === category
                             ? 'bg-[#FF9500] text-white'
                             : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                         }`}
-                        data-testid={`category-btn-${category.toLowerCase()}`}
+                        data-testid={`category-btn-${category ? category.toLowerCase() : 'all'}`}
                       >
-                        {category}
+                        {category ? category : 'All'}
                       </button>
                     ))}
                   </div>
@@ -139,7 +139,7 @@ export default function TrackerPage() {
               {marketData.popularAssets.length === 0 && (
                 <div className="text-center bg-gray-800 p-8 rounded-lg mt-8" data-testid="no-assets-message">
                   <p className="text-xl text-gray-300 mb-4">
-                    No assets found for the selected category: {selectedCategory}
+                    No assets found for the selected category: {selectedCategory || 'All'}
                   </p>
                   <p className="text-gray-500">
                     Try selecting a different category or check your market data configuration.
@@ -151,7 +151,7 @@ export default function TrackerPage() {
               {marketData.popularAssets.length > 0 && (
                 <AssetPriceTable
                   assets={marketData.popularAssets}
-                  showCategory={selectedCategory === 'All'}
+                  showCategory={selectedCategory === null}
                   data-testid="asset-price-table"
                 />
               )}
