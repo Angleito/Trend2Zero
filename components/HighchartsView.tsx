@@ -9,7 +9,7 @@
 import { useEffect, useState } from 'react';
 import Highcharts from 'highcharts/highstock';
 import HighchartsReact from 'highcharts-react-official';
-import marketDataService from '../lib/services/marketDataService';
+
 import { MarketDataService } from '../lib/services/marketDataService';
 import type { HistoricalDataPoint } from '../lib/types';
 
@@ -182,27 +182,36 @@ const HighchartsView = ({
           throw new Error('No historical data available');
         }
 
-        // Format data for Highcharts
-        const priceData = historicalData.map((dataPoint: HistoricalDataPoint) => {
-          // Handle both Date objects and ISO strings
+        // Filter out points with invalid date or missing price
+        const validHistoricalData = historicalData.filter(
+          (dp: HistoricalDataPoint) =>
+            dp.price != null &&
+            (dp.date instanceof Date ||
+              ((typeof dp.date === 'string' || typeof dp.date === 'number') &&
+                !isNaN(new Date(dp.date).getTime())))
+        );
+
+        // Format data for Highcharts using only valid points
+        const priceData = validHistoricalData.map((dataPoint: HistoricalDataPoint) => {
+          // Handle both Date objects and ISO strings/numbers
           const timestamp = dataPoint.date instanceof Date
             ? dataPoint.date.getTime()
-            : new Date(dataPoint.date).getTime();
+            : new Date(dataPoint.date!).getTime(); // Safe due to filter
 
           return [
             timestamp,
-            dataPoint.price,
+            dataPoint.price!, // Safe due to filter
           ];
         });
 
-        const volumeData = historicalData.map((dataPoint: HistoricalDataPoint) => {
-          // Handle both Date objects and ISO strings
+        const volumeData = validHistoricalData.map((dataPoint: HistoricalDataPoint) => {
+          // Handle both Date objects and ISO strings/numbers
           const timestamp = dataPoint.date instanceof Date
             ? dataPoint.date.getTime()
-            : new Date(dataPoint.date).getTime();
+            : new Date(dataPoint.date!).getTime(); // Safe due to filter
 
           // Use a default volume if missing
-          const volume = dataPoint.volume ?? 1000000;
+          const volume = dataPoint.volume ?? 0;
 
           return [
             timestamp,
