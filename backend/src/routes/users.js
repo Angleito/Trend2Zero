@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const {
-    signup,
+    register,
     login,
     protect,
     forgotPassword,
@@ -22,7 +22,7 @@ const {
 } = require('../controllers/userController');
 
 // Public routes
-router.post('/signup', signup);
+router.post('/signup', register);
 router.post('/login', login);
 router.post('/forgot-password', forgotPassword);
 router.patch('/reset-password/:token', resetPassword);

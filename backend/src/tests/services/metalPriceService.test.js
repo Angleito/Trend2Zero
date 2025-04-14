@@ -1,5 +1,5 @@
 const axios = require('axios');
-const MetalPriceService = require('../../services/metalPriceService');
+const { MetalPriceService } = require('../../services/metalPriceService');
 const AppError = require('../../utils/appError');
 const cache = require('../../utils/cache');
 

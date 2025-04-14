@@ -7,6 +7,14 @@ export const testConfig = {
   baseDir: process.cwd(),
   testResultsDir: path.join(process.cwd(), 'test-results'),
 
+  // Server configuration
+  server: {
+    port: process.env.TEST_SERVER_PORT || '3001',
+    get baseUrl() {
+      return `http://localhost:${this.port}`;
+    }
+  },
+
   // MCP Configuration
   mcp: {
     url: process.env.MCP_SERVER_URL || 'http://localhost:8081',

@@ -1,6 +1,7 @@
 import { render, act, waitFor } from '@testing-library/react';
 import { useAuth, AuthProvider } from '../../hooks/useAuth';
 import React from 'react';
+import * as apiClientModule from '../../lib/api/apiClient';  // Import the module for mocking
 
 // Mock auth service
 jest.mock('../../lib/api/authService', () => ({
@@ -8,6 +9,12 @@ jest.mock('../../lib/api/authService', () => ({
     signup: jest.fn(),
     logout: jest.fn(),
     getCurrentUser: jest.fn()
+}));
+
+// Properly mock the apiClient module
+jest.mock('../../lib/api/apiClient', () => ({
+    ...jest.requireActual('../../lib/api/apiClient'),  // Retain original functions if needed
+    getAuthToken: jest.fn(() => 'mocked-token')  // Mock getAuthToken to return a string
 }));
 
 const TestComponent = ({ onMount }) => {
@@ -34,6 +41,8 @@ describe('useAuth', () => {
     beforeEach(() => {
         localStorage.clear();
         jest.clearAllMocks();
+        // Ensure the mock is reset
+        apiClientModule.getAuthToken.mockClear();
     });
 
     const mockCredentials = {
@@ -63,6 +72,7 @@ describe('useAuth', () => {
             expect(authData.login).toBeDefined();
             expect(authData.signup).toBeDefined();
             expect(authData.logout).toBeDefined();
+            expect(apiClientModule.getAuthToken).toHaveBeenCalled();  // Verify it's called
         });
     });
 

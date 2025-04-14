@@ -57,6 +57,24 @@ jest.mock('next/navigation', () => ({
   useSearchParams: jest.fn(() => new URLSearchParams()),
 }));
 
+jest.mock('./lib/api/apiClient', () => ({
+  interceptors: {
+    request: {
+      use: jest.fn(), // Mock the 'use' function
+    },
+    response: {
+      use: jest.fn(), // Also mock response interceptor
+    },
+  },
+  // Mock other methods if needed by any tests
+  get: jest.fn(),
+  post: jest.fn(),
+  put: jest.fn(),
+  delete: jest.fn(),
+  // Add mock for getAuthToken
+  getAuthToken: jest.fn(() => null), // Mock returns null (no token) by default
+}));
+
 // Mock ResizeObserver
 global.ResizeObserver = jest.fn().mockImplementation(() => ({
   observe: jest.fn(),

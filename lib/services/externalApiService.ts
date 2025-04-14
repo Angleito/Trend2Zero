@@ -46,7 +46,7 @@ export class ExternalApiService {
   }
 
   /**
-   * Fetch cryptocurrency data from CoinMarketCap
+   * Fetch cryptocurrency list from CoinMarketCap
    */
   async fetchCryptoList(page: number = 1, pageSize: number = 20): Promise<any> {
     try {
@@ -127,7 +127,134 @@ export class ExternalApiService {
     }
   }
 
-  // ... rest of the existing methods remain unchanged
-}
+  /**
+   * Fetch cryptocurrency prices
+   */
+  async fetchCryptoPrices(symbols: string[]): Promise<any> {
+    try {
+      await this.applyRateLimit();
 
-export default ExternalApiService;
+      if (this.useMockData) {
+        console.log('Using mock data for crypto prices');
+        return symbols.map(symbol => this.mockDataService.getMockAssetPrice(symbol));
+      }
+
+      if (!this.coinMarketCapApiKey) {
+        throw new Error('CoinMarketCap API key is missing');
+      }
+
+      const response = await axios.get('https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest', {
+        headers: {
+          'X-CMC_PRO_API_KEY': this.coinMarketCapApiKey
+        },
+        params: {
+          symbol: symbols.join(','),
+          convert: 'USD'
+        }
+      });
+
+      // Transform the response to match our expected format
+      const prices = symbols.map(symbol => {
+        const cryptoData = response.data.data[symbol]?.[0];
+        return {
+          symbol,
+          price: cryptoData?.quote?.USD?.price,
+          change: cryptoData?.quote?.USD?.percent_change_24h
+        };
+      });
+
+      return prices;
+    } catch (error) {
+      console.error('Error fetching crypto prices:', error);
+
+      if (this.useMockData) {
+        console.log('Falling back to mock data for crypto prices');
+        return symbols.map(symbol => this.mockDataService.getMockAssetPrice(symbol));
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch stock price
+   */
+  async fetchStockPrice(symbol: string): Promise<any> {
+    try {
+      await this.applyRateLimit();
+
+      if (this.useMockData) {
+        console.log('Using mock data for stock price');
+        return this.mockDataService.getMockAssetPrice(symbol);
+      }
+
+      if (!this.alphaVantageApiKey) {
+        throw new Error('Alpha Vantage API key is missing');
+      }
+
+      const response = await axios.get('https://www.alphavantage.co/query', {
+        params: {
+          function: 'GLOBAL_QUOTE',
+          symbol: symbol,
+          apikey: this.alphaVantageApiKey
+        }
+      });
+
+      const stockData = response.data['Global Quote'];
+      return {
+        symbol,
+        price: parseFloat(stockData['05. price']),
+        change: parseFloat(stockData['09. change'])
+      };
+    } catch (error) {
+      console.error('Error fetching stock price:', error);
+
+      if (this.useMockData) {
+        console.log('Falling back to mock data for stock price');
+        return this.mockDataService.getMockAssetPrice(symbol);
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch metal price
+   */
+  async fetchMetalPrice(metal: string): Promise<any> {
+    try {
+      await this.applyRateLimit();
+
+      if (this.useMockData) {
+        console.log('Using mock data for metal price');
+        return this.mockDataService.getMockAssetPrice(metal);
+      }
+
+      if (!this.metalPriceApiKey) {
+        throw new Error('Metal Price API key is missing');
+      }
+
+      const response = await axios.get('https://metals-api.com/api/latest', {
+        params: {
+          access_key: this.metalPriceApiKey,
+          base: 'USD',
+          symbols: metal
+        }
+      });
+
+      return {
+        symbol: metal,
+        price: response.data.rates[metal]
+      };
+    } catch (error) {
+      console.error('Error fetching metal price:', error);
+
+      if (this.useMockData) {
+        console.log('Falling back to mock data for metal price');
+        return this.mockDataService.getMockAssetPrice(metal);
+      }
+
+      throw error;
+    }
+  }
+}

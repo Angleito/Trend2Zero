@@ -2,8 +2,8 @@ import { FullConfig, chromium } from '@playwright/test';
 import { execSync } from 'child_process';
 import net from 'net';
 
-async function checkServerRunning(port: number, maxAttempts = 10): Promise<boolean> {
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+async function checkServerRunning(ports: number[]): Promise<number | null> {
+  for (const port of ports) {
     try {
       const socket = new net.Socket();
       const connection = await new Promise<boolean>((resolve, reject) => {
@@ -23,32 +23,33 @@ async function checkServerRunning(port: number, maxAttempts = 10): Promise<boole
         socket.connect(port, 'localhost');
       });
 
-      if (connection) return true;
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (connection) return port;
     } catch {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      continue;
     }
   }
-  return false;
+  return null;
 }
 
 async function globalSetup(config: FullConfig) {
-  console.log('Global setup: Starting development server...');
+  console.log('Global setup: Checking development server...');
   
-  // Check if server is already running
-  const isRunning = await checkServerRunning(3000);
-  if (!isRunning) {
+  // Check both ports 3000 and 3001
+  const runningPort = await checkServerRunning([3000, 3001]);
+  if (!runningPort) {
     // Start the development server in the background
     execSync('npm run dev &', { stdio: 'ignore' });
 
-    // Wait for server to be ready
-    const serverReady = await checkServerRunning(3000);
-    if (!serverReady) {
+    // Wait for server to be ready on either port
+    const serverPort = await checkServerRunning([3000, 3001]);
+    if (!serverPort) {
       throw new Error('Development server failed to start');
     }
   }
 
-  console.log('Development server is running');
+  // Set the port in process.env for tests to use
+  process.env.TEST_SERVER_PORT = String(runningPort);
+  console.log(`Development server is running on port ${runningPort}`);
 }
 
 export default globalSetup;

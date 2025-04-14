@@ -1,7 +1,4 @@
 const marketDataServiceModule = require('../../services/marketDataService');
-const AppError = require('../../utils/appError');
-const cache = require('../../utils/cache');
-const axios = require('axios');
 
 // Mock these modules
 jest.mock('../../utils/cache');

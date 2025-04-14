@@ -9,6 +9,7 @@
 import { useEffect, useState } from 'react';
 import Highcharts from 'highcharts/highstock';
 import HighchartsReact from 'highcharts-react-official';
+import marketDataService from '../lib/services/marketDataService';
 import { MarketDataService } from '../lib/services/marketDataService';
 import type { HistoricalDataPoint } from '../lib/types';
 

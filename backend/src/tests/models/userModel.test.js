@@ -1,18 +1,10 @@
 const mongoose = require('mongoose');
 const User = require('../../models/userModel');
-const { setupDatabase } = require('../setup');
 
 describe('User Model Test', () => {
-    let db;
     let testUser;
 
-    beforeAll(async () => {
-        db = await setupDatabase();
-    }, 30000);
-
     beforeEach(async () => {
-        await db.clearDatabase();
-        
         // Create a test user before each test
         testUser = await User.create({
             name: 'Test User',
@@ -21,10 +13,6 @@ describe('User Model Test', () => {
             passwordConfirm: 'password123'
         });
     }, 10000);
-
-    afterAll(async () => {
-        await db.disconnect();
-    }, 30000);
 
     // Test user creation
     it('should create & save user successfully', async () => {

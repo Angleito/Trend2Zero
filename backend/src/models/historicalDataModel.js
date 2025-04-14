@@ -37,11 +37,13 @@ const historicalDataSchema = new mongoose.Schema({
     required: true
   }
 }, {
-  timestamps: true,
-  indexes: [
-    { fields: { symbol: 1, date: -1 } },
-    { fields: { category: 1, date: -1 } }
-  ]
+  timestamps: true
 });
+
+// Define compound unique index for symbol and date
+historicalDataSchema.index({ symbol: 1, date: 1 }, { unique: true });
+
+// Optional: Index for category and date (if frequently queried together)
+// historicalDataSchema.index({ category: 1, date: -1 }); 
 
 module.exports = mongoose.model('HistoricalData', historicalDataSchema);

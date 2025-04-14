@@ -8,7 +8,7 @@
 
 import Link from 'next/link';
 import React, { useState, useEffect } from 'react';
-import { MarketDataService } from '../lib/services/marketDataService';
+import marketDataService from '../lib/services/marketDataService';
 import type { MarketAsset, AssetCategory } from '../lib/types';
 
 
@@ -43,7 +43,7 @@ const AssetPriceTable: React.FC<AssetPriceTableProps> = ({
         try {
           setLoading(true);
           setError(null);
-          const marketService = new MarketDataService();
+          const marketService = new marketDataService();
           
           // First try to fetch data with retries
           let retries = 3;

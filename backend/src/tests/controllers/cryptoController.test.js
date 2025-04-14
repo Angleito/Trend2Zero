@@ -1,15 +1,14 @@
 const request = require('supertest');
 const { getApp } = require('../setup');
-const { clearTestData } = require('../helpers/testDb');
 const coinMarketCapService = require('../../services/coinMarketCapService');
 
 jest.mock('../../services/coinMarketCapService');
 jest.setTimeout(30000); // Increase timeout for tests
 
 describe('Crypto Controller', () => {
-    beforeEach(async () => {
-        await clearTestData();
-        jest.clearAllMocks();
+    // Mock the service functions
+    beforeEach(() => {
+        jest.clearAllMocks(); // Clear mocks before each test
     });
 
     describe('GET /api/crypto/markets', () => {

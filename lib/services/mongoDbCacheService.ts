@@ -1,5 +1,5 @@
 import dbConnect, { ConnectionState } from '../db/mongodb';
-import { AssetPrice, HistoricalData, AssetList, CryptoDetection, IAssetPrice, IHistoricalData, IAssetList, ICryptoDetection } from '../db/models/assetCache';
+import { AssetPrice, HistoricalData, AssetList, CryptoDetection } from '../db/models/assetCache';
 import { AssetCategory, AssetData, HistoricalDataPoint, MarketAsset } from '../types';
 import mongoose from 'mongoose';
 

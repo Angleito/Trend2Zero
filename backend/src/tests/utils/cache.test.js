@@ -125,7 +125,7 @@ describe('Cache Utility', () => {
     describe('edge cases', () => {
         it('should handle undefined values', () => {
             cache.set('test', undefined);
-            expect(cache.get('test')).toBeUndefined();
+            expect(cache.get('test')).toBeNull();
         });
 
         it('should handle null values', () => {

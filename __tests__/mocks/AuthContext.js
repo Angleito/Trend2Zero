@@ -48,17 +48,35 @@ export const resetAuthMocks = () => {
 };
 
 // Minimal test to ensure mock works
+import { render, screen } from '@testing-library/react';
+
 describe('AuthContext Mock', () => {
-  it('should have a valid mock implementation', () => {
-    const { user, isAuthenticated, login, register, logout, error } = useAuth();
-    
-    expect(user).toBe(null);
-    expect(isAuthenticated).toBe(false);
-    expect(error).toBe(null);
-    expect(login).toBeInstanceOf(Function);
-    expect(register).toBeInstanceOf(Function);
-    expect(logout).toBeInstanceOf(Function);
-  });
+ it('should have a valid mock implementation', () => {
+   function TestComponent() {
+     const { user, isAuthenticated, login, register, logout, error } = useAuth();
+     return (
+       <div>
+         <span data-testid="user">{user}</span>
+         <span data-testid="isAuthenticated">{isAuthenticated ? 'true' : 'false'}</span>
+         <span data-testid="error">{error}</span>
+         <span data-testid="login">{typeof login}</span>
+         <span data-testid="register">{typeof register}</span>
+         <span data-testid="logout">{typeof logout}</span>
+       </div>
+     );
+   }
+   render(
+     <AuthProvider>
+       <TestComponent />
+     </AuthProvider>
+   );
+   expect(screen.getByTestId('user').textContent).toBe('');
+   expect(screen.getByTestId('isAuthenticated').textContent).toBe('false');
+   expect(screen.getByTestId('error').textContent).toBe('');
+   expect(screen.getByTestId('login').textContent).toBe('function');
+   expect(screen.getByTestId('register').textContent).toBe('function');
+   expect(screen.getByTestId('logout').textContent).toBe('function');
+ });
 });
 
 export { mockAuthState, mockAuthActions };

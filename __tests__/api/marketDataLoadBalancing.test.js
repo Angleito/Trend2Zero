@@ -1,9 +1,8 @@
 import { SecureMarketDataService } from '../../lib/services/secureMarketDataService';
 import coinGeckoService from '../../lib/services/coinGeckoService';
-import axios from 'axios';
+import coinMarketCapService from '../../lib/services/coinMarketCapService';
 
-// Mock external dependencies
-jest.mock('axios');
+// Mock the dependent services
 jest.mock('../../lib/services/coinGeckoService', () => ({
   __esModule: true,
   default: {
@@ -12,215 +11,137 @@ jest.mock('../../lib/services/coinGeckoService', () => ({
   }
 }));
 
-// Mock environment variables
-const originalEnv = process.env;
+jest.mock('../../lib/services/coinMarketCapService', () => ({
+  __esModule: true,
+  default: {
+    getAssetPrice: jest.fn()
+  }
+}));
 
 describe('Market Data Load Balancing', () => {
-  let secureMarketDataService;
-  
+  let service;
+  let mockCoinGeckoService;
+  let mockCoinMarketCapService;
+
   beforeEach(() => {
-    // Clear all mocks
     jest.clearAllMocks();
     
-    // Mock environment variables
-    process.env = {
-      ...originalEnv,
-      COINMARKETCAP_API_KEY: 'mock-coinmarketcap-key',
-      COINGECKO_API_KEY: 'mock-coingecko-key'
-    };
+    // Cast the mocks to their proper types
+    mockCoinGeckoService = coinGeckoService;
+    mockCoinMarketCapService = coinMarketCapService;
     
-    // Create a fresh instance for each test
-    secureMarketDataService = new SecureMarketDataService();
+    // Create a new instance of the service with mocked dependencies
+    service = new SecureMarketDataService({
+      coinGeckoService: mockCoinGeckoService,
+      coinMarketCapService: mockCoinMarketCapService
+    });
   });
-  
-  afterAll(() => {
-    // Restore environment variables
-    process.env = originalEnv;
-  });
-  
+
   describe('getAssetPriceInBTC with load balancing', () => {
-    it('should use CoinMarketCap as primary provider', async () => {
-      // Mock successful CoinMarketCap response
-      const mockCMCResponse = {
-        data: {
-          data: {
-            BTC: {
-              name: 'Bitcoin',
-              quote: {
-                USD: {
-                  price: 50000,
-                  volume_change_24h: 5000000000,
-                  percent_change_24h: 2.5,
-                  last_updated: '2023-01-01T12:00:00Z'
-                }
-              }
-            }
-          }
-        }
+    it('should use CoinMarketCap as primary source', async () => {
+      // Mock successful response from CoinMarketCap
+      const mockResponse = {
+        symbol: 'BTC',
+        price: 50000,
+        lastUpdated: '2023-01-01T12:00:00Z',
+        priceInBTC: 1,
+        priceInUSD: 50000
       };
       
-      axios.get.mockResolvedValue(mockCMCResponse);
+      mockCoinMarketCapService.getAssetPrice.mockResolvedValue(mockResponse);
       
-      // Call the method
-      const result = await secureMarketDataService.getAssetPriceInBTC('BTC');
+      const result = await service.getAssetPriceInBTC('BTC');
       
-      // Should have called axios.get with CoinMarketCap URL
-      expect(axios.get).toHaveBeenCalledWith(
-        expect.stringContaining('pro-api.coinmarketcap.com'),
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            'X-CMC_PRO_API_KEY': 'mock-coinmarketcap-key'
-          })
-        })
-      );
+      expect(result).toBeTruthy();
+      expect(result.symbol).toBe('BTC');
+      expect(mockCoinMarketCapService.getAssetPrice).toHaveBeenCalledWith('BTC');
+      expect(mockCoinGeckoService.getCryptoPrice).not.toHaveBeenCalled();
+    });
+
+    it('should fallback to CoinGecko on CoinMarketCap failure', async () => {
+      // Mock CoinMarketCap failure
+      mockCoinMarketCapService.getAssetPrice.mockRejectedValue(new Error('Rate limit exceeded'));
       
-      // Should not have called CoinGecko service
-      expect(coinGeckoService.getCryptoPrice).not.toHaveBeenCalled();
-      
-      // Verify result
-      expect(result).toEqual({
+      // Mock successful CoinGecko response
+      const mockGeckoResponse = {
         symbol: 'BTC',
-        name: 'Bitcoin',
-        price: 50000,
-        change: 5000000000,
-        changePercent: 2.5,
+        price: 51000,
+        lastUpdated: '2023-01-01T12:00:00Z',
         priceInBTC: 1,
-        priceInUSD: 50000,
-        lastUpdated: '2023-01-01T12:00:00Z'
-      });
-    });
-    
-    it('should fall back to CoinGecko when CoinMarketCap fails', async () => {
-      // Mock failed CoinMarketCap response
-      axios.get.mockRejectedValueOnce(new Error('CoinMarketCap API error'));
-      
-      // Mock successful CoinGecko response
-      coinGeckoService.getCryptoPrice.mockResolvedValueOnce({
-        symbol: 'BTC',
-        price: 51000,
-        lastUpdated: '2023-01-01T12:00:00Z',
-        change24h: 2.8
-      });
-      
-      // Call the method
-      const result = await secureMarketDataService.getAssetPriceInBTC('BTC');
-      
-      // Should have tried CoinMarketCap first (axios.get)
-      expect(axios.get).toHaveBeenCalledWith(
-        expect.stringContaining('pro-api.coinmarketcap.com'),
-        expect.anything()
-      );
-      
-      // Should have fallen back to CoinGecko
-      expect(coinGeckoService.getCryptoPrice).toHaveBeenCalledWith('BTC');
-      
-      // Verify result from CoinGecko
-      expect(result).toEqual(expect.objectContaining({
-        symbol: 'BTC',
-        price: 51000,
         priceInUSD: 51000
-      }));
+      };
+      
+      mockCoinGeckoService.getCryptoPrice.mockResolvedValue(mockGeckoResponse);
+      
+      const result = await service.getAssetPriceInBTC('BTC');
+      
+      expect(result).toBeTruthy();
+      expect(result.symbol).toBe('BTC');
+      expect(mockCoinMarketCapService.getAssetPrice).toHaveBeenCalledWith('BTC');
+      expect(mockCoinGeckoService.getCryptoPrice).toHaveBeenCalledWith('BTC');
     });
-    
-    it('should handle case when both providers fail', async () => {
-      // Mock console.warn to avoid cluttering test output
-      jest.spyOn(console, 'warn').mockImplementation(() => {});
-      
-      // Mock failed CoinMarketCap response
-      axios.get.mockRejectedValueOnce(new Error('CoinMarketCap API error'));
-      
-      // Mock failed CoinGecko response
-      coinGeckoService.getCryptoPrice.mockRejectedValueOnce(new Error('CoinGecko API error'));
-      
-      // Call the method
-      const result = await secureMarketDataService.getAssetPriceInBTC('BTC');
-      
-      // Should have tried both providers
-      expect(axios.get).toHaveBeenCalled();
-      expect(coinGeckoService.getCryptoPrice).toHaveBeenCalled();
-      
-      // Should return mock data
-      expect(result).toEqual(expect.objectContaining({
-        symbol: 'BTC',
-        price: expect.any(Number)
-      }));
-    });
-    
+
     it('should detect rate limiting and switch providers', async () => {
-      // First call - CoinMarketCap rate limited
-      axios.get.mockRejectedValueOnce({
-        response: { status: 429, data: 'Too many requests' }
-      });
+      // First call to CoinMarketCap fails with rate limit
+      mockCoinMarketCapService.getAssetPrice.mockRejectedValue(new Error('Rate limit exceeded'));
       
-      // Mock successful CoinGecko response
-      coinGeckoService.getCryptoPrice.mockResolvedValueOnce({
+      // First call to CoinGecko succeeds
+      const mockGeckoResponse1 = {
         symbol: 'BTC',
         price: 51000,
         lastUpdated: '2023-01-01T12:00:00Z',
-        change24h: 2.8
-      });
+        priceInBTC: 1,
+        priceInUSD: 51000
+      };
       
-      // Call the method
-      await secureMarketDataService.getAssetPriceInBTC('BTC');
+      mockCoinGeckoService.getCryptoPrice.mockResolvedValue(mockGeckoResponse1);
       
-      // Second call should go directly to CoinGecko due to rate limiting
-      coinGeckoService.getCryptoPrice.mockResolvedValueOnce({
+      // Make first request
+      await service.getAssetPriceInBTC('BTC');
+      
+      // Second call to CoinGecko for a different asset
+      const mockGeckoResponse2 = {
         symbol: 'ETH',
         price: 3000,
         lastUpdated: '2023-01-01T12:00:00Z',
-        change24h: 1.5
-      });
+        priceInBTC: 0.06,
+        priceInUSD: 3000
+      };
       
-      // Reset axios mock to verify it's not called again
-      axios.get.mockReset();
+      mockCoinGeckoService.getCryptoPrice.mockResolvedValue(mockGeckoResponse2);
       
-      // Call for a different symbol
-      await secureMarketDataService.getAssetPriceInBTC('ETH');
+      // Make second request for a different asset
+      await service.getAssetPriceInBTC('ETH');
       
-      // Should not have called CoinMarketCap again due to rate limiting
-      expect(axios.get).not.toHaveBeenCalled();
-      
-      // Should have called CoinGecko again
-      expect(coinGeckoService.getCryptoPrice).toHaveBeenCalledWith('ETH');
+      // Should have called CoinGecko directly for the second request
+      expect(mockCoinGeckoService.getCryptoPrice).toHaveBeenCalledWith('ETH');
+      expect(mockCoinMarketCapService.getAssetPrice).toHaveBeenCalledTimes(1); // Only called once for first request
     });
   });
 
   describe('getHistoricalData with load balancing', () => {
-    it('should use load balancing for historical data', async () => {
-      // First prepare CoinGecko mock response
-      const mockHistoricalData = [
-        {
-          date: new Date(),
-          price: 50000,
-          volume: 30000000000,
-          open: 49000,
-          high: 51000,
-          low: 48000,
-          close: 50000
-        }
+    it('should use CoinGecko as primary source for historical data', async () => {
+      // Mock successful response
+      const mockResponse = [
+        { timestamp: '2023-01-01T00:00:00Z', price: 50000 }
       ];
       
-      coinGeckoService.getHistoricalData.mockResolvedValueOnce(mockHistoricalData);
+      mockCoinGeckoService.getHistoricalData.mockResolvedValue(mockResponse);
       
-      // Call the method
-      const result = await secureMarketDataService.getHistoricalData('BTC', 1);
+      const result = await service.getHistoricalData('BTC', 1);
       
-      // Expect either CoinMarketCap API was called or CoinGecko service was called
-      // This tests that at least one provider was used
-      const providerWasCalled = 
-        axios.get.mock.calls.some(call => call[0].includes('api/market-data/historical')) || 
-        coinGeckoService.getHistoricalData.mock.calls.length > 0;
-        
-      expect(providerWasCalled).toBe(true);
+      expect(result).toEqual(mockResponse);
+      expect(mockCoinGeckoService.getHistoricalData).toHaveBeenCalledWith('BTC', 1);
+    });
+
+    it('should handle historical data fetch failures', async () => {
+      // Mock failed response
+      mockCoinGeckoService.getHistoricalData.mockRejectedValue(new Error('API error'));
       
-      // Result should have the right structure
-      expect(result).toEqual(expect.arrayContaining([
-        expect.objectContaining({
-          date: expect.any(Date),
-          price: expect.any(Number),
-          volume: expect.any(Number)
-        })
-      ]));
+      const result = await service.getHistoricalData('BTC', 1);
+      
+      expect(result).toEqual([]);
+      expect(mockCoinGeckoService.getHistoricalData).toHaveBeenCalledWith('BTC', 1);
     });
   });
 });

@@ -62,7 +62,7 @@ export function normalizeSymbol(symbol: string): string {
   
   // Remove common suffixes like -USD, -USDT, /USD, etc.
   return normalizedSymbol
-    .replace(/-USD$|-USDT$|-BTC$|\\/USD$|\\/USDT$|\\/BTC$/i, '')
+    .replace(/-USD$|-USDT$|-BTC$|\/USD$|\/USDT$|\/BTC$/i, '')
     .replace(/PERP$|PERPETUAL$/i, '')
     .trim();
 }

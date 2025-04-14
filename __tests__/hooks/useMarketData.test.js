@@ -3,6 +3,19 @@ import { useMarketData } from '../../hooks/useMarketData';
 import * as marketDataService from '../../lib/api/marketDataService';
 
 jest.mock('../../lib/api/marketDataService');
+// Add mock for apiClient to prevent interceptor errors
+jest.mock('../../lib/api/apiClient', () => ({
+  interceptors: {
+    request: {
+      use: jest.fn(), // Mock the 'use' function
+    },
+    response: {
+      use: jest.fn(), // Also mock response interceptor if needed
+    },
+  },
+  // Mock other apiClient methods if they were directly used (they aren't here)
+  get: jest.fn(), 
+}));
 
 describe('useMarketData', () => {
     beforeEach(() => {

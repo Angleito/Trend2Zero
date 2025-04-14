@@ -3,9 +3,22 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+// Type definitions for test results
+interface CryptoTestResults {
+  found: string[];
+  missing: string[];
+  unexpected?: string[];
+}
+
+interface DomTestResults {
+  found: Record<string, number>;
+  count: number;
+  symbols: string[];
+}
+
 // Create a __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// const __dirname = path.dirname(__filename);  // Commented out to avoid conflict
 
 test.describe('Cryptocurrency Detection Tests', () => {
   // List of top cryptocurrency symbols to verify
@@ -17,7 +30,7 @@ test.describe('Cryptocurrency Detection Tests', () => {
   ];
 
   // Track which symbols were found and which were missing
-  const results = {
+  const results: CryptoTestResults = {
     found: [],
     missing: [],
     unexpected: []
@@ -85,14 +98,21 @@ test.describe('Cryptocurrency Detection Tests', () => {
     }
 
     // Save results to file for debugging
+    // Ensure only valid properties are written to the file
+    const safeResults: CryptoTestResults = {
+      found: results.found,
+      missing: results.missing,
+      ...(results.unexpected && { unexpected: results.unexpected })
+    };
     fs.writeFileSync(
-      path.join(__dirname, 'crypto-detection-results.json'),
-      JSON.stringify(results, null, 2)
+      path.join(process.cwd(), 'crypto-detection-results.json'),  // Use process.cwd() instead
+      JSON.stringify(safeResults, null, 2)
     );
 
     // Assert that we found some cryptocurrencies (at least BTC should be there)
+    // Type guard to ensure results.found is not empty
     expect(results.found.length).toBeGreaterThan(0);
-    expect(results.found).toContain('BTC');
+    expect(results.found.includes('BTC')).toBeTruthy();
   });
 
   test('deep DOM search for crypto elements', async ({ page }) => {
@@ -115,7 +135,7 @@ test.describe('Cryptocurrency Detection Tests', () => {
     console.log('✅ Page fully loaded');
 
     // Initialize results object for DOM elements
-    const domResults = {
+    const domResults: DomTestResults = {
       found: {},
       count: 0,
       symbols: []
@@ -144,7 +164,7 @@ test.describe('Cryptocurrency Detection Tests', () => {
       
       if (uniqueElements.length > 0) {
         console.log(`✅ Found ${uniqueElements.length} elements for ${symbol}`);
-        domResults.found[symbol] = uniqueElements.length;
+        domResults.found[symbol as keyof typeof domResults.found] = uniqueElements.length;
         domResults.symbols.push(symbol);
         domResults.count++;
       } else {
@@ -153,9 +173,15 @@ test.describe('Cryptocurrency Detection Tests', () => {
     }
 
     // Save detailed results to file
+    // Ensure only valid properties are written to the file
+    const safeDomResults: DomTestResults = {
+      found: domResults.found,
+      count: domResults.count,
+      symbols: domResults.symbols
+    };
     fs.writeFileSync(
-      path.join(__dirname, 'crypto-dom-elements.json'),
-      JSON.stringify(domResults, null, 2)
+      path.join(process.cwd(), 'crypto-dom-elements.json'),  // Use process.cwd() instead
+      JSON.stringify(safeDomResults, null, 2)
     );
 
     // Output test summary
@@ -164,7 +190,8 @@ test.describe('Cryptocurrency Detection Tests', () => {
     console.log(`Cryptocurrencies found in DOM: ${domResults.symbols.join(', ')}`);
 
     // Assert that we found elements for at least one cryptocurrency
+    // Type guard to ensure domResults.count is greater than 0
     expect(domResults.count).toBeGreaterThan(0);
-    expect(domResults.symbols).toContain('BTC');
+    expect(domResults.symbols.includes('BTC')).toBeTruthy();
   });
 });

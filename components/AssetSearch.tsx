@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import Link from 'next/link';
-import { MarketDataService } from '../lib/services/marketDataService';
+import marketDataService from '../lib/services/marketDataService';
 import type { MarketAsset } from '../lib/types';
 
 interface AssetSearchProps {

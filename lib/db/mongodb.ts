@@ -15,8 +15,11 @@ interface CustomGlobal {
 
 // Extend the global object with our mongoose cache type
 declare global {
-  // eslint-disable-next-line no-var
-  var mongoose: MongooseCache | undefined;
+  namespace NodeJS {
+    interface Global {
+      mongoose?: MongooseCache;
+    }
+  }
 }
 
 // Connection states as constants
@@ -28,7 +31,7 @@ export const ConnectionState = {
 };
 
 // Ensure global is used to maintain a cached connection across hot reloads
-let cached: MongooseCache = (globalThis as CustomGlobal).mongoose ?? { conn: null, promise: null };
+const cached: MongooseCache = (globalThis as CustomGlobal).mongoose ?? { conn: null, promise: null };
 
 // Ensure global.mongoose is set
 (globalThis as CustomGlobal).mongoose = cached;

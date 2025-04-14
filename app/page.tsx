@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useMounted } from '../lib/hooks/useMounted';
 import { useMarketData } from '../lib/hooks/useMarketData';
@@ -11,17 +11,16 @@ import StickyHeader from '../components/StickyHeader';
 import AssetPriceTable from '../components/AssetPriceTable';
 import AssetSearch from '../components/AssetSearch';
 
+// Ensure marketService is properly imported if needed, but since it's in the hook, it should be handled there
+import marketService from '../lib/services/marketDataService';  // Add this if not already present, assuming this is the service
+
 export default function HomePage() {
-  // Use useMounted to prevent hydration mismatches
   const isMounted = useMounted({ delayMs: 300 });
   
-  // Memoize options to prevent unnecessary re-renders
   const options = useMemo(() => ({ limit: 10 }), []);
   
-  // Use market data hook with error handling
   const { assets: popularAssets, loading, error, refetch } = useMarketData(options);
 
-  // Render loading state or error state before content
   if (!isMounted || loading) {
     return (
       <div className="min-h-screen flex flex-col" data-testid="home-page-loading">
@@ -41,7 +40,6 @@ export default function HomePage() {
     );
   }
 
-  // Render error state if there's an error
   if (error) {
     return (
       <ErrorBoundary>
@@ -64,7 +62,6 @@ export default function HomePage() {
     );
   }
 
-  // Render main content
   return (
     <ErrorBoundary>
       <div className="min-h-screen flex flex-col" data-testid="home-page">
@@ -74,12 +71,10 @@ export default function HomePage() {
           <div className="container mx-auto max-w-6xl">
             <h1 className="text-3xl font-bold mb-8 text-center">Market Overview</h1>
             
-            {/* Search Component */}
             <div className="mb-8">
               <AssetSearch />
             </div>
 
-            {/* No Assets Found State */}
             {popularAssets.length === 0 && (
               <div 
                 className="text-center bg-gray-800 p-8 rounded-lg" 
@@ -94,7 +89,6 @@ export default function HomePage() {
               </div>
             )}
 
-            {/* Asset Table */}
             {popularAssets.length > 0 && (
               <AssetPriceTable
                 assets={popularAssets}

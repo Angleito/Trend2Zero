@@ -53,19 +53,24 @@ const AssetPriceConverter = ({ assetSymbol }: AssetPriceConverterProps) => {
 
   const calculateConversion = (): string => {
     if (!assetData) return '0';
+    
+    // Add null/undefined checks for required properties
+    const priceInBTC = assetData.priceInBTC ?? 0;
+    const priceInUSD = assetData.priceInUSD ?? 0;
 
     if (conversionType === 'toBTC') {
       // Convert asset to BTC
-      const btcValue = amount * assetData.priceInBTC;
+      const btcValue = amount * priceInBTC;
       return formatBTC(btcValue);
     } else {
       // Convert BTC to asset
-      const assetValue = amount / assetData.priceInBTC;
-      return formatUSD(assetValue * assetData.priceInUSD);
+      const assetValue = amount / priceInBTC;
+      return formatUSD(assetValue * priceInUSD);
     }
   };
 
-  const formatBTC = (value: number): string => {
+  const formatBTC = (value?: number): string => {
+    if (value === undefined) return '0 ₿';
     if (value >= 1) {
       return `${value.toFixed(8)} ₿`;
     } else if (value >= 0.0001) {
@@ -75,7 +80,8 @@ const AssetPriceConverter = ({ assetSymbol }: AssetPriceConverterProps) => {
     }
   };
 
-  const formatUSD = (value: number): string => {
+  const formatUSD = (value?: number): string => {
+    if (value === undefined) return '$0.00';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
@@ -119,11 +125,11 @@ const AssetPriceConverter = ({ assetSymbol }: AssetPriceConverterProps) => {
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
           <span className="text-gray-400">Current Price:</span>
-          <span className="text-white font-medium">{formatBTC(assetData.priceInBTC)}</span>
+          <span className="text-white font-medium">{formatBTC(assetData?.priceInBTC)}</span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-gray-400">USD Price:</span>
-          <span className="text-white font-medium">{formatUSD(assetData.priceInUSD)}</span>
+          <span className="text-white font-medium">{formatUSD(assetData?.priceInUSD)}</span>
         </div>
       </div>
 

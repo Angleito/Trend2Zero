@@ -1,6 +1,5 @@
 const request = require('supertest');
 const { getApp } = require('../setup');
-const { clearTestData } = require('../helpers/testDb');
 const marketDataService = require('../../services/marketDataService');
 
 jest.setTimeout(30000); // Increase timeout for all tests
@@ -9,8 +8,7 @@ jest.mock('../../services/marketDataService');
 describe('Market Data Controller Tests', () => {
     const baseUrl = '/api/market-data';
 
-    beforeEach(async () => {
-        await clearTestData();
+    beforeEach(() => {
         jest.clearAllMocks();
     });
 

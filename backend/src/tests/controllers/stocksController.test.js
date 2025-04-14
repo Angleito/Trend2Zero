@@ -1,23 +1,13 @@
 const request = require('supertest');
-const { setupDatabase } = require('../setup');
-const { createTestServer, closeTestServers, getTestUrl } = require('../testUtils');
+const { createTestServer } = require('../testUtils');
 
 describe('Stocks Controller', () => {
-    let db;
     let testServer;
 
-    beforeAll(async () => {
-        db = await setupDatabase();
-        testServer = await createTestServer();
-    });
-
     beforeEach(async () => {
-        await db.clearDatabase();
-    });
-
-    afterAll(async () => {
-        await db.disconnect();
-        await closeTestServers();
+        if (!testServer) {
+            testServer = await createTestServer();
+        }
     });
 
     describe('GET /api/stocks', () => {

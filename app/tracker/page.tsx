@@ -23,7 +23,7 @@ export default function TrackerPage() {
   const categories: AssetCategory[] = ['stocks', 'indices', 'cryptocurrency', 'metals'];
 
   const marketData = useMarketData({
-    type: selectedCategory,
+    type: selectedCategory ?? undefined, // Explicitly handle null case
     limit: 50
   });
 
@@ -47,13 +47,6 @@ export default function TrackerPage() {
       <main className="flex-grow p-6">
         <div className="container mx-auto max-w-6xl">
           <h1 className="text-3xl font-bold mb-8 text-center">Asset Tracker</h1>
-
-          {/* CRITICAL FOR TESTS: Plain text crypto symbols to ensure text detection works */}
-          <div style={{ marginBottom: '20px' }} aria-hidden="true">
-            {TOP_CRYPTOCURRENCIES.map(symbol => (
-              <span key={`plain-${symbol}`} style={{ marginRight: '8px' }}>{symbol}</span>
-            ))}
-          </div>
 
           {/* Mock Data Warning */}
           {mockDataWarning && (
@@ -97,16 +90,6 @@ export default function TrackerPage() {
             </div>
           )}
 
-          {/* DEDICATED TEST DETECTION SECTION - Always visible regardless of loading state */}
-          <div id="crypto-test-detection" style={{ padding: '10px', margin: '10px 0' }}>
-            <h3>Cryptocurrency Symbols for Test Detection</h3>
-            {TOP_CRYPTOCURRENCIES.map(symbol => (
-              <div key={`test-${symbol}`} data-testid={`crypto-symbol-${symbol.toLowerCase()}`} style={{ display: 'inline-block', margin: '5px', padding: '3px 8px', background: '#333', borderRadius: '3px' }}>
-                {symbol}
-              </div>
-            ))}
-          </div>
-
           {/* Main Content */}
           {!marketData.loading && !marketData.error && (
             <>
@@ -136,7 +119,7 @@ export default function TrackerPage() {
               </div>
 
               {/* No Assets Found State */}
-              {marketData.popularAssets.length === 0 && (
+              {!marketData.popularAssets || marketData.popularAssets.length === 0 && (
                 <div className="text-center bg-gray-800 p-8 rounded-lg mt-8" data-testid="no-assets-message">
                   <p className="text-xl text-gray-300 mb-4">
                     No assets found for the selected category: {selectedCategory || 'All'}
@@ -148,7 +131,7 @@ export default function TrackerPage() {
               )}
 
               {/* Asset Table - Only render if assets exist */}
-              {marketData.popularAssets.length > 0 && (
+              {marketData.popularAssets && marketData.popularAssets.length > 0 && (
                 <AssetPriceTable
                   assets={marketData.popularAssets}
                   showCategory={selectedCategory === null}

@@ -1,5 +1,9 @@
+if (typeof setImmediate === 'undefined') {
+  global.setImmediate = (fn, ...args) => setTimeout(fn, 0, ...args);
+}
+
 const axios = require('axios');
-const CoinMarketCapService = require('../../services/coinMarketCapService');
+const coinMarketCapService = require('../../services/coinMarketCapService');
 const AppError = require('../../utils/appError');
 const cache = require('../../utils/cache');
 
@@ -7,12 +11,10 @@ jest.mock('axios');
 jest.mock('../../utils/cache');
 
 describe('CoinMarketCap Service', () => {
-    let coinMarketCapService;
     const mockApiKey = 'test-api-key';
 
     beforeEach(() => {
         jest.clearAllMocks();
-        coinMarketCapService = new CoinMarketCapService(mockApiKey);
         cache.get.mockReturnValue(null);
     });
 

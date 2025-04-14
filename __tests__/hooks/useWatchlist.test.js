@@ -3,10 +3,16 @@ import { useWatchlist } from '../../lib/hooks/useWatchlist';
 import * as watchlistService from '../../lib/api/watchlistService';
 import { useAuth } from '../../lib/hooks/useAuth';
 
-// Mock the watchlist service
+// Mock the necessary modules
 jest.mock('../../lib/api/watchlistService');
+jest.mock('../../lib/api/apiClient', () => ({
+  interceptors: {
+    request: {
+      use: jest.fn()
+    }
+  }
+}));
 
-// Mock the auth hook
 jest.mock('../../lib/hooks/useAuth', () => ({
   useAuth: jest.fn()
 }));
@@ -27,13 +33,10 @@ describe('useWatchlist Hook', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
-    // Default mock implementations
     useAuth.mockReturnValue({
       user: { _id: '123' },
       isAuthenticated: true
     });
-    
     watchlistService.getWatchlist.mockResolvedValue({
       data: { watchlist: mockWatchlist }
     });

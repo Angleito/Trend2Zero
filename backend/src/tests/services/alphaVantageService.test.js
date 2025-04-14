@@ -2,9 +2,11 @@ const axios = require('axios');
 const AlphaVantageService = require('../../services/alphaVantageService');
 const AppError = require('../../utils/appError');
 const cache = require('../../utils/cache');
+const logger = require('../../utils/logger');
 
 jest.mock('axios');
 jest.mock('../../utils/cache');
+jest.mock('../../utils/logger');
 
 describe('AlphaVantageService', () => {
     let alphaVantageService;

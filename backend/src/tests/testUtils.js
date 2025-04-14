@@ -45,7 +45,7 @@ const createTestServer = async () => {
     app.use('/api/crypto', cryptoRoutes);
 
     // Error handling middleware
-    app.use((err, req, res, next) => {
+    app.use((err, req, res, _next) => {
         logger.error('Error:', err);
         res.status(err.statusCode || 500).json({
             status: err.status || 'error',
@@ -55,7 +55,7 @@ const createTestServer = async () => {
 
     const server = app.listen(0); // Random port
     testServers.push(server);
-    return server;
+    return { app, server }; // Return both app and server instances
 };
 
 /**

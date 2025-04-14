@@ -1,4 +1,4 @@
-imthport mongoose from 'mongoose';
+import mongoose from 'mongoose';
 import logger from '../../utils/logger';
 
 export const setupTestDatabase = async () => {

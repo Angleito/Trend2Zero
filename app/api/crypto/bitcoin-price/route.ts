@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
+import { AssetPrice, ErrorResponse } from '@/lib/types';
 
 // Fallback Bitcoin price data for static generation
-const FALLBACK_BITCOIN_PRICE = {
+const FALLBACK_BITCOIN_PRICE: AssetPrice = {
   symbol: 'BTC',
   price: 67890.12,
   change: 1234.56,
@@ -12,19 +13,24 @@ const FALLBACK_BITCOIN_PRICE = {
   lastUpdated: new Date().toISOString()
 };
 
-// Inline implementation of getAssetPrice
-async function getAssetPrice(symbol) {
+// Inline implementation of getAssetPrice with explicit typing
+async function getAssetPrice(symbol: string): Promise<AssetPrice> {
   try {
     // First try to call our own API
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
     
     if (apiUrl) {
       const response = await axios.get(`${apiUrl}/market-data/price/${symbol}`);
-      return response.data;
+      return response.data as AssetPrice;
     }
     
     // If no API URL, fall back to CoinGecko directly
-    const cgResponse = await axios.get(
+    const cgResponse = await axios.get<{
+      bitcoin?: {
+        usd: number;
+        usd_24h_change?: number;
+      }
+    }>(
       `https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true`
     );
     
@@ -63,7 +69,7 @@ export async function GET() {
         JSON.stringify({
           error: 'All providers are rate-limited or unavailable. No Bitcoin price data available.',
           ...FALLBACK_BITCOIN_PRICE
-        }),
+        } as ErrorResponse),
         { status: 503, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -73,7 +79,7 @@ export async function GET() {
       JSON.stringify({
         ...FALLBACK_BITCOIN_PRICE,
         error: error instanceof Error ? error.message : String(error)
-      }),
+      } as ErrorResponse),
       { status: 503, headers: { 'Content-Type': 'application/json' } }
     );
   }

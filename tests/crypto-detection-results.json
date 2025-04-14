@@ -1,5 +1,7 @@
 {
-  "found": [],
+  "found": [
+    "FIL"
+  ],
   "missing": [
     "BTC",
     "ETH",
@@ -21,7 +23,6 @@
     "LTC",
     "ATOM",
     "XMR",
-    "FIL",
     "ALGO",
     "ICP",
     "SUI",

@@ -1,89 +1,72 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import * as authService from '../lib/api/authService';
+import { createContext, useContext, useState, useCallback } from 'react';
+import authService from '../lib/api/authService';
+import { setAuthToken, getAuthToken } from '../lib/api/apiClient';
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
-export function AuthProvider({ children }) {
+export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        const storedUser = localStorage.getItem('user');
-        if (token && storedUser) {
-            setUser(JSON.parse(storedUser));
+    const signup = useCallback(async (userData) => {
+        try {
+            setError(null);
+            setLoading(true);
+            const response = await authService.signup(userData);
+            if (response?.token) {
+                setAuthToken(response.token);
+                setUser(response.user);
+            }
+            return response;
+        } catch (err) {
+            setError(err.message);
+            throw err;
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     }, []);
 
-    const login = async (credentials) => {
+    const login = useCallback(async (credentials) => {
         try {
             setError(null);
-            const { user: userData, token } = await authService.login(credentials);
-            localStorage.setItem('token', token);
-            localStorage.setItem('user', JSON.stringify(userData));
-            setUser(userData);
+            setLoading(true);
+            const response = await authService.login(credentials);
+            if (response?.token) {
+                setAuthToken(response.token);
+                setUser(response.user);
+            }
+            return response;
         } catch (err) {
             setError(err.message);
             throw err;
+        } finally {
+            setLoading(false);
         }
-    };
+    }, []);
 
-    const signup = async (userData) => {
-        try {
-            setError(null);
-            const newUser = await authService.signup(userData);
-            const { token } = await authService.login({
-                email: userData.email,
-                password: userData.password
-            });
-            localStorage.setItem('token', token);
-            localStorage.setItem('user', JSON.stringify(newUser));
-            setUser(newUser);
-        } catch (err) {
-            setError(err.message);
-            throw err;
-        }
-    };
-
-    const logout = async () => {
-        try {
-            await authService.logout();
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            setUser(null);
-        } catch (err) {
-            setError(err.message);
-            throw err;
-        }
-    };
-
-    const clearError = () => {
-        setError(null);
-    };
+    const logout = useCallback(() => {
+        setAuthToken(null);
+        setUser(null);
+    }, []);
 
     const value = {
         user,
-        error,
         loading,
-        login,
+        error,
         signup,
+        login,
         logout,
-        clearError
+        isAuthenticated: !!getAuthToken()
     };
 
-    return (
-        <AuthContext.Provider value={value}>
-            {children}
-        </AuthContext.Provider>
-    );
-}
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
 
-export function useAuth() {
+export const useAuth = () => {
     const context = useContext(AuthContext);
     if (context === undefined) {
         throw new Error('useAuth must be used within an AuthProvider');
     }
     return context;
-}
+};

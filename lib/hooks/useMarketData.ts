@@ -1,27 +1,41 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import * as marketDataService from '../api/marketDataService';
+import { MarketDataService } from '../services/marketDataService';
 import { 
   MarketData, 
   MarketDataOptions, 
   createDefaultAsset, 
-  HistoricalDataPoint, 
-  AssetData,
   MarketAsset,
   AssetPrice,
-  AssetCategory
+  AssetCategory,
+  HistoricalDataPoint,
+  parseAssetCategory
 } from '../types';
 import MongoDbCacheService from '../services/mongoDbCacheService';
 
-// Type guard to check if data is FallbackData
-function isFallbackData(data: any): data is { data: any, isCached: boolean } {
-  return data && typeof data === 'object' && 'data' in data && 'isCached' in data;
-}
+// Create a single instance of MarketDataService
+const marketDataService = new MarketDataService();
 
 // Initialize MongoDB cache service lazily
 let mongoDbCache: MongoDbCacheService | null = null;
 if (typeof window !== 'undefined') {
   mongoDbCache = new MongoDbCacheService();
   console.log('[useMarketData] Initialized MongoDB cache on client-side');
+}
+
+// Type guard to check if data is FallbackData
+function isFallbackData<T>(data: unknown): data is { data: T, isCached: boolean } {
+  return data !== null && 
+         typeof data === 'object' && 
+         'data' in data && 
+         'isCached' in data;
+}
+
+// Helper function to safely extract data
+function extractData<T>(data: unknown, defaultValue: T): T {
+  if (isFallbackData<T>(data)) {
+    return data.data;
+  }
+  return data as T || defaultValue;
 }
 
 export function useMarketData(options: MarketDataOptions = {}): MarketData {
@@ -34,32 +48,18 @@ export function useMarketData(options: MarketDataOptions = {}): MarketData {
     limit = 10
   } = options;
 
-  const [marketData, setMarketData] = useState<MarketData>({
-    asset: null,
-    price: null,
-    historicalData: null,
-    popularAssets: [],
-    searchResults: [],
-    loading: true,
-    error: null,
-    refetch: () => {},
-    assets: [] // Added to match the usage in page.tsx
-  });
-
   // Memoize options to prevent unnecessary re-renders
   const memoizedOptions = useMemo(() => ({
     symbol,
-    type,
+    type: type ? parseAssetCategory(type) : undefined,
     searchQuery,
     limit
   }), [symbol, type, searchQuery, limit]);
 
-  /**
-   * Safe execute MongoDB operations with SSR handling
-   */
+  // Safe execute MongoDB operations with SSR handling
   const safeExecuteMongo = async <T,>(
     operation: () => Promise<T>,
-    fallbackData?: any
+    fallbackData?: T
   ): Promise<T | null> => {
     if (typeof window === 'undefined') {
       console.log('[useMarketData] Skipping MongoDB operation on server-side');
@@ -79,26 +79,41 @@ export function useMarketData(options: MarketDataOptions = {}): MarketData {
     }
   };
 
-  /**
-   * Fetch historical data with MongoDB caching integration
-   */
+  // State initialization with explicit typing
+  const [marketData, setMarketData] = useState<MarketData>({
+    price: null,
+    historicalData: null,
+    popularAssets: [],
+    searchResults: [],
+    loading: true,
+    error: null,
+    assets: [],
+    refetch: () => Promise.resolve()
+  });
+
+  // Fetch historical data with MongoDB caching integration
   const fetchHistoricalData = useCallback(async (assetSymbol: string, days: number = 30) => {
     console.log(`[useMarketData] Fetching historical data for ${assetSymbol} over ${days} days`);
     
     try {
-      setMarketData(prev => ({ ...prev, loading: true, error: null }));
+      setMarketData(prev => ({ 
+        ...prev, 
+        loading: true, 
+        error: null 
+      }));
       
       const cachedHistoricalData = await safeExecuteMongo(
         async () => mongoDbCache?.getCachedHistoricalData(assetSymbol, days),
         null
       );
       
-      if (cachedHistoricalData) {
-        console.log(`[useMarketData] Using cached historical data for ${assetSymbol}`);
-        const historicalData = isFallbackData(cachedHistoricalData) 
-          ? cachedHistoricalData.data 
-          : cachedHistoricalData;
+      const historicalData = extractData<HistoricalDataPoint[]>(
+        cachedHistoricalData, 
+        []
+      );
 
+      if (historicalData.length > 0) {
+        console.log(`[useMarketData] Using cached historical data for ${assetSymbol}`);
         setMarketData(prev => ({
           ...prev,
           historicalData,
@@ -107,7 +122,7 @@ export function useMarketData(options: MarketDataOptions = {}): MarketData {
         return;
       }
       
-      const response = await marketDataService.getAssetHistory(assetSymbol, { days });
+      const response = await marketDataService.getHistoricalData(assetSymbol, days);
       
       if (response) {
         if (mongoDbCache) {
@@ -120,19 +135,18 @@ export function useMarketData(options: MarketDataOptions = {}): MarketData {
           loading: false
         }));
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch historical data';
       console.error(`[useMarketData] Error fetching historical data for ${assetSymbol}:`, err);
       setMarketData(prev => ({
         ...prev,
         loading: false,
-        error: err.message || 'Failed to fetch historical data'
+        error: errorMessage
       }));
     }
   }, []);
 
-  /**
-   * Search for assets with MongoDB caching integration
-   */
+  // Search for assets with MongoDB caching integration
   const searchAssets = useCallback(async (query: string) => {
     if (!query || query.trim() === '') {
       setMarketData(prev => ({
@@ -151,55 +165,59 @@ export function useMarketData(options: MarketDataOptions = {}): MarketData {
         null
       );
       
-      if (cachedSearchResults) {
-        const searchResults = isFallbackData(cachedSearchResults) 
-          ? cachedSearchResults.data 
-          : cachedSearchResults;
+      const searchResults = extractData<MarketAsset[]>(
+        cachedSearchResults, 
+        []
+      );
 
+      if (searchResults.length > 0) {
         setMarketData(prev => ({
           ...prev,
-          searchResults: searchResults || [],
-          assets: searchResults || [], // Added to match the usage in page.tsx
+          searchResults,
+          assets: searchResults,
           loading: false
         }));
         return;
       }
       
-      const response = await marketDataService.searchAssets(query, 'cryptocurrency', memoizedOptions.limit);
+      const response = await marketDataService.listAvailableAssets({
+        keywords: query,
+        category: 'cryptocurrency',
+        pageSize: memoizedOptions.limit
+      });
       
-      if (response?.assets) {
+      if (response) {
         if (mongoDbCache) {
           await mongoDbCache.cacheAssetList(
             `search-${query.toLowerCase()}`, 
             1, 
             memoizedOptions.limit, 
             {
-              data: response.assets,
-              pagination: response.total ? { totalItems: response.total } : {}
+              data: response,
+              pagination: { totalItems: response.length }
             }
           );
         }
         
         setMarketData(prev => ({
           ...prev,
-          searchResults: response.assets,
+          searchResults: response,
           loading: false
         }));
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to search for assets';
       console.error(`[useMarketData] Error searching for assets:`, err);
       setMarketData(prev => ({
         ...prev,
         loading: false,
-        error: err.message || 'Failed to search for assets',
-        assets: [] // Ensure assets is reset on error
+        error: errorMessage,
+        assets: []
       }));
     }
   }, [memoizedOptions.limit]);
 
-  /**
-   * Fetch asset details by symbol with MongoDB caching
-   */
+  // Fetch asset details by symbol with MongoDB caching
   const fetchAssetBySymbol = useCallback(async (assetSymbol: string) => {
     if (!assetSymbol) return;
     
@@ -211,29 +229,29 @@ export function useMarketData(options: MarketDataOptions = {}): MarketData {
         null
       );
       
-      let price: AssetPrice | null = null;
+      const price = extractData<AssetPrice>(
+        cachedPrice, 
+        { 
+          symbol: assetSymbol, 
+          price: 0,
+          change: 0,
+          changePercent: 0,
+          priceInBTC: undefined,
+          priceInUSD: undefined,
+          lastUpdated: undefined,
+          type: 'cryptocurrency' as AssetCategory
+        }
+      );
+      
       let asset = null;
       
-      if (cachedPrice) {
-        price = isFallbackData(cachedPrice) ? cachedPrice.data : cachedPrice;
-      } else {
+      if (!price.price) {
         try {
-          const priceResponse = await marketDataService.getAssetPrice(assetSymbol);
+          const priceResponse = await marketDataService.getAssetPriceInBTC(assetSymbol);
           if (priceResponse) {
-            price = priceResponse as AssetPrice;
+            Object.assign(price, priceResponse);
             if (mongoDbCache) {
-              await mongoDbCache.cacheAssetPrice(assetSymbol, {
-                id: assetSymbol,
-                symbol: assetSymbol,
-                name: assetSymbol,
-                type: 'cryptocurrency' as AssetCategory,
-                price: price.price,
-                change: price.change,
-                changePercent: price.changePercent,
-                priceInBTC: price.priceInBTC,
-                priceInUSD: price.priceInUSD,
-                lastUpdated: price.lastUpdated
-              });
+              await mongoDbCache.cacheAssetPrice(assetSymbol, price);
             }
           }
         } catch (err) {
@@ -242,59 +260,65 @@ export function useMarketData(options: MarketDataOptions = {}): MarketData {
       }
       
       try {
-        const response = await marketDataService.getAssetBySymbol(assetSymbol);
-        asset = response || null;
+        const response = await marketDataService.listAvailableAssets({ keywords: assetSymbol });
+        asset = response.length > 0 ? response[0] : null;
       } catch (err) {
         console.error(`[useMarketData] Error fetching details for ${assetSymbol}:`, err);
       }
       
       setMarketData(prev => ({
         ...prev,
-        asset: asset ? createDefaultAsset(asset) : null,
+        asset: asset ? createDefaultAsset(asset.symbol) : null,
         price: price?.price || null,
         loading: false,
         error: !asset && !price ? `Failed to fetch data for ${assetSymbol}` : null
       }));
       
       if (asset || price) {
-        fetchHistoricalData(assetSymbol);
+        await fetchHistoricalData(assetSymbol);
       }
       
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error 
+        ? err.message 
+        : `Failed to fetch data for ${assetSymbol}`;
+      
       console.error(`[useMarketData] Error fetching asset by symbol ${assetSymbol}:`, err);
       setMarketData(prev => ({
         ...prev,
         loading: false,
-        error: err.message || `Failed to fetch data for ${assetSymbol}`
+        error: errorMessage
       }));
     }
   }, [fetchHistoricalData]);
 
+  // Fetch market data with caching
   const fetchMarketData = useCallback(async () => {
     try {
       setMarketData(prev => ({ ...prev, loading: true, error: null }));
-
-      let popularAssets: MarketAsset[] = [];
-      let typeAssets: MarketAsset[] = [];
 
       const cachedPopularAssets = await safeExecuteMongo(
         async () => mongoDbCache?.getCachedAssetList('popular', 1, memoizedOptions.limit),
         null
       );
       
-      if (cachedPopularAssets) {
-        popularAssets = isFallbackData(cachedPopularAssets) 
-          ? cachedPopularAssets.data 
-          : cachedPopularAssets;
-      } else {
+      const popularAssets = extractData<MarketAsset[]>(
+        cachedPopularAssets, 
+        []
+      );
+
+      if (popularAssets.length === 0) {
         try {
-          const response = await marketDataService.getPopularAssets(memoizedOptions.limit);
-          popularAssets = response.assets || [];
+          const response = await marketDataService.listAvailableAssets({
+            category: 'cryptocurrency', 
+            pageSize: memoizedOptions.limit
+          });
+          popularAssets.push(...(response || []));
           
-          if (mongoDbCache && response.assets) {
+          if (mongoDbCache && response) {
             await mongoDbCache.cacheAssetList('popular', 1, memoizedOptions.limit, {
               data: popularAssets,
-              pagination: response.total ? { totalItems: response.total } : {}
+              pagination: { totalItems: response.length }
             });
           }
         } catch (err) {
@@ -302,6 +326,7 @@ export function useMarketData(options: MarketDataOptions = {}): MarketData {
         }
       }
 
+      let typeAssets: MarketAsset[] = [];
       if (memoizedOptions.type) {
         const cachedTypeAssets = await safeExecuteMongo(
           async () => mongoDbCache?.getCachedAssetList(
@@ -312,26 +337,27 @@ export function useMarketData(options: MarketDataOptions = {}): MarketData {
           null
         );
         
-        if (cachedTypeAssets) {
-          typeAssets = isFallbackData(cachedTypeAssets) 
-            ? cachedTypeAssets.data 
-            : cachedTypeAssets;
-        } else {
+        typeAssets = extractData<MarketAsset[]>(
+          cachedTypeAssets, 
+          []
+        );
+
+        if (typeAssets.length === 0) {
           try {
-            const response = await marketDataService.getAssetsByType(
-              memoizedOptions.type, 
-              memoizedOptions.limit
-            );
-            typeAssets = response.assets || [];
+            const response = await marketDataService.listAvailableAssets({
+              category: memoizedOptions.type, 
+              pageSize: memoizedOptions.limit
+            });
+            typeAssets.push(...(response || []));
             
-            if (mongoDbCache && response.assets) {
+            if (mongoDbCache && response) {
               await mongoDbCache.cacheAssetList(
                 memoizedOptions.type, 
                 1, 
                 memoizedOptions.limit, 
                 {
                   data: typeAssets,
-                  pagination: response.total ? { totalItems: response.total } : {}
+                  pagination: { totalItems: response.length }
                 }
               );
             }
@@ -345,34 +371,34 @@ export function useMarketData(options: MarketDataOptions = {}): MarketData {
       const defaultSymbol = assets.length > 0 ? assets[0].symbol : null;
 
       if (defaultSymbol) {
-        let asset = null;
-        let price: AssetPrice | null = null;
-        
         const cachedPrice = await safeExecuteMongo(
           async () => mongoDbCache?.getCachedAssetPrice(defaultSymbol),
           null
         );
         
-        if (cachedPrice) {
-          price = isFallbackData(cachedPrice) ? cachedPrice.data : cachedPrice;
-        } else {
+        const price = extractData<AssetPrice>(
+          cachedPrice, 
+          { 
+            symbol: defaultSymbol, 
+            price: 0,
+            change: 0,
+            changePercent: 0,
+            priceInBTC: undefined,
+            priceInUSD: undefined,
+            lastUpdated: undefined,
+            type: 'cryptocurrency' as AssetCategory
+          }
+        );
+        
+        let asset = null;
+        
+        if (!price.price) {
           try {
-            const response = await marketDataService.getAssetPrice(defaultSymbol);
+            const response = await marketDataService.getAssetPriceInBTC(defaultSymbol);
             if (response) {
-              price = response as AssetPrice;
+              Object.assign(price, response);
               if (mongoDbCache) {
-                await mongoDbCache.cacheAssetPrice(defaultSymbol, {
-                  id: defaultSymbol,
-                  symbol: defaultSymbol,
-                  name: defaultSymbol,
-                  type: 'cryptocurrency' as AssetCategory,
-                  price: price.price,
-                  change: price.change,
-                  changePercent: price.changePercent,
-                  priceInBTC: price.priceInBTC,
-                  priceInUSD: price.priceInUSD,
-                  lastUpdated: price.lastUpdated
-                });
+                await mongoDbCache.cacheAssetPrice(defaultSymbol, price);
               }
             }
           } catch (err) {
@@ -381,42 +407,46 @@ export function useMarketData(options: MarketDataOptions = {}): MarketData {
         }
         
         try {
-          const response = await marketDataService.getAssetBySymbol(defaultSymbol);
-          asset = response || null;
+          const response = await marketDataService.listAvailableAssets({ keywords: defaultSymbol });
+          asset = response.length > 0 ? response[0] : null;
         } catch (err) {
           console.error('[useMarketData] Default asset fetch error:', err);
         }
 
         setMarketData(prev => ({
           ...prev,
-          asset: asset ? createDefaultAsset(asset) : null,
+          asset: asset ? createDefaultAsset(asset.symbol) : null,
           price: price?.price || null,
           popularAssets: assets || [],
-          assets: assets || [], // Added to match the usage in page.tsx
+          assets: assets || [],
           loading: false,
           error: !asset && !price ? 'Failed to fetch asset data' : null
         }));
         
         if (asset || price) {
-          fetchHistoricalData(defaultSymbol);
+          await fetchHistoricalData(defaultSymbol);
         }
       } else {
         setMarketData(prev => ({
           ...prev,
           popularAssets: assets || [],
-          assets: assets || [], // Ensure assets is synchronized with popularAssets
+          assets: assets || [],
           loading: false,
           error: null
         }));
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error 
+        ? err.message 
+        : 'Failed to fetch market data';
+      
       console.error('[useMarketData] Unexpected error in market data fetch:', err);
       setMarketData(prev => ({
         ...prev,
         loading: false,
-        error: err.message || 'Failed to fetch market data',
-        assets: [], // Ensure assets is reset on error
-        popularAssets: [] // Also reset popularAssets
+        error: errorMessage,
+        assets: [],
+        popularAssets: []
       }));
     }
   }, [memoizedOptions, fetchHistoricalData]);
@@ -464,7 +494,7 @@ export function useMarketData(options: MarketDataOptions = {}): MarketData {
   useEffect(() => {
     setMarketData(prev => ({
       ...prev,
-      refetch: fetchMarketData
+      refetch: () => fetchMarketData()
     }));
   }, [fetchMarketData]);
 
