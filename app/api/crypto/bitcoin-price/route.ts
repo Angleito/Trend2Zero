@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { MarketDataService } from '@/lib/api/marketDataService';
+import { getAssetPrice } from '@/lib/api/marketDataService';
 
 // Fallback Bitcoin price data for static generation
 const FALLBACK_BITCOIN_PRICE = {
@@ -15,9 +15,8 @@ const FALLBACK_BITCOIN_PRICE = {
 export async function GET() {
   try {
     console.log('[API] /api/crypto/bitcoin-price called');
-    const marketDataService = new MarketDataService();
-    const btcData = await marketDataService.getAssetPriceInBTC('BTC');
-    console.log('[API] MarketDataService.getAssetPriceInBTC returned:', btcData);
+    const btcData = await getAssetPrice('BTC');
+    console.log('[API] MarketDataService.getAssetPrice returned:', btcData);
 
     if (btcData) {
       return NextResponse.json(btcData);

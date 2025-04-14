@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import MarketDataService from '@/lib/api/marketDataService';
+import { getAssetsByType } from '@/lib/api/marketDataService';
 import { AssetCategory } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
@@ -19,17 +19,12 @@ export async function GET(request: NextRequest) {
       ? type as AssetCategory
       : undefined;
 
-    // Create an instance of the MarketDataService
-    const marketDataService = new MarketDataService();
-
     // Detailed logging for debugging
     console.log('Market Data Request:', { category, limit });
 
     // Get real market data using the service
-    const data = await marketDataService.listAvailableAssets({
-      category,
-      pageSize: limit
-    });
+    const response = await getAssetsByType(category || 'all', limit);
+    const data = response.assets || [];
 
     // Log response details
     console.log(`Fetched ${data.length} market assets`);
