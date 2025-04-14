@@ -75,16 +75,16 @@ export default async function AssetDetailPage(props: AssetDetailPageProps) {
               <tbody className="divide-y divide-gray-800">
                 <tr>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {assetData.price.toFixed(2)}
+                    {assetData.price ? assetData.price.toFixed(2) : 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={assetData.change >= 0 ? 'text-green-500' : 'text-red-500'}>
-                      {assetData.change >= 0 ? '+' : ''}{assetData.change.toFixed(2)}
+                    <span className={assetData.change && assetData.change >= 0 ? 'text-green-500' : 'text-red-500'}>
+                      {assetData.change ? `${assetData.change >= 0 ? '+' : ''}${assetData.change.toFixed(2)}` : 'N/A'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={assetData.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}>
-                      {assetData.changePercent >= 0 ? '+' : ''}{assetData.changePercent.toFixed(2)}%
+                    <span className={assetData.changePercent && assetData.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}>
+                      {assetData.changePercent ? `${assetData.changePercent >= 0 ? '+' : ''}${assetData.changePercent.toFixed(2)}%` : 'N/A'}
                     </span>
                   </td>
                 </tr>
