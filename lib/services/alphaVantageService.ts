@@ -2,12 +2,84 @@ import axios from 'axios';
 import {
   AssetData,
   HistoricalDataPoint,
-  AlphaVantageStockResponse,
-  AlphaVantageHistoricalResponse,
-  CurrencyExchangeRate,
-  AlphaVantageExchangeRateResponse,
-  AlphaVantageCryptoResponse
 } from '../types';
+
+// --- Define Alpha Vantage Specific Response Types --- //
+
+interface AlphaVantageStockQuote {
+  '01. symbol': string;
+  '02. open': string;
+  '03. high': string;
+  '04. low': string;
+  '05. price': string;
+  '06. volume': string;
+  '07. latest trading day': string;
+  '08. previous close': string;
+  '09. change': string;
+  '10. change percent': string;
+}
+
+interface AlphaVantageStockResponse {
+  'Global Quote': AlphaVantageStockQuote;
+}
+
+interface AlphaVantageDailyValue {
+  '1. open': string;
+  '2. high': string;
+  '3. low': string;
+  '4. close': string;
+  '5. volume': string;
+}
+
+interface AlphaVantageCryptoDailyValue {
+  '1a. open (USD)': string;
+  '1b. open (USD)': string;
+  '2a. high (USD)': string;
+  '2b. high (USD)': string;
+  '3a. low (USD)': string;
+  '3b. low (USD)': string;
+  '4a. close (USD)': string;
+  '4b. close (USD)': string;
+  '5. volume': string;
+  '6. market cap (USD)': string;
+}
+
+interface AlphaVantageHistoricalResponse {
+  'Time Series (Daily)': Record<string, AlphaVantageDailyValue>;
+}
+
+interface AlphaVantageCryptoResponse {
+  'Time Series (Digital Currency Daily)': Record<string, AlphaVantageCryptoDailyValue>;
+}
+
+interface AlphaVantageExchangeRateData {
+  '1. From_Currency Code': string;
+  '2. From_Currency Name': string;
+  '3. To_Currency Code': string;
+  '4. To_Currency Name': string;
+  '5. Exchange Rate': string;
+  '6. Last Refreshed': string;
+  '7. Time Zone': string;
+  '8. Bid Price': string;
+  '9. Ask Price': string;
+}
+
+interface AlphaVantageExchangeRateResponse {
+  'Realtime Currency Exchange Rate': AlphaVantageExchangeRateData;
+}
+
+// Interface for the data structure we return
+interface CurrencyExchangeRate {
+  fromCurrencyCode: string;
+  fromCurrencyName: string;
+  toCurrencyCode: string;
+  toCurrencyName: string;
+  exchangeRate: number;
+  lastRefreshed: string;
+  timeZone: string;
+}
+
+// --- End Alpha Vantage Specific Types --- //
 
 export class AlphaVantageService {
   private apiKey: string;
@@ -101,6 +173,8 @@ export class AlphaVantageService {
       const historicalData: HistoricalDataPoint[] = Object.entries(timeSeries)
         .slice(0, days)
         .map(([dateStr, data]) => ({
+          timestamp: dateStr, // Keep timestamp as string initially or parse here
+          value: parseFloat(data['4. close']),
           date: new Date(dateStr),
           price: parseFloat(data['4. close']),
           open: parseFloat(data['1. open']),
@@ -166,16 +240,18 @@ export class AlphaVantageService {
       const btcRate = await this.getCurrencyExchangeRate(symbol, 'BTC');
 
       const timeSeries = response['Time Series (Digital Currency Daily)'];
-      const latestData = Object.entries(timeSeries)[0][1] as Record<string, string>;
+      const latestDate = Object.keys(timeSeries)[0];
+      const latestData = timeSeries[latestDate]; // Access data for the latest date
       const usdPrice = parseFloat(latestData['4b. close (USD)']);
 
-      const cryptoData = {
+      const cryptoData: AssetData = {
         symbol: symbol,
         price: usdPrice,
-        change: parseFloat(latestData['5. volume']),
-        changePercent: 0, // Alpha Vantage doesn't provide direct percentage change
-        priceInBTC: usdPrice / btcRate.exchangeRate,
-        priceInUSD: usdPrice
+        change: parseFloat(latestData['5. volume']), // Volume as change for now?
+        changePercent: 0, // Alpha Vantage doesn't provide direct percentage change for daily crypto
+        priceInBTC: btcRate ? usdPrice / btcRate.exchangeRate : undefined, // Handle case where btcRate is undefined
+        priceInUSD: usdPrice,
+        lastUpdated: latestDate // Use the date as last updated
       };
 
       this.setCachedData(cacheKey, cryptoData);
