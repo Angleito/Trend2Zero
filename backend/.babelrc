@@ -1,7 +1,7 @@
 {
   "presets": [
     [
-      "@babel/preset-env", 
+      "@babel/preset-env",
       {
         "targets": {
           "node": "current"
@@ -19,7 +19,7 @@
       "allExtensions": true
     }],
     "@babel/plugin-transform-runtime",
-    "@babel/plugin-proposal-optional-chaining",
+    "@babel/plugin-transform-optional-chaining",
     "@babel/plugin-proposal-nullish-coalescing-operator",
     ["module-resolver", {
       "root": ["./src"],

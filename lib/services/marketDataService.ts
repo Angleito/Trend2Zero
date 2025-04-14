@@ -99,6 +99,8 @@ export class MarketDataService {
         const price = basePrice * randomFactor;
         
         result.push({
+          timestamp: date.getTime(),
+          value: price,
           date,
           price,
           open: price * 0.99,
@@ -114,14 +116,17 @@ export class MarketDataService {
       return result;
     }
 
-    return this.secureService.getHistoricalData(symbol, days);
+    const data = await this.secureService.getHistoricalData(symbol, days);
+    return data ?? [];
   }
 
   /**
    * Determine if an asset is a cryptocurrency based on its symbol
    */
   isCryptoCurrency(symbol: string): boolean {
-    return this.secureService.isCryptoCurrency(symbol);
+    // Fallback: treat as crypto if symbol matches common crypto symbols
+    const cryptoSymbols = ["BTC", "ETH", "USDT", "BNB", "XRP", "ADA", "DOGE", "SOL", "DOT", "MATIC"];
+    return cryptoSymbols.includes(symbol.toUpperCase());
   }
 
   /**
@@ -133,60 +138,66 @@ export class MarketDataService {
         symbol: 'BTC',
         name: 'Bitcoin',
         type: 'Cryptocurrency',
-        description: 'Digital gold',
+        price: 65000,
+        changePercent: 2.3,
         priceInUSD: 65000,
         priceInBTC: 1,
-        change24h: 1500,
+        change: 1500,
         lastUpdated: new Date().toISOString()
       },
       {
         symbol: 'ETH',
         name: 'Ethereum',
         type: 'Cryptocurrency',
-        description: 'Smart contract platform',
+        price: 3500,
+        changePercent: 1.5,
         priceInUSD: 3500,
         priceInBTC: 0.05,
-        change24h: 120,
+        change: 120,
         lastUpdated: new Date().toISOString()
       },
       {
         symbol: 'AAPL',
         name: 'Apple Inc',
         type: 'Stocks',
-        description: 'Consumer electronics',
+        price: 175,
+        changePercent: 1.2,
         priceInUSD: 175,
         priceInBTC: 0.003,
-        change24h: 2.5,
+        change: 2.5,
         lastUpdated: new Date().toISOString()
       },
       {
         symbol: 'GOOGL',
         name: 'Alphabet Inc',
         type: 'Stocks',
-        description: 'Technology services',
+        price: 140,
+        changePercent: 1.0,
         priceInUSD: 140,
         priceInBTC: 0.002,
-        change24h: 1.8,
+        change: 1.8,
         lastUpdated: new Date().toISOString()
       },
       {
         symbol: 'XAU',
         name: 'Gold',
         type: 'Precious Metal',
-        description: 'Precious metal',
+        price: 2000,
+        changePercent: -0.2,
         priceInUSD: 2000,
         priceInBTC: 0.03,
-        change24h: -5,
+        change: -5,
         lastUpdated: new Date().toISOString()
       },
       {
         symbol: 'XAG',
         name: 'Silver',
         type: 'Precious Metal',
-        description: 'Precious metal',
+        price: 25,
+        changePercent: -0.1,
         priceInUSD: 25,
         priceInBTC: 0.0004,
-        change24h: -0.2,
+        change: -0.2,
         lastUpdated: new Date().toISOString()
       }
     ];

@@ -8,7 +8,7 @@ module.exports = {
     '@babel/plugin-proposal-class-properties',
     '@babel/plugin-transform-object-rest-spread',  // Updated from deprecated plugin
     '@babel/plugin-transform-optional-chaining',
-    '@babel/plugin-transform-nullish-coalescing-operator',  // Updated from proposal to transform
+    '@babel/plugin-proposal-nullish-coalescing-operator',
     ['module-resolver', {
       root: ['./src'],
       alias: {
