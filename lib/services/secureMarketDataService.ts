@@ -64,6 +64,34 @@ interface MarketDataServiceDependencies {
 }
 
 class SecureMarketDataService {
+  /**
+   * List available assets, filtered by category and/or keywords, paginated.
+   */
+  public async listAvailableAssets(options: {
+    page?: number;
+    pageSize?: number;
+    category?: string;
+    keywords?: string;
+  } = {}): Promise<MarketAsset[]> {
+    let results = predefinedAssets;
+    if (options.category) {
+      results = results.filter(asset => asset.type?.toLowerCase() === options.category?.toLowerCase());
+    }
+    if (options.keywords) {
+      const kw = options.keywords.toLowerCase();
+      results = results.filter(asset =>
+        asset.symbol.toLowerCase().includes(kw) ||
+        (asset.name && asset.name.toLowerCase().includes(kw))
+      );
+    }
+    // Pagination
+    const page = options.page ?? 1;
+    const pageSize = options.pageSize ?? 20;
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    return results.slice(start, end);
+  }
+
   private mongoDbCacheService: MongoDbCacheService;
   private coinGeckoService: typeof coinGeckoService;
   private coinMarketCapService: typeof coinMarketCapService;
