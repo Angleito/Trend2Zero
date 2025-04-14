@@ -1,6 +1,22 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
 
+// Add proper TypeScript interfaces for result objects
+interface ServiceResult {
+  status: string;
+  data?: any;
+  message?: string;
+}
+
+interface TestResults {
+  coinmarketcap: ServiceResult;
+  alphaVantage: ServiceResult;
+  metalPrice: ServiceResult;
+  environment: {
+    [key: string]: string;
+  };
+}
+
 // Inline simplified ExternalApiService to avoid import issues
 class ExternalApiService {
   async fetchCryptoPrices(symbols = ['BTC']) {
@@ -69,7 +85,8 @@ class ExternalApiService {
 }
 
 export async function GET() {
-  const results = {
+  // Initialize results with proper typing
+  const results: TestResults = {
     coinmarketcap: { status: 'not tested' },
     alphaVantage: { status: 'not tested' },
     metalPrice: { status: 'not tested' },
