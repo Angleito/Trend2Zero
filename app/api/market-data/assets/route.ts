@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
-import { AssetCategory, MarketAsset } from '@/lib/types';
+
+// Define types locally instead of importing them
+type AssetCategory = 'Cryptocurrency' | 'Stocks' | 'Commodities' | 'Indices';
+
+// Define MarketAsset type locally
+interface MarketAsset {
+  symbol: string;
+  name: string;
+  type: string;
+  description?: string;
+  priceInUSD: number;
+  priceInBTC: number;
+  change24h: number;
+  lastUpdated: string;
+}
 
 // Inline ExternalApiService to avoid import path issues
 class ExternalApiService {
