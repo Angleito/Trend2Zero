@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
-import { AssetCategory } from '@/lib/types';
+
+// Define AssetCategory type locally instead of importing it
+type AssetCategory = 'Stocks' | 'Commodities' | 'Indices' | 'Cryptocurrency';
 
 // Fallback assets for when API calls fail
 const FALLBACK_ASSETS = [
