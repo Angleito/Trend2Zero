@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
-import { HistoricalDataPoint } from '@/lib/types';
+
+// Define HistoricalDataPoint type locally instead of importing
+interface HistoricalDataPoint {
+  date: Date;
+  price: number;
+  open?: number;
+  high?: number;
+  low?: number;
+  close?: number;
+  volume?: number;
+}
 
 // Define a type for the possible symbol parameter formats
 type SymbolParam = string | string[] | Record<string, unknown> | unknown;
