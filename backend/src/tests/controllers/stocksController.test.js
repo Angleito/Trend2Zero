@@ -1,5 +1,5 @@
 const request = require('supertest');
-const { createTestServer } = require('../testUtils');
+const { createTestServer, getTestUrl } = require('../testUtils');
 
 describe('Stocks Controller', () => {
     let testServer;
