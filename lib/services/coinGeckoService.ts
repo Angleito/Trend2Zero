@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import { HistoricalDataPoint, AssetPrice, normalizeHistoricalDataPoint } from '../types';
+import { getCachedData } from '../cache';
 
 /**
  * CoinGecko API Service
@@ -41,39 +42,42 @@ export class CoinGeckoService {
    * @returns Formatted asset price data
    */
   async getAssetPrice(id: string): Promise<AssetPrice> {
-    try {
-      const response = await axios.get(`${this.baseURL}/simple/price`, {
-        headers: this.headers,
-        params: {
-          ids: id,
-          vs_currencies: 'usd',
-          include_market_cap: 'true',
-          include_24hr_vol: 'true',
-          include_24hr_change: 'true',
-          include_last_updated_at: 'true'
-        }
-      });
+    const cacheKey = `coingecko_asset_price_${id}`;
+    return getCachedData<AssetPrice>(cacheKey, async () => {
+      try {
+        const response = await axios.get(`${this.baseURL}/simple/price`, {
+          headers: this.headers,
+          params: {
+            ids: id,
+            vs_currencies: 'usd',
+            include_market_cap: 'true',
+            include_24hr_vol: 'true',
+            include_24hr_change: 'true',
+            include_last_updated_at: 'true'
+          }
+        });
 
-      const data = response.data[id];
-      
-      return {
-        symbol: this.getSymbolFromId(id),
-        price: data.usd,
-        change: data.usd_24h_change,
-        changePercent: data.usd_24h_change,
-        volume24h: data.usd_24h_vol,
-        marketCap: data.usd_market_cap,
-        lastUpdated: new Date(data.last_updated_at * 1000).toISOString(),
-        id,
-        name: id.charAt(0).toUpperCase() + id.slice(1),
-        type: 'cryptocurrency',
-        priceInBTC: 0,
-        priceInUSD: data.usd
-      };
-    } catch (error) {
-      console.error(`[CoinGecko] Error fetching asset price for ${id}:`, error);
-      throw error;
-    }
+        const data = response.data[id];
+        
+        return {
+          symbol: this.getSymbolFromId(id),
+          price: data.usd,
+          change: data.usd_24h_change,
+          changePercent: data.usd_24h_change,
+          volume24h: data.usd_24h_vol,
+          marketCap: data.usd_market_cap,
+          lastUpdated: new Date(data.last_updated_at * 1000).toISOString(),
+          id,
+          name: id.charAt(0).toUpperCase() + id.slice(1),
+          type: 'cryptocurrency',
+          priceInBTC: 0,
+          priceInUSD: data.usd
+        };
+      } catch (error) {
+        console.error(`[CoinGecko] Error fetching asset price for ${id}:`, error);
+        throw error; // Re-throw error for consistency with original behavior
+      }
+    }, 60 * 60); // 1 hour TTL
   }
 
   /**
@@ -83,46 +87,48 @@ export class CoinGeckoService {
    * @returns Formatted asset price data
    */
   async getCryptoPrice(symbol: string): Promise<AssetPrice | null> {
-    try {
-      const id = this.getIdFromSymbol(symbol);
-      
-      const response = await axios.get(`${this.baseURL}/simple/price`, {
-        headers: this.headers,
-        params: {
-          ids: id,
-          vs_currencies: 'usd',
-          include_market_cap: 'true',
-          include_24hr_vol: 'true',
-          include_24hr_change: 'true',
-          include_last_updated_at: 'true'
-        }
-      });
+    const cacheKey = `coingecko_crypto_price_${symbol}`;
+    return getCachedData<AssetPrice | null>(cacheKey, async () => {
+      try {
+        const id = this.getIdFromSymbol(symbol);
+        
+        const response = await axios.get(`${this.baseURL}/simple/price`, {
+          headers: this.headers,
+          params: {
+            ids: id,
+            vs_currencies: 'usd',
+            include_market_cap: 'true',
+            include_24hr_vol: 'true',
+            include_24hr_change: 'true',
+            include_last_updated_at: 'true'
+          }
+        });
 
-      const data = response.data[id];
-      
-      // Match the test's expected output exactly
-      return {
-        symbol,
-        price: data.usd,
-        change: data.usd_24h_change, // Changed to match test expectation
-        changePercent: data.usd_24h_change,
-        volume24h: data.usd_24h_vol,
-        marketCap: data.usd_market_cap,
-        lastUpdated: new Date(data.last_updated_at * 1000).toISOString(),
-        id,
-        name: symbol === 'BTC' ? 'Bitcoin' : id.charAt(0).toUpperCase() + id.slice(1),
-        type: 'cryptocurrency',
-        priceInBTC: 0,
-        priceInUSD: data.usd
-      };
-    } catch (error) {
-      if (this.isRateLimitError(error)) {
-        console.error(`[CoinGecko] Rate limit exceeded for ${symbol}`);
+        const data = response.data[id];
+        
+        return {
+          symbol,
+          price: data.usd,
+          change: data.usd_24h_change,
+          changePercent: data.usd_24h_change,
+          volume24h: data.usd_24h_vol,
+          marketCap: data.usd_market_cap,
+          lastUpdated: new Date(data.last_updated_at * 1000).toISOString(),
+          id,
+          name: symbol === 'BTC' ? 'Bitcoin' : id.charAt(0).toUpperCase() + id.slice(1),
+          type: 'cryptocurrency',
+          priceInBTC: 0,
+          priceInUSD: data.usd
+        };
+      } catch (error) {
+        if (this.isRateLimitError(error)) {
+          console.error(`[CoinGecko] Rate limit exceeded for ${symbol}`);
+          return null;
+        }
+        console.error(`[CoinGecko] Error fetching price for ${symbol}:`, error);
         return null;
       }
-      console.error(`[CoinGecko] Error fetching price for ${symbol}:`, error);
-      return null;
-    }
+    }, 60 * 60); // 1 hour TTL
   }
 
   /**
@@ -133,42 +139,45 @@ export class CoinGeckoService {
    * @returns Array of historical data points
    */
   async getHistoricalData(symbol: string, days = 30): Promise<HistoricalDataPoint[]> {
-    try {
-      const id = this.getIdFromSymbol(symbol);
-      const interval = days <= 30 ? 'hourly' : 'daily';
+    const cacheKey = `coingecko_historical_data_${symbol}_${days}`;
+    return getCachedData<HistoricalDataPoint[]>(cacheKey, async () => {
+      try {
+        const id = this.getIdFromSymbol(symbol);
+        const interval = days <= 30 ? 'hourly' : 'daily';
 
-      const response = await axios.get(`${this.baseURL}/coins/${id}/market_chart`, {
-        headers: this.headers,
-        params: {
-          vs_currency: 'usd',
-          days: days.toString(),
-          interval: interval
+        const response = await axios.get(`${this.baseURL}/coins/${id}/market_chart`, {
+          headers: this.headers,
+          params: {
+            vs_currency: 'usd',
+            days: days.toString(),
+            interval: interval
+          }
+        });
+
+        const { prices, total_volumes } = response.data;
+
+        return prices.map((priceData: [number, number], index: number) => 
+          normalizeHistoricalDataPoint({
+            timestamp: priceData[0],
+            date: new Date(priceData[0]),
+            price: priceData[1],
+            value: priceData[1],
+            open: priceData[1],
+            high: priceData[1],
+            low: priceData[1],
+            close: priceData[1],
+            volume: total_volumes[index][1]
+          })
+        );
+      } catch (error) {
+        if (this.isRateLimitError(error)) {
+          console.error(`[CoinGecko] Rate limit exceeded for historical data: ${symbol}`);
+          return [];
         }
-      });
-
-      const { prices, total_volumes } = response.data;
-
-      return prices.map((priceData: [number, number], index: number) => 
-        normalizeHistoricalDataPoint({
-          timestamp: priceData[0],
-          date: new Date(priceData[0]),
-          price: priceData[1],
-          value: priceData[1],
-          open: priceData[1],
-          high: priceData[1],
-          low: priceData[1],
-          close: priceData[1],
-          volume: total_volumes[index][1]
-        })
-      );
-    } catch (error) {
-      if (this.isRateLimitError(error)) {
-        console.error(`[CoinGecko] Rate limit exceeded for historical data: ${symbol}`);
+        console.error(`[CoinGecko] Error fetching historical data for ${symbol}:`, error);
         return [];
       }
-      console.error(`[CoinGecko] Error fetching historical data for ${symbol}:`, error);
-      return [];
-    }
+    }, 60 * 60);
   }
 
   /**
@@ -180,43 +189,46 @@ export class CoinGeckoService {
    * @returns Historical data points
    */
   async getHistoricalDataRange(symbol: string, from: Date, to: Date): Promise<HistoricalDataPoint[]> {
-    try {
-      const id = this.getIdFromSymbol(symbol);
-      const fromTimestamp = Math.floor(from.getTime() / 1000);
-      const toTimestamp = Math.floor(to.getTime() / 1000);
+    const cacheKey = `coingecko_historical_range_${symbol}_${from.toISOString()}_${to.toISOString()}`;
+    return getCachedData<HistoricalDataPoint[]>(cacheKey, async () => {
+      try {
+        const id = this.getIdFromSymbol(symbol);
+        const fromTimestamp = Math.floor(from.getTime() / 1000);
+        const toTimestamp = Math.floor(to.getTime() / 1000);
 
-      const response = await axios.get(`${this.baseURL}/coins/${id}/market_chart/range`, {
-        headers: this.headers,
-        params: {
-          vs_currency: 'usd',
-          from: fromTimestamp,
-          to: toTimestamp
+        const response = await axios.get(`${this.baseURL}/coins/${id}/market_chart/range`, {
+          headers: this.headers,
+          params: {
+            vs_currency: 'usd',
+            from: fromTimestamp,
+            to: toTimestamp
+          }
+        });
+
+        const { prices, total_volumes } = response.data;
+
+        return prices.map((priceData: [number, number], index: number) => 
+          normalizeHistoricalDataPoint({
+            timestamp: priceData[0],
+            date: new Date(priceData[0]),
+            price: priceData[1],
+            value: priceData[1],
+            open: priceData[1],
+            high: priceData[1],
+            low: priceData[1],
+            close: priceData[1],
+            volume: total_volumes[index][1]
+          })
+        );
+      } catch (error) {
+        if (this.isRateLimitError(error)) {
+          console.error(`[CoinGecko] Rate limit exceeded for historical data range: ${symbol}`);
+          return [];
         }
-      });
-
-      const { prices, total_volumes } = response.data;
-
-      return prices.map((priceData: [number, number], index: number) => 
-        normalizeHistoricalDataPoint({
-          timestamp: priceData[0],
-          date: new Date(priceData[0]),
-          price: priceData[1],
-          value: priceData[1],
-          open: priceData[1],
-          high: priceData[1],
-          low: priceData[1],
-          close: priceData[1],
-          volume: total_volumes[index][1]
-        })
-      );
-    } catch (error) {
-      if (this.isRateLimitError(error)) {
-        console.error(`[CoinGecko] Rate limit exceeded for historical data range: ${symbol}`);
+        console.error(`[CoinGecko] Error fetching historical data range for ${symbol}:`, error);
         return [];
       }
-      console.error(`[CoinGecko] Error fetching historical data range for ${symbol}:`, error);
-      return [];
-    }
+    }, 60 * 60);
   }
 
   /**
@@ -227,41 +239,44 @@ export class CoinGeckoService {
    * @returns OHLC data points
    */
   async getOHLCData(symbol: string, days: number): Promise<any[]> {
-    const validDays = [1, 7, 14, 30, 90, 180, 365];
-    const closestDays = validDays.reduce((prev, curr) => 
-      Math.abs(curr - days) < Math.abs(prev - days) ? curr : prev
-    );
+    const cacheKey = `coingecko_ohlc_${symbol}_${days}`;
+    return getCachedData<any[]>(cacheKey, async () => {
+      const validDays = [1, 7, 14, 30, 90, 180, 365];
+      const closestDays = validDays.reduce((prev, curr) => 
+        Math.abs(curr - days) < Math.abs(prev - days) ? curr : prev
+      );
 
-    if (days !== closestDays) {
-      console.warn(`Adjusted days from ${days} to ${closestDays} for OHLC data`);
-    }
+      if (days !== closestDays) {
+        console.warn(`Adjusted days from ${days} to ${closestDays} for OHLC data`);
+      }
 
-    try {
-      const id = this.getIdFromSymbol(symbol);
+      try {
+        const id = this.getIdFromSymbol(symbol);
 
-      const response = await axios.get(`${this.baseURL}/coins/${id}/ohlc`, {
-        headers: this.headers,
-        params: {
-          vs_currency: 'usd',
-          days: closestDays.toString()
+        const response = await axios.get(`${this.baseURL}/coins/${id}/ohlc`, {
+          headers: this.headers,
+          params: {
+            vs_currency: 'usd',
+            days: closestDays.toString()
+          }
+        });
+
+        return response.data.map((ohlcData: [number, number, number, number, number]) => ({
+          timestamp: ohlcData[0],
+          open: ohlcData[1],
+          high: ohlcData[2],
+          low: ohlcData[3],
+          close: ohlcData[4]
+        }));
+      } catch (error) {
+        if (this.isRateLimitError(error)) {
+          console.error(`[CoinGecko] Rate limit exceeded for OHLC data: ${symbol}`);
+          return [];
         }
-      });
-
-      return response.data.map((ohlcData: [number, number, number, number, number]) => ({
-        timestamp: ohlcData[0],
-        open: ohlcData[1],
-        high: ohlcData[2],
-        low: ohlcData[3],
-        close: ohlcData[4]
-      }));
-    } catch (error) {
-      if (this.isRateLimitError(error)) {
-        console.error(`[CoinGecko] Rate limit exceeded for OHLC data: ${symbol}`);
+        console.error(`[CoinGecko] Error fetching OHLC data for ${symbol}:`, error);
         return [];
       }
-      console.error(`[CoinGecko] Error fetching OHLC data for ${symbol}:`, error);
-      return [];
-    }
+    }, 60 * 60);
   }
 
   /**

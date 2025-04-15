@@ -3,6 +3,7 @@ import {
   AssetData,
   HistoricalDataPoint,
 } from '../types';
+import { getCachedData } from '../cache'; // Import the MongoDB cache utility
 
 // --- Define Alpha Vantage Specific Response Types --- //
 
@@ -84,26 +85,11 @@ interface CurrencyExchangeRate {
 export class AlphaVantageService {
   private apiKey: string;
   private baseURL: string;
-  private cache: Map<string, { data: any, timestamp: number }>;
-  private CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
   private RATE_LIMIT_DELAY = 15 * 1000; // 15 seconds between requests
 
   constructor() {
     this.apiKey = process.env.ALPHA_VANTAGE_API_KEY || '';
     this.baseURL = 'https://www.alphavantage.co/query';
-    this.cache = new Map();
-  }
-
-  private getCachedData(cacheKey: string): any | null {
-    const cachedItem = this.cache.get(cacheKey);
-    if (cachedItem && (Date.now() - cachedItem.timestamp) < this.CACHE_DURATION) {
-      return cachedItem.data;
-    }
-    return null;
-  }
-
-  private setCachedData(cacheKey: string, data: any): void {
-    this.cache.set(cacheKey, { data, timestamp: Date.now() });
   }
 
   private async makeRequest(params: Record<string, string>): Promise<any> {
@@ -117,6 +103,12 @@ export class AlphaVantageService {
           apikey: this.apiKey
         }
       });
+      // Basic check for common Alpha Vantage API errors/notes
+      if (response.data.Note || response.data['Error Message']) {
+        console.warn('Alpha Vantage API Note/Error:', response.data.Note || response.data['Error Message']);
+        // Depending on the error, you might want to throw or return an empty/default state
+        // For now, we'll proceed, but be aware of potential issues like rate limits
+      }
       return response.data;
     } catch (error) {
       console.error('Alpha Vantage API Error:', error);
@@ -124,141 +116,172 @@ export class AlphaVantageService {
     }
   }
 
-  async getStockData(symbol: string): Promise<AssetData> {
-    const cacheKey = `stock_${symbol}`;
-    const cachedData = this.getCachedData(cacheKey);
-    if (cachedData) return cachedData;
+  async getStockData(symbol: string): Promise<AssetData | null> { // Return null on error/no data
+    const cacheKey = `alphavantage_stock_${symbol}`;
+    // Use the MongoDB cache utility
+    return getCachedData<AssetData | null>(cacheKey, async () => {
+      try {
+        const stockResponse = await this.makeRequest({
+          function: 'GLOBAL_QUOTE',
+          symbol: symbol
+        }) as AlphaVantageStockResponse;
 
-    try {
-      // Fetch stock data
-      const stockResponse = await this.makeRequest({
-        function: 'GLOBAL_QUOTE',
-        symbol: symbol
-      }) as AlphaVantageStockResponse;
+        const data = stockResponse['Global Quote'];
+        if (!data || Object.keys(data).length === 0 || !data['01. symbol']) {
+          console.warn(`No valid stock data returned for ${symbol} from Alpha Vantage.`);
+          return null; // Return null if API response is empty or invalid
+        }
 
-      // Fetch BTC exchange rate
-      const btcRate = await this.getCurrencyExchangeRate(symbol, 'BTC');
+        // Fetch BTC exchange rate (consider caching this separately if needed frequently)
+        // Note: Getting BTC rate might fail if the symbol IS BTC or isn't convertible
+        let btcRate: CurrencyExchangeRate | null = null;
+        try {
+          if (symbol !== 'BTC') {
+            btcRate = await this.getCurrencyExchangeRate(symbol, 'BTC');
+          }
+        } catch (rateError) {
+          console.warn(`Could not fetch BTC exchange rate for ${symbol}:`, rateError);
+        }
 
-      const data = stockResponse['Global Quote'];
-      const stockData = {
-        symbol: data['01. symbol'],
-        price: parseFloat(data['05. price']),
-        change: parseFloat(data['09. change']),
-        changePercent: parseFloat(data['10. change percent'].replace('%', '')),
-        priceInBTC: parseFloat(data['05. price']) / btcRate.exchangeRate,
-        priceInUSD: parseFloat(data['05. price'])
-      };
+        const usdPrice = parseFloat(data['05. price']);
 
-      this.setCachedData(cacheKey, stockData);
-      return stockData;
-    } catch (error) {
-      console.error(`Error fetching stock data for ${symbol}:`, error);
-      throw error;
-    }
+        return {
+          symbol: data['01. symbol'],
+          price: usdPrice,
+          change: parseFloat(data['09. change']),
+          changePercent: parseFloat(data['10. change percent'].replace('%', '')),
+          priceInUSD: usdPrice,
+          priceInBTC: btcRate ? usdPrice / btcRate.exchangeRate : undefined,
+          lastUpdated: data['07. latest trading day']
+        };
+      } catch (error) {
+        console.error(`Error fetching stock data for ${symbol}:`, error);
+        return null; // Return null on fetch error
+      }
+    }, 60 * 60 * 6); // 6 hours TTL (21600 seconds)
   }
 
   async getHistoricalData(symbol: string, days: number = 30): Promise<HistoricalDataPoint[]> {
-    const cacheKey = `historical_${symbol}_${days}`;
-    const cachedData = this.getCachedData(cacheKey);
-    if (cachedData) return cachedData;
+    const cacheKey = `alphavantage_historical_${symbol}_${days}`;
+    // Use the MongoDB cache utility
+    return getCachedData<HistoricalDataPoint[]>(cacheKey, async () => {
+      try {
+        const response = await this.makeRequest({
+          function: 'TIME_SERIES_DAILY',
+          symbol: symbol,
+          outputsize: 'compact' // Use 'full' for more data if needed
+        }) as AlphaVantageHistoricalResponse;
 
-    try {
-      const response = await this.makeRequest({
-        function: 'TIME_SERIES_DAILY',
-        symbol: symbol,
-        outputsize: 'compact'
-      }) as AlphaVantageHistoricalResponse;
+        const timeSeries = response['Time Series (Daily)'];
+        if (!timeSeries) {
+           console.warn(`No time series data found for ${symbol} from Alpha Vantage.`);
+           return [];
+        }
 
-      const timeSeries = response['Time Series (Daily)'];
-      const historicalData: HistoricalDataPoint[] = Object.entries(timeSeries)
-        .slice(0, days)
-        .map(([dateStr, data]) => ({
-          timestamp: dateStr, // Keep timestamp as string initially or parse here
-          value: parseFloat(data['4. close']),
-          date: new Date(dateStr),
-          price: parseFloat(data['4. close']),
-          open: parseFloat(data['1. open']),
-          high: parseFloat(data['2. high']),
-          low: parseFloat(data['3. low']),
-          close: parseFloat(data['4. close']),
-          volume: parseInt(data['5. volume'])
-        }));
-
-      this.setCachedData(cacheKey, historicalData);
-      return historicalData;
-    } catch (error) {
-      console.error(`Error fetching historical data for ${symbol}:`, error);
-      throw error;
-    }
+        return Object.entries(timeSeries)
+          .slice(0, days)
+          .map(([dateStr, data]) => ({
+            timestamp: dateStr,
+            value: parseFloat(data['4. close']),
+            date: new Date(dateStr),
+            price: parseFloat(data['4. close']),
+            open: parseFloat(data['1. open']),
+            high: parseFloat(data['2. high']),
+            low: parseFloat(data['3. low']),
+            close: parseFloat(data['4. close']),
+            volume: parseInt(data['5. volume'])
+          }))
+          .sort((a, b) => a.date.getTime() - b.date.getTime()); // Ensure chronological order
+      } catch (error) {
+        console.error(`Error fetching historical data for ${symbol}:`, error);
+        return []; // Return empty array on error
+      }
+    }, 60 * 60); // Example: Cache historical data for 1 hour (3600 seconds)
   }
 
-  async getCurrencyExchangeRate(fromCurrency: string, toCurrency: string): Promise<CurrencyExchangeRate> {
-    const cacheKey = `exchange_${fromCurrency}_${toCurrency}`;
-    const cachedData = this.getCachedData(cacheKey);
-    if (cachedData) return cachedData;
+  async getCurrencyExchangeRate(fromCurrency: string, toCurrency: string): Promise<CurrencyExchangeRate | null> {
+    const cacheKey = `alphavantage_exchange_${fromCurrency}_${toCurrency}`;
+    // Use the MongoDB cache utility
+    return getCachedData<CurrencyExchangeRate | null>(cacheKey, async () => {
+      try {
+        const response = await this.makeRequest({
+          function: 'CURRENCY_EXCHANGE_RATE',
+          from_currency: fromCurrency,
+          to_currency: toCurrency
+        }) as AlphaVantageExchangeRateResponse;
 
-    try {
-      const response = await this.makeRequest({
-        function: 'CURRENCY_EXCHANGE_RATE',
-        from_currency: fromCurrency,
-        to_currency: toCurrency
-      }) as AlphaVantageExchangeRateResponse;
-      
-      const rateData = response['Realtime Currency Exchange Rate'];
-      const exchangeRate = {
-        fromCurrencyCode: rateData['1. From_Currency Code'],
-        fromCurrencyName: rateData['2. From_Currency Name'],
-        toCurrencyCode: rateData['3. To_Currency Code'],
-        toCurrencyName: rateData['4. To_Currency Name'],
-        exchangeRate: parseFloat(rateData['5. Exchange Rate']),
-        lastRefreshed: rateData['6. Last Refreshed'],
-        timeZone: rateData['7. Time Zone']
-      };
+        const rateData = response['Realtime Currency Exchange Rate'];
+         if (!rateData || Object.keys(rateData).length === 0 || !rateData['1. From_Currency Code']) {
+          console.warn(`No valid exchange rate data returned for ${fromCurrency} to ${toCurrency}.`);
+          return null;
+        }
 
-      this.setCachedData(cacheKey, exchangeRate);
-      return exchangeRate;
-    } catch (error) {
-      console.error(`Error fetching exchange rate from ${fromCurrency} to ${toCurrency}:`, error);
-      throw error;
-    }
+        return {
+          fromCurrencyCode: rateData['1. From_Currency Code'],
+          fromCurrencyName: rateData['2. From_Currency Name'],
+          toCurrencyCode: rateData['3. To_Currency Code'],
+          toCurrencyName: rateData['4. To_Currency Name'],
+          exchangeRate: parseFloat(rateData['5. Exchange Rate']),
+          lastRefreshed: rateData['6. Last Refreshed'],
+          timeZone: rateData['7. Time Zone']
+        };
+      } catch (error) {
+        console.error(`Error fetching exchange rate from ${fromCurrency} to ${toCurrency}:`, error);
+        return null; // Return null on error
+      }
+    }, 60 * 60 * 6); // 6 hours TTL (21600 seconds)
   }
 
-  async getCryptoCurrencyData(symbol: string): Promise<AssetData> {
-    const cacheKey = `crypto_${symbol}`;
-    const cachedData = this.getCachedData(cacheKey);
-    if (cachedData) return cachedData;
+  async getCryptoCurrencyData(symbol: string): Promise<AssetData | null> { // Return null on error/no data
+    const cacheKey = `alphavantage_crypto_${symbol}`;
+    // Use the MongoDB cache utility
+    return getCachedData<AssetData | null>(cacheKey, async () => {
+      try {
+        const response = await this.makeRequest({
+          function: 'DIGITAL_CURRENCY_DAILY',
+          symbol: symbol,
+          market: 'USD'
+        }) as AlphaVantageCryptoResponse;
 
-    try {
-      // Fetch crypto data
-      const response = await this.makeRequest({
-        function: 'DIGITAL_CURRENCY_DAILY',
-        symbol: symbol,
-        market: 'USD'
-      }) as AlphaVantageCryptoResponse;
+        const timeSeries = response['Time Series (Digital Currency Daily)'];
+        if (!timeSeries) {
+          console.warn(`No time series data found for crypto ${symbol} from Alpha Vantage.`);
+          return null;
+        }
 
-      // Fetch BTC exchange rate
-      const btcRate = await this.getCurrencyExchangeRate(symbol, 'BTC');
+        const latestDate = Object.keys(timeSeries)[0];
+        const latestData = timeSeries[latestDate];
+        if (!latestData) {
+            console.warn(`No latest daily data found for crypto ${symbol} from Alpha Vantage.`);
+            return null;
+        }
 
-      const timeSeries = response['Time Series (Digital Currency Daily)'];
-      const latestDate = Object.keys(timeSeries)[0];
-      const latestData = timeSeries[latestDate]; // Access data for the latest date
-      const usdPrice = parseFloat(latestData['4b. close (USD)']);
+        // Fetch BTC exchange rate (consider caching)
+        let btcRate: CurrencyExchangeRate | null = null;
+        try {
+           if (symbol !== 'BTC') {
+              btcRate = await this.getCurrencyExchangeRate(symbol, 'BTC');
+           }
+        } catch (rateError) {
+          console.warn(`Could not fetch BTC exchange rate for crypto ${symbol}:`, rateError);
+        }
 
-      const cryptoData: AssetData = {
-        symbol: symbol,
-        price: usdPrice,
-        change: parseFloat(latestData['5. volume']), // Volume as change for now?
-        changePercent: 0, // Alpha Vantage doesn't provide direct percentage change for daily crypto
-        priceInBTC: btcRate ? usdPrice / btcRate.exchangeRate : undefined, // Handle case where btcRate is undefined
-        priceInUSD: usdPrice,
-        lastUpdated: latestDate // Use the date as last updated
-      };
+        const usdPrice = parseFloat(latestData['4b. close (USD)']);
 
-      this.setCachedData(cacheKey, cryptoData);
-      return cryptoData;
-    } catch (error) {
-      console.error(`Error fetching cryptocurrency data for ${symbol}:`, error);
-      throw error;
-    }
+        return {
+          symbol: symbol,
+          price: usdPrice,
+          // Alpha Vantage doesn't provide daily change easily here, set to 0 or calculate if needed
+          change: 0, 
+          changePercent: 0,
+          priceInBTC: btcRate ? usdPrice / btcRate.exchangeRate : (symbol === 'BTC' ? 1 : undefined),
+          priceInUSD: usdPrice,
+          lastUpdated: latestDate
+        };
+      } catch (error) {
+        console.error(`Error fetching cryptocurrency data for ${symbol}:`, error);
+        return null; // Return null on fetch error
+      }
+    }, 60 * 60); // 1 hour TTL (3600 seconds)
   }
 }

@@ -19,3 +19,4 @@ jest.setup.js
 postcss.config.js
 tailwind.config.js
 next-env.d.ts
+strapi-backend/
