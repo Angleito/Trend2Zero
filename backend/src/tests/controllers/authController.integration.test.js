@@ -1,11 +1,19 @@
 const request = require('supertest');
 const { getApp } = require('../setup');
+const { setupTestDB } = require('../setupTestDB');
 const { createTestUser, clearTestData } = require('../helpers/testDb');
-const User = require('../../models/userModel');
+const _User = require('../../models/userModel');
 
 jest.setTimeout(30000); // Increase timeout for integration tests
 
 describe('Auth Controller Integration Tests', () => {
+    let db;
+    beforeAll(async () => {
+        db = await setupTestDB();
+    });
+    afterAll(async () => {
+        await db.stop();
+    });
     beforeEach(async () => {
         await clearTestData();
     });
@@ -14,7 +22,8 @@ describe('Auth Controller Integration Tests', () => {
         it('should create a new user and return a token', async () => {
             const userData = {
                 name: 'Test User',
-                email: 'test@example.com',
+                // Use a unique email to avoid MongoDB duplicate key errors during parallel or repeated test runs
+                email: `test+${Math.random().toString(36).substring(2, 10)}@example.com`,
                 password: 'password123',
                 passwordConfirm: 'password123'
             };
@@ -34,7 +43,8 @@ describe('Auth Controller Integration Tests', () => {
                 .post('/api/users/signup')
                 .send({
                     name: 'Test User',
-                    email: 'test@example.com',
+                    // Use a unique email to avoid MongoDB duplicate key errors during parallel or repeated test runs
+                email: `test+${Math.random().toString(36).substring(2, 10)}@example.com`,
                     password: 'password123',
                     passwordConfirm: 'different123'
                 });
@@ -46,7 +56,8 @@ describe('Auth Controller Integration Tests', () => {
         it('should return 400 if email is already in use', async () => {
             const userData = {
                 name: 'Test User',
-                email: 'test@example.com',
+                // Use a unique email to avoid MongoDB duplicate key errors during parallel or repeated test runs
+                email: `test+${Math.random().toString(36).substring(2, 10)}@example.com`,
                 password: 'password123',
                 passwordConfirm: 'password123'
             };
@@ -66,7 +77,8 @@ describe('Auth Controller Integration Tests', () => {
         it('should login user and return a token', async () => {
             const userData = {
                 name: 'Test User',
-                email: 'test@example.com',
+                // Use a unique email to avoid MongoDB duplicate key errors during parallel or repeated test runs
+                email: `test+${Math.random().toString(36).substring(2, 10)}@example.com`,
                 password: 'password123',
                 passwordConfirm: 'password123'
             };
@@ -99,7 +111,8 @@ describe('Auth Controller Integration Tests', () => {
         it('should return 401 if password is incorrect', async () => {
             const userData = {
                 name: 'Test User',
-                email: 'test@example.com',
+                // Use a unique email to avoid MongoDB duplicate key errors during parallel or repeated test runs
+                email: `test+${Math.random().toString(36).substring(2, 10)}@example.com`,
                 password: 'password123',
                 passwordConfirm: 'password123'
             };
@@ -125,7 +138,8 @@ describe('Auth Controller Integration Tests', () => {
         beforeEach(async () => {
             const userData = {
                 name: 'Test User',
-                email: 'test@example.com',
+                // Use a unique email to avoid MongoDB duplicate key errors during parallel or repeated test runs
+                email: `test+${Math.random().toString(36).substring(2, 10)}@example.com`,
                 password: 'password123',
                 passwordConfirm: 'password123'
             };

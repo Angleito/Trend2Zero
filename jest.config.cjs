@@ -20,68 +20,67 @@ const commonConfig = {
     '<rootDir>/playwright/',
     '<rootDir>/tests/.*'
   ],
+  setupFiles: ['<rootDir>/jest.env.js'],
+  extensionsToTreatAsEsm: ['.ts', '.tsx', '.jsx'], 
+  transform: {
+    '^.+\\.(js|jsx|ts|tsx|mjs)$': ['babel-jest', { presets: ['next/babel'] }],
+  },
 };
 
 module.exports = {
+  // Global settings that apply to all projects
+  bail: process.env.CI === 'true' ? 1 : 0,
+  testTimeout: 30000,
+  verbose: process.env.JEST_WORKER_ID === undefined,
+  silent: process.env.JEST_WORKER_ID !== undefined,
+  forceExit: true,
+  detectOpenHandles: true,
+  
   projects: [
     // Frontend tests (React/Next.js)
     {
       ...commonConfig,
       displayName: 'frontend',
-      testEnvironment: 'jest-environment-jsdom', // Use jsdom for frontend
-      setupFilesAfterEnv: ['<rootDir>/jest.setup.js'], // Frontend specific setup
+      testEnvironment: 'jest-environment-jsdom',
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
       testMatch: [
-        '<rootDir>/__tests__/**/*.test.[jt]s?(x)',
-        '<rootDir>/app/**/*.test.[jt]s?(x)', // Include tests colocated with app components
-        '<rootDir>/?(*.)+(spec|test).[jt]s?(x)' // Uncomment this line
+        '<rootDir>/__tests__/**/*.[jt]s?(x)',
+        '<rootDir>/app/**/*.[jt]s?(x)',
+        '<rootDir>/?(*.)+(spec|test).[jt]s?(x)'
       ],
-      // Apply Next.js specific transforms
-      transform: {
-        '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
-      },
-      modulePaths: ['<rootDir>'],
       collectCoverageFrom: [
-        '**/*.{js,jsx,ts,tsx}',
+        '**/*.[jt]s?(x)',
         '!**/*.d.ts',
         '!**/node_modules/**',
         '!**/.next/**',
         '!**/coverage/**',
-        '!**/*.config.js',
+        '!**/*.config.[jt]s',
         '!**/playwright/**'
       ],
       globals: {
         'ts-jest': {
-          tsconfig: '<rootDir>/tsconfig.json'
+          tsconfig: '<rootDir>/tsconfig.json',
+          useESM: true
         }
       }
     },
-    // Backend tests (Node.js)
+    // Backend tests
     {
       ...commonConfig,
       displayName: 'backend',
-      testEnvironment: 'node', // Use node for backend
-      // setupFilesAfterEnv: ['<rootDir>/backend/src/tests/setup.cjs'], // If backend needs specific setup after env
+      testEnvironment: 'node',
       testMatch: [
-        '<rootDir>/backend/src/tests/**/*.test.js',
+        '<rootDir>/backend/src/tests/**/*.[jt]s?(x)',
       ],
-      // Backend doesn't usually need Next.js transforms
-      transform: { // Add basic transform if needed (e.g., for modern JS syntax)
-        '^.+\\.js$': 'babel-jest',
-      },
       collectCoverageFrom: [
-        '**/*.{js,jsx,ts,tsx}',
+        '**/*.[jt]s?(x)',
         '!**/*.d.ts',
         '!**/node_modules/**',
         '!**/.next/**',
         '!**/coverage/**',
-        '!**/*.config.js',
+        '!**/*.config.[jt]s',
         '!**/playwright/**'
       ],
     },
   ],
-  // Optional: global settings applicable to all projects if needed
-  // reporters: ['default'],
-  // collectCoverage: true,
-  // coverageDirectory: 'coverage',
-  testTimeout: 15000, // Add global timeout (15 seconds)
 };

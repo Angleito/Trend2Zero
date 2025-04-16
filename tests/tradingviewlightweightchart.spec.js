@@ -1,5 +1,4 @@
-// @ts-check
-const { test, expect } = require('@playwright/test');
+import { test, expect } from '@playwright/test';
 
 test.describe('TradingViewLightweightChart Component', () => {
   test('should render the chart correctly', async ({ page }) => {
@@ -61,5 +60,10 @@ test.describe('TradingViewLightweightChart Component', () => {
 
     // Take a screenshot of the error state
     await page.screenshot({ path: 'test-results/tradingviewlightweightchart-error.png' });
+  });
+
+  test('TradingView Lightweight Chart renders correctly', async ({ page }) => {
+    await page.goto('http://localhost:3000/test-page');
+    await expect(page.locator('.tv-lightweight-charts')).toBeVisible();
   });
 });

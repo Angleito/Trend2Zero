@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-const { program } = require('commander');
-const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+import { Command } from 'commander';
+import { execSync } from 'child_process';
 
+
+const program = new Command();
 program.version('1.0.1');
 
 // Build Commands

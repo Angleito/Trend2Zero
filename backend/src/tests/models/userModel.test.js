@@ -1,7 +1,14 @@
-const mongoose = require('mongoose');
+const { setupTestDB } = require('../setupTestDB');
 const User = require('../../models/userModel');
 
 describe('User Model Test', () => {
+    let db;
+    beforeAll(async () => {
+        db = await setupTestDB();
+    });
+    afterAll(async () => {
+        await db.stop();
+    });
     let testUser;
 
     beforeEach(async () => {

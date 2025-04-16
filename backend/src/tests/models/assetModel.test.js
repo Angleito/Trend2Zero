@@ -1,7 +1,14 @@
-const mongoose = require('mongoose');
+const { setupTestDB } = require('../setupTestDB');
 const Asset = require('../../models/assetModel');
 
 describe('Asset Model', () => {
+    let db;
+    beforeAll(async () => {
+        db = await setupTestDB();
+    });
+    afterAll(async () => {
+        await db.stop();
+    });
     it('should create a new asset successfully', async () => {
         const assetData = {
             symbol: 'BTC',

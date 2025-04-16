@@ -1,3 +1,5 @@
+// WARNING: This file is server-side only. Do NOT import in client-side code or React components/hooks.
+// Use API routes to access cache functionality from the client.
 import clientPromise from './mongo';
 
 interface CacheEntry<T> {

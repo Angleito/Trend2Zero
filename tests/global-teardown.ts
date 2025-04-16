@@ -1,5 +1,5 @@
 import { FullConfig } from '@playwright/test';
-import { execSync } from 'child_process';
+import { execSync, ChildProcess } from 'child_process';
 
 async function globalTeardown(config: FullConfig) {
   console.log('Global teardown: Stopping development server...');
@@ -16,6 +16,15 @@ async function globalTeardown(config: FullConfig) {
     console.log('Development server stopped');
   } catch (error) {
     console.error('Error stopping development server:', error);
+  }
+
+  // Clean up dev server
+  const devServer = globalThis.__DEV_SERVER__ as ChildProcess;
+  if (devServer) {
+    console.log('[Teardown] Shutting down development server...');
+    devServer.kill();
+    delete globalThis.__DEV_SERVER__;
+    console.log('[Teardown] Development server shutdown complete');
   }
 }
 

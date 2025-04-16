@@ -18,6 +18,15 @@ export default async () => {
       logger.warn('MongoMemoryServer instance not found in global scope during teardown.');
     }
 
+    // Stop development server
+    const devServer = global.__DEV_SERVER__;
+    if (devServer) {
+      devServer.kill();
+      logger.info('Development server stopped.');
+    } else {
+      logger.warn('Development server instance not found in global scope during teardown.');
+    }
+
   } catch (error) {
     logger.error('Error during global test database teardown:', error);
     process.exit(1); // Exit with error code if teardown fails

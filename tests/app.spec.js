@@ -1,7 +1,7 @@
-const { test, expect } = require('@playwright/test');
-const path = require('path');
-const fs = require('fs');
-const { testConfig } = require('./test-config');
+import { test, expect } from '@playwright/test';
+import path from 'path';
+import fs from 'fs';
+import { testConfig } from './test-config';
 
 // Utility function to log test details
 function logTestDetails(testName, details) {
@@ -105,4 +105,9 @@ test.describe('Basic App Tests', () => {
       throw error;
     }
   });
+});
+
+test('basic test', async ({ page }) => {
+  await page.goto('http://localhost:3000/');
+  await expect(page).toHaveTitle(/Trend2Zero/);
 });

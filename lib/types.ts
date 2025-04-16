@@ -4,8 +4,8 @@ import React from 'react';
 // Expanded Error Handling
 export interface ErrorResponse {
   error: string;
-  status?: number;
-  details?: Record<string, unknown>;
+  status: number;
+  details?: Record<string, any>;
 }
 
 export interface ErrorBoundaryProps {
@@ -29,48 +29,46 @@ export const AssetCategoryValues = {
   Other: 'other'
 } as const;
 
-export type AssetCategory = typeof AssetCategoryValues[keyof typeof AssetCategoryValues];
+export type AssetCategory = 'Cryptocurrency' | 'Stocks' | 'Precious Metal';
 
 export function isValidAssetCategory(category: string): category is AssetCategory {
   return Object.values(AssetCategoryValues).includes(category as AssetCategory);
 }
 
-export function parseAssetCategory(category: string): AssetCategory {
-  return isValidAssetCategory(category) 
-    ? category 
-    : AssetCategoryValues.Other;
+export function parseAssetCategory(category: string): AssetCategory | undefined {
+  const normalized = category.toLowerCase();
+  if (normalized === 'cryptocurrency') return 'Cryptocurrency';
+  if (normalized === 'stocks') return 'Stocks';
+  if (normalized === 'precious metal' || normalized === 'precious_metal') return 'Precious Metal';
+  return undefined;
 }
 
 // Market Data Types with Extended Properties
 export interface AssetPrice {
   symbol: string;
-  name?: string;
-  id?: string;
+  name: string;
+  type: string;
   price: number;
   change: number;
   changePercent: number;
-  priceInBTC?: number;
-  priceInUSD?: number;
-  lastUpdated?: string;
-  type?: string;
-  volume24h?: number;
-  marketCap?: number;
+  priceInBTC: number;
+  priceInUSD: number;
+  lastUpdated: string;
 }
 
 export interface AssetData extends AssetPrice {
   category?: AssetCategory;
 }
 
-export interface MarketAsset extends AssetData {
-  rank?: number;
-  type?: string;
+export interface MarketAsset extends AssetPrice {
+  // Extended fields can be added here
 }
 
 export interface HistoricalDataPoint {
-  timestamp: number | string;
+  timestamp: number;
+  date: Date;
+  price: number;
   value: number;
-  date?: Date;
-  price?: number;
   open?: number;
   high?: number;
   low?: number;
@@ -120,16 +118,16 @@ export function createDefaultAsset(symbol: string): MarketAsset {
   };
 }
 
-export function normalizeHistoricalDataPoint(point: any): HistoricalDataPoint {
+export function normalizeHistoricalDataPoint(data: Partial<HistoricalDataPoint>): HistoricalDataPoint {
   return {
-    timestamp: point.timestamp || point.date,
-    value: point.value || point.close || 0,
-    date: point.date instanceof Date ? point.date : new Date(point.date),
-    price: point.price,
-    open: point.open,
-    high: point.high,
-    low: point.low,
-    close: point.close,
-    volume: point.volume
+    timestamp: data.timestamp || 0,
+    date: data.date || new Date(data.timestamp || 0),
+    price: data.price || 0,
+    value: data.value || data.price || 0,
+    open: data.open || data.price || 0,
+    high: data.high || data.price || 0,
+    low: data.low || data.price || 0,
+    close: data.close || data.price || 0,
+    volume: data.volume || 0
   };
 }

@@ -1,5 +1,5 @@
-// @ts-check
-const { test, expect } = require('@playwright/test');
+import { test, expect } from '@playwright/test';
+import { Chart } from '../components/Chart';
 
 test.describe('TradingViewLightweightChart Component', () => {
   test('should render charts with both data and symbol props', async ({ page }) => {
@@ -71,4 +71,9 @@ test.describe('TradingViewLightweightChart Component', () => {
       await page.screenshot({ path: 'charts-after-retry.png' });
     }
   });
+});
+
+test('Chart component should render correctly', async ({ page }) => {
+  await page.goto('http://localhost:3000/test-page');
+  await expect(page.locator('[data-testid="chart"]')).toBeVisible();
 });

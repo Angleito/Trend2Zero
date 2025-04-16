@@ -1,5 +1,4 @@
-// @ts-check
-const { test, expect } = require('@playwright/test');
+import { test, expect } from '@playwright/test';
 
 test('basic test', async ({ page }) => {
   // Use baseURL from config instead of hardcoding

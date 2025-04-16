@@ -1,9 +1,17 @@
 const request = require('supertest');
 const { getApp } = require('../setup');
+const { setupTestDB } = require('../setupTestDB');
 const User = require('../../models/userModel');
 const logger = require('../../utils/logger');
 
 describe('Auth Controller', () => {
+    let db;
+    beforeAll(async () => {
+        db = await setupTestDB();
+    });
+    afterAll(async () => {
+        await db.stop();
+    });
     const createTestUser = async (userData = {
         name: 'Test User',
         email: 'test@example.com',

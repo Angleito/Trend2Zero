@@ -117,7 +117,7 @@ exports.getPortfolioPerformance = catchAsync(async (req, res) => {
 exports.getMarkets = catchAsync(async (req, res) => {
     const { limit = 100, sort = 'market_cap_desc', currency = 'usd' } = req.query;
     const markets = await cryptoService.getMarkets({ limit, sort, currency });
-    res.json(markets);
+    res.status(200).json({ status: 'success', data: markets });
 });
 
 exports.getCoinDetails = catchAsync(async (req, res) => {
@@ -131,18 +131,18 @@ exports.getCoinDetails = catchAsync(async (req, res) => {
         throw new AppError.notFound('Coin not found');
     }
 
-    res.json(coinDetails);
+    res.status(200).json({ status: 'success', data: coinDetails });
 });
 
 exports.getSimplePrices = catchAsync(async (req, res) => {
     const { ids, currencies = ['usd'] } = req.query;
     if (!ids) {
-        throw new AppError.badRequest('Coin IDs are required');
+        throw new AppError.badRequest('Missing required parameters');
     }
 
     const coinIds = Array.isArray(ids) ? ids : ids.split(',');
     const currencyList = Array.isArray(currencies) ? currencies : currencies.split(',');
     
     const prices = await cryptoService.getSimplePrices(coinIds, currencyList);
-    res.json(prices);
+    res.status(200).json({ status: 'success', data: prices });
 });

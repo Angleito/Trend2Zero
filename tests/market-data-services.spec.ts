@@ -1,3 +1,4 @@
+import { test, expect, describe } from '@jest/globals';
 import { SecureMarketDataService } from '../lib/services/secureMarketDataService';
 import coinGeckoService from '../lib/services/coinGeckoService';
 import coinMarketCapService from '../lib/services/coinMarketCapService';
@@ -156,5 +157,18 @@ describe('Market Data Services', () => {
         consoleSpy.mockRestore();
       });
     });
+  });
+});
+
+describe('Market Data Service', () => {
+  let marketDataService: SecureMarketDataService;
+
+  beforeEach(() => {
+    marketDataService = new SecureMarketDataService();
+  });
+
+  test('should handle rate limiting correctly', async () => {
+    const result = await marketDataService.getAssetPriceInBTC('BTC');
+    expect(result).toBeDefined();
   });
 });

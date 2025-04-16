@@ -194,3 +194,34 @@ $RECYCLE.BIN/
 # Browser-specific files
 .chrome/
 playwright/.auth/
+
+# Added by Claude Task Master
+dev-debug.log
+# Dependency directories
+node_modules/
+# Environment variables
+# Editor directories and files
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# OS specific
+# Task files
+tasks.json
+
+# Additional development files
+.cursor/
+.windsurfrules
+jest-results.json
+tasks/
+
+# Cache and data files
+apiCache.json
+dump/
+
+# Documentation
+README-task-master.md
+prd.md
+scripts/README.md
+scripts/example_prd.txt

@@ -1,6 +1,7 @@
 import axios, { AxiosError } from 'axios';
-import { HistoricalDataPoint, AssetPrice, normalizeHistoricalDataPoint } from '../types';
+import { HistoricalDataPoint, AssetPrice, normalizeHistoricalDataPoint, MarketAsset } from '../types';
 import { getCachedData } from '../cache';
+import fetch from 'node-fetch';
 
 /**
  * CoinGecko API Service
@@ -12,6 +13,7 @@ export class CoinGeckoService {
   private baseURL: string;
   private headers: Record<string, string>;
   private symbolToIdMappings: Record<string, string>;
+  private baseUrl = 'https://api.coingecko.com/api/v3';
 
   constructor(apiKey?: string) {
     this.apiKey = apiKey || 'free_tier_public_access';
@@ -87,48 +89,35 @@ export class CoinGeckoService {
    * @returns Formatted asset price data
    */
   async getCryptoPrice(symbol: string): Promise<AssetPrice | null> {
-    const cacheKey = `coingecko_crypto_price_${symbol}`;
-    return getCachedData<AssetPrice | null>(cacheKey, async () => {
-      try {
-        const id = this.getIdFromSymbol(symbol);
-        
-        const response = await axios.get(`${this.baseURL}/simple/price`, {
-          headers: this.headers,
-          params: {
-            ids: id,
-            vs_currencies: 'usd',
-            include_market_cap: 'true',
-            include_24hr_vol: 'true',
-            include_24hr_change: 'true',
-            include_last_updated_at: 'true'
-          }
-        });
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/simple/price?ids=${symbol.toLowerCase()}&vs_currencies=usd&include_24hr_change=true`
+      );
 
-        const data = response.data[id];
-        
-        return {
-          symbol,
-          price: data.usd,
-          change: data.usd_24h_change,
-          changePercent: data.usd_24h_change,
-          volume24h: data.usd_24h_vol,
-          marketCap: data.usd_market_cap,
-          lastUpdated: new Date(data.last_updated_at * 1000).toISOString(),
-          id,
-          name: symbol === 'BTC' ? 'Bitcoin' : id.charAt(0).toUpperCase() + id.slice(1),
-          type: 'cryptocurrency',
-          priceInBTC: 0,
-          priceInUSD: data.usd
-        };
-      } catch (error) {
-        if (this.isRateLimitError(error)) {
-          console.error(`[CoinGecko] Rate limit exceeded for ${symbol}`);
-          return null;
-        }
-        console.error(`[CoinGecko] Error fetching price for ${symbol}:`, error);
-        return null;
+      if (!response.ok) {
+        throw new Error(`CoinGecko API error: ${response.statusText}`);
       }
-    }, 60 * 60); // 1 hour TTL
+
+      const data = await response.json();
+      const price = data[symbol.toLowerCase()]?.usd;
+      
+      if (!price) return null;
+
+      return {
+        symbol: symbol.toUpperCase(),
+        name: symbol.toUpperCase(),
+        type: 'Cryptocurrency',
+        price,
+        changePercent: data[symbol.toLowerCase()]?.usd_24h_change || 0,
+        priceInUSD: price,
+        priceInBTC: 0,
+        change: 0,
+        lastUpdated: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error(`[CoinGeckoService] Error fetching price for ${symbol}:`, error);
+      return null;
+    }
   }
 
   /**
@@ -322,6 +311,57 @@ export class CoinGeckoService {
       return true;
     }
     return false;
+  }
+
+  async getTopAssets(limit: number = 100): Promise<MarketAsset[]> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${limit}&page=1`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`CoinGecko API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.map((item: any) => ({
+        symbol: item.symbol.toUpperCase(),
+        name: item.name,
+        type: 'Cryptocurrency',
+        price: item.current_price,
+        changePercent: item.price_change_percentage_24h,
+        priceInUSD: item.current_price,
+        priceInBTC: item.current_price / (data[0].current_price || 1),
+        change: item.price_change_24h,
+        lastUpdated: item.last_updated
+      }));
+    } catch (error) {
+      console.error('[CoinGeckoService] Error fetching top assets:', error);
+      return [];
+    }
+  }
+
+  async getHistoricalData(symbol: string, days: number = 7): Promise<any[]> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/coins/${symbol.toLowerCase()}/market_chart?vs_currency=usd&days=${days}&interval=daily`
+      );
+
+      if (!response.ok) {
+        throw new Error(`CoinGecko API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.prices.map(([timestamp, price]: [number, number]) => ({
+        timestamp,
+        date: new Date(timestamp),
+        price,
+        value: price
+      }));
+    } catch (error) {
+      console.error(`[CoinGeckoService] Error fetching historical data for ${symbol}:`, error);
+      return [];
+    }
   }
 }
 

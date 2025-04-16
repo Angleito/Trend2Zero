@@ -1,22 +1,15 @@
-const mongoose = require('mongoose');
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { setupTestDB } = require('../setupTestDB');
 const HistoricalData = require('../../models/historicalDataModel');
 
 describe('Historical Data Model', () => {
-  let mongoServer;
+  let db;
 
   beforeAll(async () => {
-    mongoServer = await MongoMemoryServer.create();
-    const mongoUri = mongoServer.getUri();
-    await mongoose.connect(mongoUri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
+    db = await setupTestDB();
   });
 
   afterAll(async () => {
-    await mongoose.disconnect();
-    await mongoServer.stop();
+    await db.stop();
   });
 
   beforeEach(async () => {

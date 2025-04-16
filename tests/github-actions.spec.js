@@ -1,5 +1,4 @@
-// @ts-check
-const { test, expect } = require('@playwright/test');
+import { test, expect } from '@playwright/test';
 
 // This test is specifically designed to run in GitHub Actions
 test('GitHub Actions compatibility test', async ({ page }) => {
@@ -67,4 +66,9 @@ test('GitHub Actions compatibility test', async ({ page }) => {
 
     throw error; // Re-throw the error to fail the test
   }
+});
+
+test('Project build and test workflow', async ({ page }) => {
+  await page.goto('http://localhost:3000/');
+  await expect(page.locator('h1')).toBeVisible();
 });

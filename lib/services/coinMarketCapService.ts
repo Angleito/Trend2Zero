@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { AssetPrice } from '../types';
 import { getCachedData } from '../cache'; // Import the MongoDB cache utility
+import fetch from 'node-fetch';
 
 class CoinMarketCapService {
   private apiKey?: string;
@@ -145,6 +146,31 @@ class CoinMarketCapService {
       Object.entries(this.symbolToIdMappings).map(([k, v]) => [v, k])
     );
     return reverseMapping[id.toString()] || id.toString().toUpperCase();
+  }
+
+  private getMockPrice(symbol: string): AssetPrice {
+    // Mock data for testing
+    const mockPrices: Record<string, number> = {
+      'BTC': 65000,
+      'ETH': 3500,
+      'SOL': 120,
+      'DOGE': 0.15
+    };
+
+    const basePrice = mockPrices[symbol] || 100;
+    const changePercent = -5 + Math.random() * 10; // Random change between -5% and +5%
+
+    return {
+      symbol: symbol,
+      name: symbol,
+      type: 'Cryptocurrency',
+      price: basePrice,
+      changePercent: changePercent,
+      priceInUSD: basePrice,
+      priceInBTC: basePrice / mockPrices['BTC'],
+      change: basePrice * (changePercent / 100),
+      lastUpdated: new Date().toISOString()
+    };
   }
 }
 

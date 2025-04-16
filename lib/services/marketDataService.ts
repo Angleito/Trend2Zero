@@ -1,5 +1,8 @@
+import { AssetPrice, MarketAsset, MarketDataOptions, AssetCategory } from '../types';
+import { CoinGeckoService } from './coinGeckoService';
+import { CoinMarketCapService } from './coinMarketCapService';
 import { SecureMarketDataService } from './secureMarketDataService';
-import type { AssetCategory, AssetData, HistoricalDataPoint, MarketAsset } from '../types';
+import type { AssetData, HistoricalDataPoint } from '../types';
 
 /**
  * Market Data Service
@@ -8,176 +11,77 @@ import type { AssetCategory, AssetData, HistoricalDataPoint, MarketAsset } from 
  * from various sources. It uses the SecureMarketDataService to ensure
  * that API keys are not exposed to the client.
  */
-import coinGeckoService from './coinGeckoService';
-import coinMarketCapService from './coinMarketCapService';
-import { AssetPrice } from '../types';
 
 export class MarketDataService {
+  private coinGeckoService: CoinGeckoService;
+  private coinMarketCapService: CoinMarketCapService;
   private secureService: SecureMarketDataService;
   private useMockData: boolean;
 
   constructor() {
     console.log(`[MarketDataService] Initializing service`);
+    this.coinGeckoService = new CoinGeckoService();
+    this.coinMarketCapService = new CoinMarketCapService();
     this.secureService = new SecureMarketDataService();
     this.useMockData = process.env.USE_MOCK_DATA === 'true';
   }
 
-  /**
-   * Get asset price with weighted/round-robin logic and fallback
-   * BTC/ETH: CoinGecko first, fallback to CoinMarketCap
-   * Other cryptos: CoinMarketCap first, fallback to CoinGecko
-   * Others: use secureService (stocks, metals, etc)
-   */
-  async getAssetPrice(symbol: string): Promise<AssetData | null> {
+  async listAvailableAssets(options: MarketDataOptions = {}): Promise<MarketAsset[]> {
+    if (this.useMockData) {
+      return this.getMockAssets(options.category, options.limit);
+    }
+
+    try {
+      // Default to CoinGecko for initial implementation
+      const assetList = await this.coinGeckoService.getTopAssets(options.limit || 100);
+      
+      if (options.searchQuery) {
+        return assetList.filter(asset => 
+          asset.name.toLowerCase().includes(options.searchQuery!.toLowerCase()) ||
+          asset.symbol.toLowerCase().includes(options.searchQuery!.toLowerCase())
+        );
+      }
+
+      if (options.category) {
+        return assetList.filter(asset => asset.type === options.category);
+      }
+
+      if (options.sortBy) {
+        return assetList.sort((a, b) => {
+          const aValue = a[options.sortBy!];
+          const bValue = b[options.sortBy!];
+          return options.sortOrder === 'desc' 
+            ? (bValue > aValue ? 1 : -1)
+            : (aValue > bValue ? 1 : -1);
+        });
+      }
+
+      return assetList;
+    } catch (error) {
+      console.error('[MarketDataService] Error fetching assets:', error);
+      return []; // Return empty array instead of throwing to maintain API stability
+    }
+  }
+
+  async getAssetPrice(symbol: string): Promise<AssetPrice | null> {
     if (this.useMockData) {
       return this.getMockAssets(undefined, 1).find(a => a.symbol === symbol) || null;
     }
-    const upper = symbol.toUpperCase();
-    const isCrypto = this.isCryptoCurrency(upper);
-    let primary: 'coingecko' | 'cmc' | null = null;
-    let secondary: 'coingecko' | 'cmc' | null = null;
-    if (isCrypto) {
-      if (upper === 'BTC' || upper === 'ETH') {
-        primary = 'coingecko';
-        secondary = 'cmc';
-      } else {
-        primary = 'cmc';
-        secondary = 'coingecko';
-      }
-    }
-    // Try crypto logic
-    if (isCrypto) {
-      let price: AssetPrice | null = null;
-      let provider: string = '';
-      // Try primary
-      try {
-        if (primary === 'coingecko') {
-          price = await coinGeckoService.getAssetPrice(upper.toLowerCase());
-          provider = 'CoinGecko';
-        } else if (primary === 'cmc') {
-          // Map symbol to CMC ID if needed, here we assume symbol is CMC ID or symbol
-          price = await coinMarketCapService.getAssetPrice(upper);
-          provider = 'CoinMarketCap';
-        }
-      } catch (e) {
-        price = null;
-      }
-      if (price && price.price) {
-        console.log(`[MarketDataService] Used ${provider} for ${symbol}`);
-        return {
-          symbol: upper,
-          price: price.price,
-          change: price.change ?? 0,
-          changePercent: price.changePercent ?? 0,
-          priceInBTC: price.priceInBTC ?? undefined,
-          priceInUSD: price.price,
-          lastUpdated: price.lastUpdated ?? new Date().toISOString(),
-        };
-      }
-      // Try secondary
-      try {
-        if (secondary === 'coingecko') {
-          price = await coinGeckoService.getAssetPrice(upper.toLowerCase());
-          provider = 'CoinGecko';
-        } else if (secondary === 'cmc') {
-          price = await coinMarketCapService.getAssetPrice(upper);
-          provider = 'CoinMarketCap';
-        }
-      } catch (e) {
-        price = null;
-      }
-      if (price && price.price) {
-        console.log(`[MarketDataService] Used fallback ${provider} for ${symbol}`);
-        return {
-          symbol: upper,
-          price: price.price,
-          change: price.change ?? 0,
-          changePercent: price.changePercent ?? 0,
-          priceInBTC: price.priceInBTC ?? undefined,
-          priceInUSD: price.price,
-          lastUpdated: price.lastUpdated ?? new Date().toISOString(),
-        };
-      }
-      console.warn(`[MarketDataService] Both providers failed for ${symbol}`);
+
+    try {
+      // Try CoinGecko first
+      const price = await this.coinGeckoService.getCryptoPrice(symbol);
+      if (price) return price;
+
+      // Fallback to CoinMarketCap
+      return await this.coinMarketCapService.getAssetPrice(symbol);
+    } catch (error) {
+      console.error(`[MarketDataService] Error fetching price for ${symbol}:`, error);
       return null;
     }
-    // Not a crypto: use secureService.getAssetPriceInBTC (stocks, metals, etc)
-    const nonCryptoPrice = await this.secureService.getAssetPriceInBTC(symbol);
-    if (nonCryptoPrice && nonCryptoPrice.price) {
-      return {
-        symbol: nonCryptoPrice.symbol,
-        price: nonCryptoPrice.price,
-        change: nonCryptoPrice.change ?? 0,
-        changePercent: nonCryptoPrice.changePercent ?? 0,
-        priceInBTC: nonCryptoPrice.priceInBTC ?? undefined,
-        priceInUSD: nonCryptoPrice.priceInUSD ?? nonCryptoPrice.price,
-        lastUpdated: nonCryptoPrice.lastUpdated ?? new Date().toISOString(),
-      };
-    }
-    return null;
   }
 
-  /**
-   * List available assets of a specific category
-   */
-  async listAvailableAssets(options: {
-    page?: number;
-    pageSize?: number;
-    category?: AssetCategory;
-    keywords?: string;
-  } = {}): Promise<MarketAsset[]> {
-    if (this.useMockData) {
-      return this.getMockAssets(options.category, options.pageSize);
-    }
-
-    return this.secureService.listAvailableAssets(options);
-  }
-
-  /**
-   * Get asset price in BTC
-   */
-  async getAssetPriceInBTC(assetSymbol: string): Promise<AssetData | null> {
-    if (this.useMockData) {
-      const mockPrices: Record<string, AssetData> = {
-        'BTC': {
-          symbol: 'BTC',
-          price: 67890.12,
-          change: 1234.56,
-          changePercent: 2.34,
-          priceInBTC: 1.0,
-          priceInUSD: 67890.12,
-          lastUpdated: new Date().toISOString()
-        },
-        'ETH': {
-          symbol: 'ETH',
-          price: 3456.78,
-          change: 123.45,
-          changePercent: 1.5,
-          priceInBTC: 0.05,
-          priceInUSD: 3456.78,
-          lastUpdated: new Date().toISOString()
-        },
-        'AAPL': {
-          symbol: 'AAPL',
-          price: 180.50,
-          change: 2.75,
-          changePercent: 1.2,
-          priceInBTC: 0.0025,
-          priceInUSD: 180.50,
-          lastUpdated: new Date().toISOString()
-        }
-      };
-
-      return mockPrices[assetSymbol] || null;
-    }
-
-    return this.secureService.getAssetPriceInBTC(assetSymbol);
-  }
-
-  /**
-   * Get historical price data for an asset
-   */
-  async getHistoricalData(symbol: string, days: number = 30): Promise<HistoricalDataPoint[]> {
+  async getHistoricalData(symbol: string, days: number = 7): Promise<any[]> {
     if (this.useMockData) {
       // Generate mock historical data
       const result: HistoricalDataPoint[] = [];
@@ -215,8 +119,12 @@ export class MarketDataService {
       return result;
     }
 
-    const data = await this.secureService.getHistoricalData(symbol, days);
-    return data ?? [];
+    try {
+      return await this.coinGeckoService.getHistoricalData(symbol, days);
+    } catch (error) {
+      console.error(`[MarketDataService] Error fetching historical data for ${symbol}:`, error);
+      return [];
+    }
   }
 
   /**
