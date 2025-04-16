@@ -1,10 +1,10 @@
-import { MarketDataService } from '../../../lib/services/marketDataService';
+import marketDataService from '../../../lib/services/marketDataService';
 import type { AssetData } from '../../../lib/types';
 
 // Server-side data fetching
 async function fetchAssetData(symbol: string): Promise<AssetData | null> {
   try {
-    const marketService = new MarketDataService();
+    const marketService = marketDataService;
     return await marketService.getAssetPrice(symbol);
   } catch (err) {
     console.error('Error fetching asset data:', err);

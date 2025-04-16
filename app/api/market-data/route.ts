@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { ErrorResponse, MarketAsset, MarketDataOptions, AssetCategory, parseAssetCategory } from '@/lib/types';
-import { MarketDataService } from '@/lib/services/marketDataService';
+import marketDataService from '@/lib/services/marketDataService';
 
 export async function GET(request: Request) {
-  const marketDataService = new MarketDataService();
+  const marketService = marketDataService;
 
   try {
     // Parse query parameters for market data options

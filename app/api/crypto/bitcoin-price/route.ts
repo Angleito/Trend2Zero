@@ -72,6 +72,7 @@ export async function GET() {
       return new NextResponse(
         JSON.stringify({
           error: 'All providers are rate-limited or unavailable. No Bitcoin price data available.',
+          status: 503,
           ...FALLBACK_BITCOIN_PRICE
         } as ErrorResponse),
         { status: 503, headers: { 'Content-Type': 'application/json' } }
