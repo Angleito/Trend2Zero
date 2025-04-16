@@ -217,4 +217,6 @@ export class MarketDataService {
   }
 }
 
-export default MarketDataService;
+const marketDataService = new MarketDataService();
+export default marketDataService;
+export { MarketDataService };

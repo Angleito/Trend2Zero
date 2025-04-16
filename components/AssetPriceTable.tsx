@@ -43,7 +43,7 @@ const AssetPriceTable: React.FC<AssetPriceTableProps> = ({
         try {
           setLoading(true);
           setError(null);
-          const marketService = new marketDataService();
+          const marketService = marketDataService;
           
           // First try to fetch data with retries
           let retries = 3;
@@ -53,7 +53,7 @@ const AssetPriceTable: React.FC<AssetPriceTableProps> = ({
             try {
               assetList = await marketService.listAvailableAssets({
                 category,
-                pageSize: limit
+                limit: limit
               });
               break;
             } catch (fetchError) {

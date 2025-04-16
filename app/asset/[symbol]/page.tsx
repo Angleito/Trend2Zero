@@ -5,7 +5,7 @@ import type { AssetData } from '../../../lib/types';
 async function fetchAssetData(symbol: string): Promise<AssetData | null> {
   try {
     const marketService = new MarketDataService();
-    return await marketService.getAssetPriceInBTC(symbol);
+    return await marketService.getAssetPrice(symbol);
   } catch (err) {
     console.error('Error fetching asset data:', err);
     return null;

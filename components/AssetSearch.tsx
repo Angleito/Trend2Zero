@@ -40,10 +40,10 @@ const AssetSearch = ({ onAssetSelect }: AssetSearchProps) => {
 
       setLoading(true);
       try {
-        const marketService = new marketDataService();
+        const marketService = marketDataService;
         const assets = await marketService.listAvailableAssets({
-          pageSize: 10,
-          keywords: searchTerm
+          limit: 10,
+          query: searchTerm
         });
 
         const filteredResults = assets.filter((asset: MarketAsset) =>

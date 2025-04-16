@@ -5,12 +5,14 @@ import { AssetPrice, ErrorResponse } from '@/lib/types';
 // Fallback Bitcoin price data for static generation
 const FALLBACK_BITCOIN_PRICE: AssetPrice = {
   symbol: 'BTC',
+  name: 'Bitcoin',
+  type: 'Cryptocurrency',
   price: 67890.12,
   change: 1234.56,
-  changePercent: 2.34,
-  priceInBTC: 1.0,
+  changePercent: 1.85,
+  priceInBTC: 1,
   priceInUSD: 67890.12,
-  lastUpdated: new Date().toISOString()
+  lastUpdated: '2025-04-15T00:00:00Z',
 };
 
 // Inline implementation of getAssetPrice with explicit typing
