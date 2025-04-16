@@ -1,6 +1,6 @@
 import { AssetPrice, MarketAsset, MarketDataOptions, AssetCategory } from '../types';
 import { CoinGeckoService } from './coinGeckoService';
-import { CoinMarketCapService } from './coinMarketCapService';
+import coinMarketCapService from './coinMarketCapService'; // Fixed import to use the default export
 import { SecureMarketDataService } from './secureMarketDataService';
 import type { AssetData, HistoricalDataPoint } from '../types';
 
@@ -11,17 +11,15 @@ import type { AssetData, HistoricalDataPoint } from '../types';
  * from various sources. It uses the SecureMarketDataService to ensure
  * that API keys are not exposed to the client.
  */
-
 export class MarketDataService {
   private coinGeckoService: CoinGeckoService;
-  private coinMarketCapService: CoinMarketCapService;
   private secureService: SecureMarketDataService;
   private useMockData: boolean;
 
   constructor() {
     console.log(`[MarketDataService] Initializing service`);
     this.coinGeckoService = new CoinGeckoService();
-    this.coinMarketCapService = new CoinMarketCapService();
+    // Using the imported coinMarketCapService singleton instance instead of creating a new one
     this.secureService = new SecureMarketDataService();
     this.useMockData = process.env.USE_MOCK_DATA === 'true';
   }
@@ -74,7 +72,7 @@ export class MarketDataService {
       if (price) return price;
 
       // Fallback to CoinMarketCap
-      return await this.coinMarketCapService.getAssetPrice(symbol);
+      return await coinMarketCapService.getAssetPrice(symbol);
     } catch (error) {
       console.error(`[MarketDataService] Error fetching price for ${symbol}:`, error);
       return null;
@@ -217,6 +215,6 @@ export class MarketDataService {
   }
 }
 
+// Create a singleton instance and export as default
 const marketDataService = new MarketDataService();
 export default marketDataService;
-export { MarketDataService };

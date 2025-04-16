@@ -39,6 +39,8 @@ async function getAssetPrice(symbol: string): Promise<AssetPrice> {
     if (cgResponse.data && cgResponse.data.bitcoin) {
       return {
         symbol: 'BTC',
+        name: 'Bitcoin',
+        type: 'Cryptocurrency',
         price: cgResponse.data.bitcoin.usd,
         change: cgResponse.data.bitcoin.usd_24h_change || 0,
         changePercent: cgResponse.data.bitcoin.usd_24h_change || 0,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, ChangeEvent } from 'react';
 import Link from 'next/link';
-import marketDataService from '../lib/services/marketDataService';
+import { MarketDataService } from '../lib/services/marketDataService';
 import type { MarketAsset } from '../lib/types';
 
 interface AssetSearchProps {
@@ -40,10 +40,10 @@ const AssetSearch = ({ onAssetSelect }: AssetSearchProps) => {
 
       setLoading(true);
       try {
-        const marketService = marketDataService;
+        const marketService = new MarketDataService();
         const assets = await marketService.listAvailableAssets({
           limit: 10,
-          query: searchTerm
+          searchQuery: searchTerm
         });
 
         const filteredResults = assets.filter((asset: MarketAsset) =>
