@@ -20,7 +20,7 @@ export default function TrackerPage() {
   const [selectedCategory, setSelectedCategory] = useState<AssetCategory | null>(null);
   const [mockDataWarning, setMockDataWarning] = useState(false);
 
-  const categories: AssetCategory[] = ['stocks', 'indices', 'cryptocurrency', 'metals'];
+  const categories: AssetCategory[] = ['Stocks', 'Indices', 'Cryptocurrency', 'Commodities'];
 
   const marketData = useMarketData({
     type: selectedCategory ?? undefined, // Explicitly handle null case

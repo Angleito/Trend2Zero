@@ -27,7 +27,8 @@
         "@models": "./src/models",
         "@controllers": "./src/controllers",
         "@services": "./src/services",
-        "@utils": "./src/utils"
+        "@utils": "./src/utils",
+        "@rootLibServices": "../../lib/services"  // Corrected path
       }
     }]
   ],

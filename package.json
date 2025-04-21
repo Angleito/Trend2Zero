@@ -38,6 +38,9 @@
     "generate": "node scripts/dev.js generate",
     "parse-prd": "node scripts/dev.js parse-prd"
   },
+  "_moduleAliases": {
+    "@rootLibServices": "./lib/services"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
     "@emotion/react": "^11.14.0",
@@ -66,6 +69,7 @@
     "jsonwebtoken": "^9.0.2",
     "lightweight-charts": "^5.0.5",
     "lru-cache": "^10.2.0",
+    "module-alias": "^2.2.3",
     "mongodb": "^6.15.0",
     "next": "^14.2.28",
     "node-fetch": "^2.7.0",

@@ -1,8 +1,22 @@
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-const crypto = require('crypto');
-
-const userSchema = new mongoose.Schema({
+import mongoose, { Schema } from 'mongoose';
+import bcrypt from 'bcryptjs';
+import { AppError } from '../utils/appError';
+const watchlistItemSchema = new Schema({
+    symbol: {
+        type: String,
+        required: [true, 'Asset symbol is required']
+    },
+    type: {
+        type: String,
+        enum: ['crypto', 'stock'],
+        required: [true, 'Asset type is required']
+    },
+    addedAt: {
+        type: Date,
+        default: Date.now
+    }
+});
+const userSchema = new Schema({
     name: {
         type: String,
         required: [true, 'Please tell us your name']
@@ -11,87 +25,100 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Please provide your email'],
         unique: true,
-        lowercase: true
-    },
-    photo: String,
-    role: {
-        type: String,
-        enum: ['user', 'admin'],
-        default: 'user'
+        lowercase: true,
+        validate: {
+            validator: function (value) {
+                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+            },
+            message: 'Please provide a valid email'
+        }
     },
     password: {
         type: String,
         required: [true, 'Please provide a password'],
-        minlength: 8,
+        minlength: [8, 'Password must be at least 8 characters long'],
         select: false
     },
     passwordConfirm: {
         type: String,
         required: [true, 'Please confirm your password'],
         validate: {
-            validator: function(el) {
+            validator: function (el) {
                 return el === this.password;
             },
             message: 'Passwords do not match'
         }
     },
     passwordChangedAt: Date,
-    passwordResetToken: String,
-    passwordResetExpires: Date,
+    watchlist: [watchlistItemSchema],
+    role: {
+        type: String,
+        enum: ['user', 'admin'],
+        default: 'user'
+    },
     active: {
         type: Boolean,
         default: true,
         select: false
     }
-}, {
-    timestamps: true
 });
-
-userSchema.pre('save', async function(next) {
-    if (!this.isModified('password')) return next();
-    
-    this.password = await bcrypt.hash(this.password, 12);
-    this.passwordConfirm = undefined;
+// Pre-save middleware to hash password
+userSchema.pre('save', async function (next) {
+    if (!this.isModified('password'))
+        return next();
+    try {
+        this.password = await bcrypt.hash(this.password, 12);
+        this.passwordConfirm = undefined;
+        next();
+    }
+    catch (error) {
+        next(error);
+    }
+});
+// Pre-save middleware to set passwordChangedAt
+userSchema.pre('save', function (next) {
+    if (!this.isModified('password') || this.isNew)
+        return next();
+    this.passwordChangedAt = new Date(Date.now() - 1000); // Subtract 1s for token creation delay
     next();
 });
-
-userSchema.pre('save', function(next) {
-    if (!this.isModified('password') || this.isNew) return next();
-    
-    this.passwordChangedAt = Date.now() - 1000;
+// Query middleware to filter out inactive users
+userSchema.pre(/^find/, function (next) {
+    this.where({ active: { $ne: false } });
     next();
 });
-
-userSchema.pre(/^find/, function(next) {
-    this.find({ active: { $ne: false } });
-    next();
-});
-
-userSchema.methods.correctPassword = async function(candidatePassword, userPassword) {
-    return await bcrypt.compare(candidatePassword, userPassword);
+// Instance method to check password
+userSchema.methods.correctPassword = async function (candidatePassword) {
+    return await bcrypt.compare(candidatePassword, this.password);
 };
-
-userSchema.methods.changedPasswordAfter = function(JWTTimestamp) {
+// Instance method to check if password was changed after token issuance
+userSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
     if (this.passwordChangedAt) {
-        const changedTimestamp = parseInt(this.passwordChangedAt.getTime() / 1000, 10);
+        const changedTimestamp = this.passwordChangedAt.getTime() / 1000;
         return JWTTimestamp < changedTimestamp;
     }
     return false;
 };
-
-userSchema.methods.createPasswordResetToken = function() {
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    
-    this.passwordResetToken = crypto
-        .createHash('sha256')
-        .update(resetToken)
-        .digest('hex');
-    
-    this.passwordResetExpires = Date.now() + 10 * 60 * 1000;
-    
-    return resetToken;
+// Instance method to add item to watchlist
+userSchema.methods.addToWatchlist = async function (symbol, type) {
+    const exists = this.watchlist.some((item) => item.symbol === symbol);
+    if (exists) {
+        throw new AppError('Asset already in watchlist', 400);
+    }
+    this.watchlist.push({ symbol, type });
+    await this.save();
 };
-
-const User = mongoose.model('User', userSchema);
-
-module.exports = User;
+// Instance method to remove item from watchlist
+userSchema.methods.removeFromWatchlist = async function (symbol) {
+    const index = this.watchlist.findIndex((item) => item.symbol === symbol);
+    if (index === -1) {
+        throw new AppError('Asset not found in watchlist', 404);
+    }
+    this.watchlist.splice(index, 1);
+    await this.save();
+};
+// Static method to find user by email
+userSchema.statics.findByEmail = function (email) {
+    return this.findOne({ email });
+};
+export const User = mongoose.model('User', userSchema);

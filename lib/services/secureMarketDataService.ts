@@ -1,6 +1,7 @@
 import { 
   MarketAsset, 
   AssetPrice,
+  AssetCategory
 } from '../types';
 import MongoDbCacheService from './mongoDbCacheService';
 import coinGeckoService from './coinGeckoService';
@@ -12,47 +13,57 @@ const predefinedAssets: MarketAsset[] = [
   { 
     symbol: 'BTC', 
     name: 'Bitcoin', 
-    type: 'cryptocurrency', 
-    id: 'bitcoin',
+    type: 'Cryptocurrency',
     price: 0,
     change: 0,
-    changePercent: 0
+    changePercent: 0,
+    priceInBTC: 0,
+    priceInUSD: 0,
+    lastUpdated: ''
   },
   { 
     symbol: 'ETH', 
     name: 'Ethereum', 
-    type: 'cryptocurrency', 
-    id: 'ethereum',
+    type: 'Cryptocurrency',
     price: 0,
     change: 0,
-    changePercent: 0
+    changePercent: 0,
+    priceInBTC: 0,
+    priceInUSD: 0,
+    lastUpdated: ''
   },
   { 
     symbol: 'AAPL', 
     name: 'Apple Inc.', 
-    type: 'stocks', 
-    id: 'apple',
+    type: 'Stocks',
     price: 0,
     change: 0,
-    changePercent: 0
+    changePercent: 0,
+    priceInBTC: 0,
+    priceInUSD: 0,
+    lastUpdated: ''
   },
   { 
     symbol: 'GOOGL', 
     name: 'Alphabet Inc.', 
-    type: 'stocks', 
-    id: 'alphabet',
+    type: 'Stocks',
     price: 0,
     change: 0,
-    changePercent: 0
+    changePercent: 0,
+    priceInBTC: 0,
+    priceInUSD: 0,
+    lastUpdated: ''
   },
   { 
     symbol: 'XAU', 
     name: 'Gold', 
-    type: 'metals', 
-    id: 'gold',
+    type: 'Precious Metal',
     price: 0,
     change: 0,
-    changePercent: 0
+    changePercent: 0,
+    priceInBTC: 0,
+    priceInUSD: 0,
+    lastUpdated: ''
   }
 ];
 
@@ -75,7 +86,7 @@ class SecureMarketDataService {
   } = {}): Promise<MarketAsset[]> {
     let results = predefinedAssets;
     if (options.category) {
-      results = results.filter(asset => asset.type?.toLowerCase() === options.category?.toLowerCase());
+      results = results.filter(asset => asset.type === options.category);
     }
     if (options.keywords) {
       const kw = options.keywords.toLowerCase();
@@ -151,11 +162,11 @@ class SecureMarketDataService {
         name: 'Bitcoin',
         price: 51000,
         priceInUSD: 51000,
-        change: 5000000000,
+        change: 0.025,
         changePercent: 2.5,
         priceInBTC: 1,
         lastUpdated: "2023-01-01T12:00:00Z",
-        type: 'cryptocurrency'
+        type: 'Cryptocurrency'
       };
 
       // If CoinMarketCap is rate limited, go directly to CoinGecko

@@ -1,3 +1,4 @@
+// components/HighchartsView.tsx
 'use client';
 
 /**
@@ -6,16 +7,11 @@
  * See tests/browser-test.js for examples.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react'; // Keep useRef for Highcharts instance
 import Highcharts from 'highcharts/highstock';
 import HighchartsReact from 'highcharts-react-official';
 
-import { MarketDataService } from '../lib/services/marketDataService';
-import type { HistoricalDataPoint } from '../lib/types';
-
-// Load Highcharts modules
-// Using dynamic imports for client-side only modules
-// Define types for Highcharts modules
+// Import necessary Highcharts modules dynamically
 type HighchartsModule = (H: typeof Highcharts) => void;
 
 // Initialize module variables
@@ -27,32 +23,41 @@ if (typeof window !== 'undefined') {
   // This will only run on the client side
   import('highcharts/modules/exporting').then(module => {
     exporting = module.default;
-    exporting(Highcharts);
+    if (Highcharts) exporting(Highcharts);
   });
 
   import('highcharts/modules/export-data').then(module => {
     exportData = module.default;
-    exportData(Highcharts);
+    if (Highcharts) exportData(Highcharts);
   });
 
   import('highcharts/modules/accessibility').then(module => {
     accessibility = module.default;
-    accessibility(Highcharts);
+    if (Highcharts) accessibility(Highcharts);
   });
 }
 
-interface HighchartsViewProps {
-  symbol: string;
+// Update the props interface to accept data and title
+export interface HighchartsViewProps {
+  data: (number | null | [number, number | null])[][]; // Highcharts data format: array of [timestamp, value]
+  title: string;
+  symbol?: string; // Keep symbol as optional if still needed for context, but not for data fetching
   theme?: 'light' | 'dark';
-  days?: number;
+  days?: number; // Keep days as optional, not used for data fetching here
 }
 
 const HighchartsView = ({
-  symbol,
+  data, // Accept data prop
+  title, // Accept title prop
+  symbol, // Keep symbol prop (optional)
   theme = 'dark',
-  days = 30,
+  days = 30, // Keep days prop (optional)
 }: HighchartsViewProps) => {
-  const [chartOptions, setChartOptions] = useState<Highcharts.Options>({
+  // Use useRef to hold the chart instance if needed for direct manipulation
+  const chartComponentRef = useRef<HighchartsReact.RefObject>(null);
+
+  // Define chart options based on props
+  const chartOptions: Highcharts.Options = {
     chart: {
       backgroundColor: theme === 'dark' ? '#1E1E1E' : '#FFFFFF',
       style: {
@@ -60,7 +65,7 @@ const HighchartsView = ({
       },
     },
     title: {
-      text: `${symbol} Price History`,
+      text: title, // Use the title prop
       style: {
         color: theme === 'dark' ? '#FFFFFF' : '#000000',
       },
@@ -78,39 +83,21 @@ const HighchartsView = ({
       lineColor: theme === 'dark' ? '#333333' : '#CCCCCC',
       tickColor: theme === 'dark' ? '#333333' : '#CCCCCC',
     },
-    yAxis: [
-      {
-        title: {
-          text: 'Price (USD)',
-          style: {
-            color: theme === 'dark' ? '#CCCCCC' : '#666666',
-          },
+    yAxis: { // Simplified to one Y-axis for price data
+      title: {
+        text: 'Price (USD)',
+        style: {
+          color: theme === 'dark' ? '#CCCCCC' : '#666666',
         },
-        labels: {
-          style: {
-            color: theme === 'dark' ? '#CCCCCC' : '#666666',
-          },
-        },
-        lineColor: theme === 'dark' ? '#333333' : '#CCCCCC',
-        tickColor: theme === 'dark' ? '#333333' : '#CCCCCC',
       },
-      {
-        title: {
-          text: 'Volume',
-          style: {
-            color: theme === 'dark' ? '#CCCCCC' : '#666666',
-          },
+      labels: {
+        style: {
+          color: theme === 'dark' ? '#CCCCCC' : '#666666',
         },
-        labels: {
-          style: {
-            color: theme === 'dark' ? '#CCCCCC' : '#666666',
-          },
-        },
-        opposite: true,
-        lineColor: theme === 'dark' ? '#333333' : '#CCCCCC',
-        tickColor: theme === 'dark' ? '#333333' : '#CCCCCC',
       },
-    ],
+      lineColor: theme === 'dark' ? '#333333' : '#CCCCCC',
+      tickColor: theme === 'dark' ? '#333333' : '#CCCCCC',
+    },
     legend: {
       enabled: true,
       itemStyle: {
@@ -128,21 +115,15 @@ const HighchartsView = ({
     series: [
       {
         type: 'line',
-        name: `${symbol} Price`,
-        data: [],
+        name: `${symbol || 'Asset'} Price`, // Use symbol prop if available, otherwise default
+        data: data, // Use the data prop
         color: '#FF9500',
         tooltip: {
           valueDecimals: 2,
           valuePrefix: '$',
         },
       },
-      {
-        type: 'column',
-        name: 'Volume',
-        data: [],
-        color: 'rgba(255, 149, 0, 0.3)',
-        yAxis: 1,
-      },
+      // Removed the volume series as the historical data endpoint only provides price
     ],
     responsive: {
       rules: [
@@ -164,118 +145,27 @@ const HighchartsView = ({
         },
       ],
     },
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  // Removed internal loading and error states, and the useEffect for data fetching
 
-        // Fetch historical data for the symbol
-        const marketService = new MarketDataService();
-        const historicalData = await marketService.getHistoricalData(symbol, days);
-
-        if (historicalData.length === 0) {
-          throw new Error('No historical data available');
-        }
-
-        // Filter out points with invalid date or missing price
-        const validHistoricalData = historicalData.filter(
-          (dp: HistoricalDataPoint) =>
-            dp.price != null &&
-            (dp.date instanceof Date ||
-              ((typeof dp.date === 'string' || typeof dp.date === 'number') &&
-                !isNaN(new Date(dp.date).getTime())))
-        );
-
-        // Format data for Highcharts using only valid points
-        const priceData = validHistoricalData.map((dataPoint: HistoricalDataPoint) => {
-          // Handle both Date objects and ISO strings/numbers
-          const timestamp = dataPoint.date instanceof Date
-            ? dataPoint.date.getTime()
-            : new Date(dataPoint.date!).getTime(); // Safe due to filter
-
-          return [
-            timestamp,
-            dataPoint.price!, // Safe due to filter
-          ];
-        });
-
-        const volumeData = validHistoricalData.map((dataPoint: HistoricalDataPoint) => {
-          // Handle both Date objects and ISO strings/numbers
-          const timestamp = dataPoint.date instanceof Date
-            ? dataPoint.date.getTime()
-            : new Date(dataPoint.date!).getTime(); // Safe due to filter
-
-          // Use a default volume if missing
-          const volume = dataPoint.volume ?? 0;
-
-          return [
-            timestamp,
-            volume,
-          ];
-        });
-
-        // Update chart options with the new data
-        setChartOptions(prevOptions => ({
-          ...prevOptions,
-          series: [
-            {
-              ...prevOptions.series?.[0],
-              type: 'line',
-              data: priceData,
-            } as Highcharts.SeriesOptionsType,
-            {
-              ...prevOptions.series?.[1],
-              type: 'column',
-              data: volumeData,
-            } as Highcharts.SeriesOptionsType,
-          ],
-        }));
-
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching chart data:', err);
-        setError('Failed to load chart data');
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [symbol, days, theme]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#FF9500]"></div>
-      </div>
-    );
+  // The parent component (AssetDetailPage) will handle loading and error states
+  // Render the chart only if data is provided and not empty
+  if (!data || data.length === 0) {
+      // This case should ideally be handled by the parent component rendering logic
+      // but as a fallback, we can return null or a message here.
+      // However, the parent is already checking for historicalData === null or length === 0
+      // So, if we reach here, data should be a non-empty array.
+      return null; // Or a placeholder if needed
   }
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <p className="text-red-500 mb-2">{error}</p>
-          <button
-            onClick={() => { if (typeof window !== 'undefined') window.location.reload(); }}
-            className="px-4 py-2 bg-[#FF9500] text-white rounded hover:bg-opacity-90 transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <HighchartsReact
       highcharts={Highcharts}
       options={chartOptions}
       constructorType={'stockChart'}
+      ref={chartComponentRef} // Attach ref
     />
   );
 };

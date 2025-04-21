@@ -83,7 +83,8 @@ export async function GET() {
     return new NextResponse(
       JSON.stringify({
         ...FALLBACK_BITCOIN_PRICE,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
+        status: 503
       } as ErrorResponse),
       { status: 503, headers: { 'Content-Type': 'application/json' } }
     );

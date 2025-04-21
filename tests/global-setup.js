@@ -1,56 +1,63 @@
-const fs = require('fs');
-const path = require('path');
-
-async function globalSetup() {
-  // Ensure test results directories exist
-  const resultsDirs = [
-    'test-results',
-    'test-results/logs',
-    'test-results/traces',
-    'test-results/screenshots',
-    'test-results/videos',
-    'test-results/archives',
-    'test-results/html-report'
-  ];
-
-  resultsDirs.forEach(dir => {
-    const fullPath = path.join(__dirname, '..', dir);
-    if (!fs.existsSync(fullPath)) {
-      fs.mkdirSync(fullPath, { recursive: true });
+import { spawn } from 'child_process';
+import { promisify } from 'util';
+import fetch from 'node-fetch';
+import { exec } from 'child_process';
+const execAsync = promisify(exec);
+async function isPortInUse(port) {
+    try {
+        await execAsync(`lsof -i:${port}`);
+        return true;
     }
-  });
-
-  // Logging function
-  const log = (message, level = 'info') => {
-    const logPath = path.join(__dirname, '..', 'test-results', 'logs', 'global-setup.log');
-    const timestamp = new Date().toISOString();
-    const logMessage = `[${level.toUpperCase()}] ${timestamp}: ${message}\n`;
-
-    fs.appendFileSync(logPath, logMessage);
-    console.log(logMessage.trim());
-  };
-
-  try {
-    log('Starting global setup for Trend2Zero tests');
-
-    // Skip browser launch in global setup to save memory
-    // Just create directories and log
-    log('Skipping browser launch in global setup to save memory');
-
-    // Create empty browser console log file
-    const logFile = path.join(__dirname, '..', 'test-results', 'logs', 'browser-console.log');
-    fs.writeFileSync(logFile, `${new Date().toISOString()} - Global setup initialized\n`);
-
-    log('Global setup completed successfully');
-
-    // Return empty cleanup function
-    return async () => {
-      log('Running global teardown');
-    };
-  } catch (error) {
-    log(`Global setup failed: ${error.message}`, 'error');
-    throw error;
-  }
+    catch {
+        return false;
+    }
 }
-
-module.exports = globalSetup;
+async function waitForServerStart(port, maxAttempts = 30) {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        try {
+            const response = await fetch(`http://localhost:${port}`);
+            if (response.ok) {
+                console.log(`[Setup] Server is ready on port ${port}`);
+                return true;
+            }
+        }
+        catch (err) {
+            console.log(`[Setup] Waiting for server... (attempt ${attempt + 1}/${maxAttempts})`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    }
+    throw new Error(`Server failed to start after ${maxAttempts} attempts`);
+}
+async function killProcessOnPort(port) {
+    try {
+        await execAsync(`lsof -t -i:${port} | xargs kill -9`);
+        console.log(`[Setup] Killed existing process on port ${port}`);
+    }
+    catch (err) {
+        // Ignore errors if no process was running
+    }
+}
+async function globalSetup(config) {
+    // Kill any existing process on port 3000
+    await killProcessOnPort(3000);
+    // Start Next.js dev server
+    console.log('[Setup] Starting Next.js development server...');
+    const devServer = spawn('npm', ['run', 'dev'], {
+        stdio: 'pipe',
+        env: { ...process.env, PORT: '3000' }
+    });
+    // Log server output
+    devServer.stdout?.on('data', (data) => {
+        console.log(`[Dev Server] ${data.toString()}`);
+    });
+    devServer.stderr?.on('data', (data) => {
+        console.error(`[Dev Server Error] ${data.toString()}`);
+    });
+    // Store dev server instance globally for teardown
+    globalThis.__DEV_SERVER__ = devServer;
+    // Wait for server to be ready
+    console.log('[Setup] Waiting for development server to be ready...');
+    await waitForServerStart(3000);
+    console.log('[Setup] Development server started successfully');
+}
+export default globalSetup;

@@ -1,0 +1,16 @@
+{
+  "presets": ["next/babel"],
+  "plugins": [
+    ["@babel/plugin-transform-class-properties"],
+    ["@babel/plugin-transform-private-methods"],
+    ["@babel/plugin-proposal-decorators", { "legacy": true }]
+  ],
+  "overrides": [
+    {
+      "include": ["./node_modules/next/font/**/*.js"],
+      "plugins": [
+        ["next/dist/build/babel/plugins/jest-work-around"]
+      ]
+    }
+  ]
+}

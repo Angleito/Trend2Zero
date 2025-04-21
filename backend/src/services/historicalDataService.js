@@ -1,5 +1,6 @@
+// backend/src/services/historicalDataService.js
 const HistoricalData = require('../models/historicalDataModel');
-const SecureMarketDataService = require('./secureMarketDataService');
+const SecureMarketDataService = require('@rootLibServices/secureMarketDataService'); // Updated import path
 const logger = require('../utils/logger');
 
 class HistoricalDataService {
@@ -15,7 +16,7 @@ class HistoricalDataService {
       for (const asset of cryptoAssets) {
         try {
           const priceData = await SecureMarketDataService.getAssetPrice(asset.symbol);
-          
+
           if (priceData) {
             const historicalEntry = new HistoricalData({
               symbol: asset.symbol,
@@ -38,7 +39,7 @@ class HistoricalDataService {
       for (const asset of stockAssets) {
         try {
           const priceData = await SecureMarketDataService.getAssetPrice(asset.symbol);
-          
+
           if (priceData) {
             const historicalEntry = new HistoricalData({
               symbol: asset.symbol,

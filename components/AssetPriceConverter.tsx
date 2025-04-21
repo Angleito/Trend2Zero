@@ -7,7 +7,7 @@
  */
 
 import { useState, useEffect, ChangeEvent } from 'react';
-import { MarketDataService } from '../lib/services/marketDataService';
+import marketDataService from '../lib/services/marketDataService';
 import type { AssetData } from '../lib/types';
 
 interface AssetPriceConverterProps {
@@ -25,8 +25,8 @@ const AssetPriceConverter = ({ assetSymbol }: AssetPriceConverterProps) => {
     const fetchAssetData = async () => {
       try {
         setLoading(true);
-        const marketService = new MarketDataService();
-        const data = await marketService.getAssetPriceInBTC(assetSymbol);
+        const marketService = marketDataService;
+        const data = await marketService.getAssetPrice(assetSymbol);
         setAssetData(data);
         setError(null);
       } catch (err) {
