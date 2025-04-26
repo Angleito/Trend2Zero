@@ -40,11 +40,11 @@ test.describe('MongoDB Connection and Data Flow Diagnostics', () => {
       console.log('Connection state:', connection.connection.readyState);
       
       // Check if we can list collections
-      const collections = await connection.connection.db.listCollections().toArray();
+      const collections = await connection.connection.db?.listCollections()?.toArray() || [];
       console.log('Available collections:', collections.map(c => c.name).join(', ') || 'None');
       
       // Basic assertion
-      expect(connection.connection.readyState).toBe(1); // 1 = connected
+      expect(connection.connection?.readyState).toBe(1); // 1 = connected
       
     } catch (error) {
       console.error('MongoDB connection error:', error);
@@ -127,7 +127,7 @@ test.describe('MongoDB Connection and Data Flow Diagnostics', () => {
     await page.waitForLoadState('networkidle');
     
     // Capture network requests to analyze data sources
-    const requests = [];
+    const requests: any[] = [];
     page.on('request', request => {
       if (request.url().includes('/api/')) {
         requests.push({

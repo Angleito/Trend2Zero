@@ -6,8 +6,10 @@
  * See tests/browser-test.js for examples.
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import { getHistoricalData } from '../lib/services/marketDataService';
+import type { HistoricalDataPoint } from '../lib/types';
 
 // Dynamically import chart components to avoid SSR issues
 const TradingViewLightweightChart = dynamic(
@@ -26,115 +28,140 @@ interface ChartContainerProps {
   interval?: '1d' | '1w' | '1m';
 }
 
-const ChartContainer = ({
-  symbol,
-  height = 400,
-  theme = 'dark',
-  interval = '1d',
-}: ChartContainerProps) => {
+export function ChartContainer({ symbol }: { symbol: string }) {
   const [chartType, setChartType] = useState<'lightweight' | 'highcharts'>('lightweight');
-  const [timeRange, setTimeRange] = useState<'30d' | '90d' | '1y' | '5y'>('30d');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [timeframe, setTimeframe] = useState<'1d' | '7d' | '30d' | '90d'>('30d');
+  const [historicalData, setHistoricalData] = useState<HistoricalDataPoint[]>([]);
 
-  // Convert timeRange to days for API calls
-  const getDays = (): number => {
-    switch (timeRange) {
-      case '30d': return 30;
+  useEffect(() => {
+    async function fetchData() {
+      const days = getDays();
+      const data = await getHistoricalData(symbol, days);
+      setHistoricalData(data);
+    }
+    fetchData();
+  }, [symbol, timeframe]);
+
+  const getDays = () => {
+    switch (timeframe) {
+      case '1d': return 1;
+      case '7d': return 7;
       case '90d': return 90;
-      case '1y': return 365;
-      case '5y': return 1825;
       default: return 30;
     }
   };
 
+  // Transform data for TradingView Lightweight Chart
+  const lightweightChartData = useMemo(() => {
+    return historicalData.map(item => ({
+      time: item.timestamp / 1000, // Lightweight chart expects timestamp in seconds
+      value: item.price,
+    }));
+  }, [historicalData]);
+
+  // Transform data for Highcharts
+  const highchartsData = useMemo(() => {
+    return historicalData.map(item => [
+      item.timestamp, // Highcharts expects timestamp in milliseconds
+      item.price,
+    ]);
+  }, [historicalData]);
+
+
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold text-white">Price Chart</h2>
-        <div className="flex space-x-2">
-          <div className="flex bg-gray-800 rounded-md p-1">
-            <button
-              className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                chartType === 'lightweight'
-                  ? 'bg-[#FF9500] text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-              onClick={() => setChartType('lightweight')}
-            >
-              Basic
-            </button>
-            <button
-              className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                chartType === 'highcharts'
-                  ? 'bg-[#FF9500] text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-              onClick={() => setChartType('highcharts')}
-            >
-              Advanced
-            </button>
-          </div>
-          <div className="flex bg-gray-800 rounded-md p-1">
-            <button
-              className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                timeRange === '30d'
-                  ? 'bg-[#FF9500] text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-              onClick={() => setTimeRange('30d')}
-            >
-              30D
-            </button>
-            <button
-              className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                timeRange === '90d'
-                  ? 'bg-[#FF9500] text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-              onClick={() => setTimeRange('90d')}
-            >
-              90D
-            </button>
-            <button
-              className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                timeRange === '1y'
-                  ? 'bg-[#FF9500] text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-              onClick={() => setTimeRange('1y')}
-            >
-              1Y
-            </button>
-            <button
-              className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                timeRange === '5y'
-                  ? 'bg-[#FF9500] text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-              onClick={() => setTimeRange('5y')}
-            >
-              5Y
-            </button>
-          </div>
+    <div className="w-full">
+      <div className="mb-4 flex justify-between items-center">
+        <div className="space-x-2">
+          <button
+            onClick={() => setChartType('lightweight')}
+            className={`px-3 py-1 rounded ${
+              chartType === 'lightweight' ? 'bg-blue-600 text-white' : 'bg-gray-200'
+            }`}
+          >
+            Lightweight
+          </button>
+          <button
+            onClick={() => setChartType('highcharts')}
+            className={`px-3 py-1 rounded ${
+              chartType === 'highcharts' ? 'bg-blue-600 text-white' : 'bg-gray-200'
+            }`}
+          >
+            Highcharts
+          </button>
+        </div>
+        
+        <div className="space-x-2">
+          <button
+            onClick={() => setTheme('light')}
+            className={`px-3 py-1 rounded ${
+              theme === 'light' ? 'bg-blue-600 text-white' : 'bg-gray-200'
+            }`}
+          >
+            Light
+          </button>
+          <button
+            onClick={() => setTheme('dark')}
+            className={`px-3 py-1 rounded ${
+              theme === 'dark' ? 'bg-blue-600 text-white' : 'bg-gray-200'
+            }`}
+          >
+            Dark
+          </button>
+        </div>
+
+        <div className="space-x-2">
+          <button
+            onClick={() => setTimeframe('1d')}
+            className={`px-3 py-1 rounded ${
+              timeframe === '1d' ? 'bg-blue-600 text-white' : 'bg-gray-200'
+            }`}
+          >
+            1D
+          </button>
+          <button
+            onClick={() => setTimeframe('7d')}
+            className={`px-3 py-1 rounded ${
+              timeframe === '7d' ? 'bg-blue-600 text-white' : 'bg-gray-200'
+            }`}
+          >
+            1W
+          </button>
+          <button
+            onClick={() => setTimeframe('30d')}
+            className={`px-3 py-1 rounded ${
+              timeframe === '30d' ? 'bg-blue-600 text-white' : 'bg-gray-200'
+            }`}
+          >
+            1M
+          </button>
+          <button
+            onClick={() => setTimeframe('90d')}
+            className={`px-3 py-1 rounded ${
+              timeframe === '90d' ? 'bg-blue-600 text-white' : 'bg-gray-200'
+            }`}
+          >
+            3M
+          </button>
         </div>
       </div>
 
-      <div style={{ height: `${height}px` }}>
+      <div className="h-[400px]">
         {chartType === 'lightweight' ? (
           <TradingViewLightweightChart
-            symbol={symbol}
+            data={lightweightChartData}
             theme={theme}
-            days={getDays()}
           />
         ) : (
           <HighchartsView
             symbol={symbol}
             theme={theme}
             days={getDays()}
+            data={highchartsData}
+            title={`${symbol.toUpperCase()} Price Chart`}
           />
         )}
       </div>
     </div>
   );
-};
-
-export default ChartContainer;
+}

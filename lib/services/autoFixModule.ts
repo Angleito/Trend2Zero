@@ -1,6 +1,7 @@
 import { execSync, ExecSyncOptions } from 'child_process';
 
 import path from 'path';
+import * as fs from 'fs';
 import { ErrorDetectionModule, ErrorDetectionResult } from './errorDetectionModule.js';
 
 export type AutoFixResult = {
@@ -24,7 +25,7 @@ export class AutoFixModule {
   private getAllFiles(dir: string): string[] {
     // Recursively get all files in a directory
     let results: string[] = [];
-    fs.readdirSync(dir).forEach((file) => {
+    fs.readdirSync(dir).forEach((file: string) => {
       const filePath = path.join(dir, file);
       const stat = fs.statSync(filePath);
       if (stat.isDirectory()) {

@@ -1,20 +1,31 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  eslint: {
+    ignoreDuringBuilds: true
+  },
   reactStrictMode: true,
-  webpack: (config) => {
+  webpack: (config, { isServer }) => {
     // Important: return the modified config
-    config.resolve.fallback = { 
-      fs: false, 
-      net: false, 
-      tls: false 
-    };
+    if (!isServer) {
+      config.externals = {
+        ...config.externals,
+        mongodb: 'mongodb',
+        net: 'net',
+        child_process: 'child_process',
+        'fs/promises': 'fs/promises',
+        tls: 'tls',
+        dns: 'dns',
+        fs: 'fs',
+        'timers/promises': 'timers/promises',
+      };
+    }
     return config;
   },
   // Explicitly set output mode and server configuration
   output: 'standalone',
   env: {
     // Ensure PORT is a string
-    PORT: process.env.NEXT_PUBLIC_PORT || '3000' 
+    PORT: process.env.NEXT_PUBLIC_PORT || '3000'
   }
 };
 

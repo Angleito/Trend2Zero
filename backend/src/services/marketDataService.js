@@ -1,104 +1,119 @@
-const axios = require('axios');
-const AppError = require('../utils/appError');
+const cache = require('../utils/cache');
 const logger = require('../utils/logger');
+const { CoinGeckoService } = require('./coinGeckoService');
+const { MetalPriceService } = require('./metalPriceService');
+const { AlphaVantageService } = require('./alphaVantageService');
 
-class MarketDataService {
-    constructor() {
-        this.apiClient = axios.create({
-            baseURL: process.env.MARKET_DATA_API_URL,
-            headers: {
-                'X-API-Key': process.env.MARKET_DATA_API_KEY
-            }
-        });
+const coinGeckoService = new CoinGeckoService();
+const metalPriceService = new MetalPriceService();
+const alphaVantageService = new AlphaVantageService();
+
+async function getAssetPrice(symbol, type = 'crypto') {
+    const cacheKey = `price-${symbol}-${type}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return cached;
+
+    let price;
+    switch(type) {
+        case 'crypto':
+            price = await coinGeckoService.getPrice(symbol);
+            break;
+        case 'metal':
+            price = await metalPriceService.getPrice(symbol);
+            break;
+        case 'stock':
+            price = await alphaVantageService.getPrice(symbol);
+            break;
+        default:
+            throw new Error('Unsupported asset type');
     }
 
-    async getMarketData(symbol) {
-        try {
-            const response = await this.apiClient.get(`/v1/market-data/${symbol}`);
-            return response.data;
-        } catch (error) {
-            logger.error(`Error fetching market data for ${symbol}:`, error);
-            throw new AppError('Failed to fetch market data', 500);
-        }
-    }
-
-    async searchAssets(query, type = 'crypto', limit = 5) {
-        try {
-            const response = await this.apiClient.get('/v1/search', {
-                params: { query, type, limit }
-            });
-            return response.data;
-        } catch (error) {
-            logger.error('Error searching assets:', error);
-            throw new AppError('Failed to search assets', 500);
-        }
-    }
-
-    async getPopularAssets(limit = 10) {
-        try {
-            const response = await this.apiClient.get('/v1/popular', {
-                params: { limit }
-            });
-            return response.data;
-        } catch (error) {
-            logger.error('Error fetching popular assets:', error);
-            throw new AppError('Failed to fetch popular assets', 500);
-        }
-    }
-
-    async getAssetsByType(type, limit = 10) {
-        try {
-            const response = await this.apiClient.get(`/v1/assets/${type}`, {
-                params: { limit }
-            });
-            return response.data;
-        } catch (error) {
-            logger.error(`Error fetching assets by type ${type}:`, error);
-            throw new AppError('Failed to fetch assets by type', 500);
-        }
-    }
-
-    async getAssetHistory(symbol, { days = 30, interval = '1d' } = {}) {
-        try {
-            const response = await this.apiClient.get(`/v1/history/${symbol}`, {
-                params: { days, interval }
-            });
-            return response.data;
-        } catch (error) {
-            logger.error(`Error fetching history for ${symbol}:`, error);
-            throw new AppError('Failed to fetch asset history', 500);
-        }
-    }
-
-    async getAssetBySymbol(symbol) {
-        try {
-            const response = await this.apiClient.get(`/v1/asset/${symbol}`);
-            return response.data;
-        } catch (error) {
-            logger.error(`Error fetching asset ${symbol}:`, error);
-            throw new AppError('Failed to fetch asset', 500);
-        }
-    }
-
-    async getMarketOverview() {
-        try {
-            const response = await this.apiClient.get('/v1/market/overview');
-            return response.data;
-        } catch (error) {
-            logger.error('Error fetching market overview:', error);
-            throw new AppError('Failed to fetch market overview', 500);
-        }
-    }
-
-    async getTrendingAssets() {
-        try {
-            const response = await this.apiClient.get('/v1/market/trending');
-            return response.data;
-        } catch (error) {
-            logger.error('Error fetching trending assets:', error);
-            throw new AppError('Failed to fetch trending assets', 500);
-        }
-    }
+    cache.set(cacheKey, price, 300); // Cache for 5 minutes
+    return price;
 }
 
-module.exports = new MarketDataService();
+async function getHistoricalData(symbol, type = 'crypto', interval = '1d') {
+    const cacheKey = `history-${symbol}-${type}-${interval}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return cached;
+
+    let data;
+    switch(type) {
+        case 'crypto':
+            data = await coinGeckoService.getHistoricalData(symbol, interval);
+            break;
+        case 'metal':
+            data = await metalPriceService.getHistoricalData(symbol, interval);
+            break;
+        case 'stock':
+            data = await alphaVantageService.getHistoricalData(symbol, interval);
+            break;
+        default:
+            throw new Error('Unsupported asset type');
+    }
+
+    cache.set(cacheKey, data, 3600); // Cache for 1 hour
+    return data;
+}
+
+async function searchAssets(query, type) {
+    const results = [];
+    
+    if (!type || type === 'crypto') {
+        const cryptoResults = await coinGeckoService.searchAssets(query);
+        results.push(...cryptoResults);
+    }
+
+    if (!type || type === 'stock') {
+        const stockResults = await alphaVantageService.searchStocks(query);
+        results.push(...stockResults);
+    }
+
+    if (!type || type === 'metal') {
+        const metalResults = await metalPriceService.searchAssets(query);
+        results.push(...metalResults);
+    }
+
+    return results;
+}
+
+async function getMarketOverview() {
+    const [cryptoOverview, stockOverview, metalOverview] = await Promise.all([
+        coinGeckoService.getMarketOverview(),
+        alphaVantageService.getMarketOverview(),
+        metalPriceService.getMarketOverview()
+    ]);
+
+    return {
+        crypto: cryptoOverview,
+        stocks: stockOverview,
+        metals: metalOverview
+    };
+}
+
+async function getTrendingAssets() {
+    const [trendingCrypto, trendingStocks] = await Promise.all([
+        coinGeckoService.getTrendingAssets(),
+        alphaVantageService.getTrendingStocks()
+    ]);
+
+    return [...trendingCrypto, ...trendingStocks];
+}
+
+async function getPopularAssets() {
+    const [popularCrypto, popularStocks] = await Promise.all([
+        coinGeckoService.getPopularAssets(),
+        alphaVantageService.getPopularStocks()
+    ]);
+
+    return [...popularCrypto, ...popularStocks];
+}
+
+module.exports = {
+    getAssetPrice,
+    getHistoricalData,
+    searchAssets,
+    getMarketOverview,
+    getTrendingAssets,
+    getPopularAssets
+};

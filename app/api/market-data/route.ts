@@ -1,55 +1,34 @@
-import { NextResponse } from 'next/server';
-import { ErrorResponse, MarketAsset, MarketDataOptions, AssetCategory, parseAssetCategory } from '@/lib/types';
-import marketDataService from '@/lib/services/marketDataService';
+import { NextRequest, NextResponse } from 'next/server';
+import { getPopularAssets } from '../../../lib/services/marketDataService';
+import { MarketDataOptions, parseAssetCategory } from '../../../lib/types';
 
-export async function GET(request: Request) {
-  const marketService = marketDataService;
-
+export async function GET(request: NextRequest) {
   try {
-    // Parse query parameters for market data options
     const { searchParams } = new URL(request.url);
-    
-    // Extract and validate market data options
-    const options: MarketDataOptions = {
-      limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!, 10) : undefined,
-      category: searchParams.get('category') 
-        ? parseAssetCategory(searchParams.get('category')!) 
-        : undefined,
-      sortBy: searchParams.get('sortBy') as keyof MarketAsset | undefined,
-      sortOrder: searchParams.get('sortOrder') === 'desc' ? 'desc' : 'asc',
-      searchQuery: searchParams.get('searchQuery') || undefined
+
+    const options: Partial<MarketDataOptions> = {
+      limit: searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : undefined,
+      category: searchParams.get('category') ? parseAssetCategory(searchParams.get('category')!) : undefined,
     };
 
-    // Fetch market data using the parsed options
-    const marketData = await marketDataService.listAvailableAssets(options);
+    // Fetch market data using getPopularAssets
+    let marketData = await getPopularAssets();
+    
+    // Apply filtering based on options
+    if (options.category) {
+      marketData = marketData.filter(asset => asset.type === options.category);
+    }
+    
+    // Apply limit if specified
+    if (options.limit && options.limit > 0) {
+      marketData = marketData.slice(0, options.limit);
+    }
 
     // Return the market data as JSON response
     return NextResponse.json(marketData);
   } catch (error) {
-    console.error('[API] Market data retrieval error:', error);
-    
-    // Construct a type-safe error response
-    const errorResponse: ErrorResponse = {
-      error: error instanceof Error ? error.message : 'Failed to retrieve market data',
-      status: 500,
-      details: {
-        timestamp: new Date().toISOString(),
-        requestOptions: {
-          limit: request.url.includes('limit'),
-          category: request.url.includes('category'),
-          sortBy: request.url.includes('sortBy'),
-          searchQuery: request.url.includes('searchQuery')
-        }
-      }
-    };
-
-    return new NextResponse(
-      JSON.stringify(errorResponse),
-      { 
-        status: 500, 
-        headers: { 'Content-Type': 'application/json' } 
-      }
-    );
+    console.error('Error fetching market data:', error);
+    return NextResponse.json({ error: 'Failed to fetch market data' });
   }
 }
 

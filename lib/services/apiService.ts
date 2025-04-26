@@ -20,7 +20,7 @@ export class ApiService {
     }
     return null;
   }
-  
+
   /**
    * Set authorization header if token exists
    */
@@ -32,22 +32,22 @@ export class ApiService {
       delete API.defaults.headers.common['Authorization'];
     }
   }
-  
+
   /**
    * Handle API errors
    */
   private handleError(error: any, context: string): void {
     // Log a generic error message without exposing details
     console.error(`API Error in ${context}`);
-    
+
     // Only log detailed error in development
     if (process.env.NODE_ENV === 'development') {
       console.debug('Detailed error:', error);
     }
-    
+
     throw error;
   }
-  
+
   /**
    * List available assets by category
    */
@@ -59,117 +59,117 @@ export class ApiService {
   } = {}): Promise<MarketAsset[]> {
     try {
       this.setAuthHeader();
-      
+
       const { category, page = 1, pageSize = 20, keywords } = options;
-      
+
       // Build query parameters
       const params: any = { page, limit: pageSize };
-      
+
       if (category) {
         params.type = category;
       }
-      
+
       if (keywords) {
         params.search = keywords;
       }
-      
+
       const response = await API.get('/market-data/assets', { params });
-      
+
       return response.data.data.assets;
     } catch (error) {
       this.handleError(error, 'listAvailableAssets');
       return [];
     }
   }
-  
+
   /**
    * Get asset price in BTC
    */
   async getAssetPriceInBTC(assetSymbol: string): Promise<AssetData | null> {
     try {
       this.setAuthHeader();
-      
+
       const response = await API.get(`/market-data/price/${assetSymbol}`);
-      
+
       return response.data.data;
     } catch (error) {
       this.handleError(error, `getAssetPriceInBTC for ${assetSymbol}`);
       return null;
     }
   }
-  
+
   /**
    * Get historical price data
    */
   async getHistoricalData(symbol: string, days: number = 30): Promise<HistoricalDataPoint[]> {
     try {
       this.setAuthHeader();
-      
+
       const response = await API.get(`/market-data/historical/${symbol}`, {
         params: { days }
       });
-      
+
       return response.data.data.dataPoints;
     } catch (error) {
       this.handleError(error, `getHistoricalData for ${symbol}`);
       return [];
     }
   }
-  
+
   /**
    * Search assets
    */
   async searchAssets(query: string): Promise<MarketAsset[]> {
     try {
       this.setAuthHeader();
-      
+
       const response = await API.get('/market-data/assets/search', {
         params: { query }
       });
-      
+
       return response.data.data.assets;
     } catch (error) {
       this.handleError(error, `searchAssets for ${query}`);
       return [];
     }
   }
-  
+
   /**
    * Get popular assets
    */
   async getPopularAssets(limit: number = 10): Promise<MarketAsset[]> {
     try {
       this.setAuthHeader();
-      
+
       const response = await API.get('/market-data/assets/popular', {
         params: { limit }
       });
-      
+
       return response.data.data.assets;
     } catch (error) {
       this.handleError(error, 'getPopularAssets');
       return [];
     }
   }
-  
+
   /**
    * Get assets by type
    */
   async getAssetsByType(type: AssetCategory, limit: number = 20): Promise<MarketAsset[]> {
     try {
       this.setAuthHeader();
-      
+
       const response = await API.get(`/market-data/assets/type/${type}`, {
         params: { limit }
       });
-      
+
       return response.data.data.assets;
     } catch (error) {
       this.handleError(error, `getAssetsByType for ${type}`);
       return [];
     }
   }
-  
+
   /**
    * Register a new user
    */
@@ -181,20 +181,20 @@ export class ApiService {
         password,
         passwordConfirm
       });
-      
+
       // Store token in localStorage
-      if (response.data.token) {
+      if (response.data.token && typeof window !== 'undefined') {
         localStorage.setItem('token', response.data.token);
         this.setAuthHeader();
       }
-      
+
       return response.data;
     } catch (error) {
       this.handleError(error, 'register');
       throw error;
     }
   }
-  
+
   /**
    * Login a user
    */
@@ -204,20 +204,20 @@ export class ApiService {
         email,
         password
       });
-      
+
       // Store token in localStorage
-      if (response.data.token) {
+      if (response.data.token && typeof window !== 'undefined') {
         localStorage.setItem('token', response.data.token);
         this.setAuthHeader();
       }
-      
+
       return response.data;
     } catch (error) {
       this.handleError(error, 'login');
       throw error;
     }
   }
-  
+
   /**
    * Logout a user
    */
@@ -225,15 +225,17 @@ export class ApiService {
     try {
       this.setAuthHeader();
       await API.get('/users/logout');
-      
+
       // Remove token from localStorage
-      localStorage.removeItem('token');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+      }
       delete API.defaults.headers.common['Authorization'];
     } catch (error) {
       this.handleError(error, 'logout');
     }
   }
-  
+
   /**
    * Get current user
    */
@@ -241,14 +243,14 @@ export class ApiService {
     try {
       this.setAuthHeader();
       const response = await API.get('/users/me');
-      
+
       return response.data.data.user;
     } catch (error) {
       this.handleError(error, 'getCurrentUser');
       return null;
     }
   }
-  
+
   /**
    * Update user profile
    */
@@ -256,14 +258,14 @@ export class ApiService {
     try {
       this.setAuthHeader();
       const response = await API.patch('/users/updateMe', data);
-      
+
       return response.data.data.user;
     } catch (error) {
       this.handleError(error, 'updateProfile');
       throw error;
     }
   }
-  
+
   /**
    * Update user password
    */
@@ -275,20 +277,20 @@ export class ApiService {
         password,
         passwordConfirm
       });
-      
+
       // Update token in localStorage
-      if (response.data.token) {
+      if (response.data.token && typeof window !== 'undefined') {
         localStorage.setItem('token', response.data.token);
         this.setAuthHeader();
       }
-      
+
       return response.data;
     } catch (error) {
       this.handleError(error, 'updatePassword');
       throw error;
     }
   }
-  
+
   /**
    * Get user watchlist
    */
@@ -296,14 +298,14 @@ export class ApiService {
     try {
       this.setAuthHeader();
       const response = await API.get('/users/watchlist');
-      
+
       return response.data.data.watchlist;
     } catch (error) {
       this.handleError(error, 'getWatchlist');
       return [];
     }
   }
-  
+
   /**
    * Add asset to watchlist
    */
@@ -314,14 +316,14 @@ export class ApiService {
         assetSymbol,
         assetType
       });
-      
+
       return response.data.data.watchlist;
     } catch (error) {
       this.handleError(error, 'addToWatchlist');
       throw error;
     }
   }
-  
+
   /**
    * Remove asset from watchlist
    */
@@ -329,7 +331,7 @@ export class ApiService {
     try {
       this.setAuthHeader();
       const response = await API.delete(`/users/watchlist/${assetSymbol}`);
-      
+
       return response.data.data.watchlist;
     } catch (error) {
       this.handleError(error, 'removeFromWatchlist');

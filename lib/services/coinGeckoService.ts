@@ -363,6 +363,38 @@ export class CoinGeckoService {
       return [];
     }
   }
+  async searchAssets(query: string, limit: number = 10): Promise<MarketAsset[]> {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/search?query=${query}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`CoinGecko API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      // The CoinGecko /search endpoint returns coins, exchanges, and markets.
+      // We'll filter for coins and map to MarketAsset.
+      return data.coins.slice(0, limit).map((item: any) => ({
+        symbol: item.symbol.toUpperCase(),
+        name: item.name,
+        type: 'Cryptocurrency', // Assuming search primarily returns cryptocurrencies
+        price: 0, // Search endpoint doesn't return price directly
+        change: 0, // Search endpoint doesn't return change directly
+        changePercent: 0, // Search endpoint doesn't return change directly
+        priceInUSD: 0, // Search endpoint doesn't return price directly
+        priceInBTC: 0, // Search endpoint doesn't return price directly
+        lastUpdated: new Date().toISOString(), // Use current time as last updated
+        id: item.id
+      }));
+    } catch (error) {
+      console.error(`[CoinGeckoService] Error searching assets for query "${query}":`, error);
+      return [];
+    }
+  }
+
+
 }
 
 // Export the default instance for compatibility

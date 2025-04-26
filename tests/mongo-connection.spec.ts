@@ -33,11 +33,11 @@ test.describe('MongoDB Connection Test', () => {
       expect(connection.connection.readyState).toBe(1); // 1 = connected
       
       // 5. Check database name
-      const dbName = connection.connection.db.databaseName;
+      const dbName = connection.connection.db?.databaseName;
       console.log('Connected to database:', dbName);
       
       // 6. List collections
-      const collections = await connection.connection.db.listCollections().toArray();
+      const collections = await connection.connection.db?.listCollections().toArray() || [];
       const collectionNames = collections.map(c => c.name);
       console.log('Collections in database:', collectionNames.join(', ') || 'No collections found');
       
@@ -59,12 +59,12 @@ test.describe('MongoDB Connection Test', () => {
       console.error('MongoDB connection error:', error);
       
       // Check if error is due to authentication failure
-      if (error.message && error.message.includes('Authentication failed')) {
+      if (error instanceof Error && error.message && error.message.includes('Authentication failed')) {
         console.error('Authentication failed. Check username and password in connection string.');
       }
       
       // Check if error is due to network connectivity
-      if (error.message && error.message.includes('getaddrinfo ENOTFOUND')) {
+      if (error instanceof Error && error.message && error.message.includes('getaddrinfo ENOTFOUND')) {
         console.error('Network connectivity issue. Cannot resolve hostname.');
       }
       
@@ -75,7 +75,8 @@ test.describe('MongoDB Connection Test', () => {
       
       // Only fail test if we expected the connection to work
       if (mongoURI) {
-        expect(false, `MongoDB connection failed: ${error.message}`).toBeTruthy();
+        const errMsg = error instanceof Error ? error.message : String(error);
+        expect(false, `MongoDB connection failed: ${errMsg}`).toBeTruthy();
       } else {
         console.log('Skipping connection failure test since we expected fallback connection to fail');
       }

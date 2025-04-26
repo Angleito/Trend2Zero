@@ -20,26 +20,29 @@ export interface ErrorBoundaryState {
 }
 
 // Asset Categories with Utility Functions
+// Aligning AssetCategoryValues with the AssetCategory union type
 export const AssetCategoryValues = {
-  Cryptocurrency: 'cryptocurrency',
-  Stock: 'stocks',
-  Commodity: 'metals',
-  Currency: 'currency',
-  Index: 'indices',
-  Other: 'other'
+  Cryptocurrency: 'Cryptocurrency',
+  Stocks: 'Stocks',
+  PreciousMetal: 'Precious Metal',
+  Commodities: 'Commodities', // Added Commodities
+  Indices: 'Indices', // Added Indices
 } as const;
 
-export type AssetCategory = 'Cryptocurrency' | 'Stocks' | 'Precious Metal';
+export type AssetCategory = keyof typeof AssetCategoryValues; // Define AssetCategory based on keys
 
 export function isValidAssetCategory(category: string): category is AssetCategory {
-  return Object.values(AssetCategoryValues).includes(category as AssetCategory);
+  // Check if the category string is one of the keys in AssetCategoryValues
+  return Object.keys(AssetCategoryValues).includes(category);
 }
 
 export function parseAssetCategory(category: string): AssetCategory | undefined {
   const normalized = category.toLowerCase();
   if (normalized === 'cryptocurrency') return 'Cryptocurrency';
   if (normalized === 'stocks') return 'Stocks';
-  if (normalized === 'precious metal' || normalized === 'precious_metal') return 'Precious Metal';
+  if (normalized === 'precious metal' || normalized === 'precious_metal') return 'PreciousMetal'; // Use 'PreciousMetal' key
+  if (normalized === 'commodities') return 'Commodities'; // Added Commodities parsing
+  if (normalized === 'indices') return 'Indices'; // Added Indices parsing
   return undefined;
 }
 
@@ -106,6 +109,24 @@ export interface MarketDataOptions {
   refreshInterval?: number;
 }
 
+export interface MarketOverview {
+  marketStatus: 'open' | 'closed';
+  lastUpdated: string;
+  marketSummary: string;
+  indices: Array<{
+    Name: string;
+    Value: number;
+    Change: number;
+  }>;
+  topMovers: Array<{
+    Symbol: string;
+    Name: string;
+    Price: number;
+    Change: number;
+    ChangePercent: number;
+  }>;
+}
+
 // Utility Functions
 export function createDefaultAsset(symbol: string): MarketAsset {
   return {
@@ -114,7 +135,12 @@ export function createDefaultAsset(symbol: string): MarketAsset {
     price: 0,
     change: 0,
     changePercent: 0,
-    category: AssetCategoryValues.Other
+    // Assign a default category, e.g., 'Cryptocurrency' or handle based on symbol
+    // For now, assigning 'Cryptocurrency' as a placeholder
+    type: 'Cryptocurrency', // Assuming default is Cryptocurrency
+    priceInBTC: 0,
+    priceInUSD: 0,
+    lastUpdated: new Date().toISOString(),
   };
 }
 

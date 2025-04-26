@@ -4,9 +4,8 @@
  * This component displays information about an asset in a card format.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useAssetPrice } from '../lib/hooks/useMarketData';
 import { useWatchlist } from '../lib/hooks/useWatchlist';
 import { useAuth } from '../lib/hooks/useAuth';
 
@@ -62,13 +61,46 @@ const AssetCard = ({ asset, showDetails = false, autoRefresh = false }) => {
   const { isAuthenticated } = useAuth();
   const { isInWatchlist, addToWatchlist, removeFromWatchlist } = useWatchlist();
   const [isAdding, setIsAdding] = useState(false);
-  
-  // Get real-time price data
-  const { priceData, loading, error } = useAssetPrice(
-    asset.symbol,
-    autoRefresh,
-    60000 // Refresh every minute
-  );
+  const [priceData, setPriceData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchAssetPrice = async (symbol) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/market-data/price/${symbol}`);
+      if (!response.ok) {
+        throw new Error(`Error fetching price for ${symbol}: ${response.statusText}`);
+      }
+      const data = await response.json();
+      setPriceData(data);
+    } catch (err) {
+      setError(err);
+      console.error('Error fetching asset price:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (asset?.symbol) {
+      fetchAssetPrice(asset.symbol);
+
+      let intervalId;
+      if (autoRefresh) {
+        intervalId = setInterval(() => {
+          fetchAssetPrice(asset.symbol);
+        }, 60000); // Refresh every minute
+      }
+
+      return () => {
+        if (intervalId) {
+          clearInterval(intervalId);
+        }
+      };
+    }
+  }, [asset?.symbol, autoRefresh]);
   
   // Use either the fetched price data or the passed asset data
   const displayData = priceData?.data || asset;

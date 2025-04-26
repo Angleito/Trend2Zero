@@ -51,9 +51,10 @@ export class ErrorDetectionModule {
 
   runCommand(command: string, options: ExecSyncOptions = {}): string {
     try {
-      return execSync(command, { encoding: 'utf-8', stdio: 'pipe', ...options });
+      const result = execSync(command, { encoding: 'utf-8', stdio: 'pipe', ...options });
+return typeof result === 'string' ? result : result.toString();
     } catch (err: any) {
-      return err.stdout ? err.stdout.toString() : (err.message || String(err));
+      return err && err.stdout ? err.stdout.toString() : (err && err.message ? String(err.message) : '');
     }
   }
 

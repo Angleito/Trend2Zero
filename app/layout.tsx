@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import React from 'react'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import Providers from './providers'
 import './globals.css'
 
 const inter = Inter({
@@ -45,7 +46,9 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable}`}>
       <body>
         <ErrorBoundary>
-          {children}
+          <Providers>
+            {children}
+          </Providers>
         </ErrorBoundary>
       </body>
     </html>

@@ -1,6 +1,7 @@
 import { execSync, ExecSyncOptions } from 'child_process';
 
 import path from 'path';
+import * as fs from 'fs';
 
 export type PreCommitHookResult = {
   framework: 'husky' | 'pre-commit' | 'none';
