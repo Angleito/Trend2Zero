@@ -1,129 +1,87 @@
-import apiClient from '../../lib/api/apiClient';
-import * as watchlistService from '../../lib/api/watchlistService';
+import { apiClient } from '../../lib/api/apiClient';
+import { getWatchlist, addToWatchlist, removeFromWatchlist } from '../../lib/api/watchlistService';
 
-// Mock the API client
-jest.mock('../../lib/api/apiClient', () => ({
-  get: jest.fn(),
-  post: jest.fn(),
-  delete: jest.fn()
-}));
+jest.mock('../../lib/api/apiClient');
 
-describe('Watchlist API Service', () => {
+describe('Watchlist Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
+  const mockWatchlistData = [
+    { symbol: 'BTC', type: 'crypto', dateAdded: '2024-03-20T00:00:00.000Z' },
+    { symbol: 'AAPL', type: 'stock', dateAdded: '2024-03-19T00:00:00.000Z' }
+  ];
+
   describe('getWatchlist', () => {
-    it('calls the correct endpoint', async () => {
-      // Mock response
-      const mockResponse = {
-        data: {
-          status: 'success',
-          data: {
-            watchlist: [
-              {
-                assetSymbol: 'BTC',
-                assetType: 'Cryptocurrency',
-                dateAdded: '2023-01-01T00:00:00.000Z'
-              },
-              {
-                assetSymbol: 'AAPL',
-                assetType: 'Stocks',
-                dateAdded: '2023-01-01T00:00:00.000Z'
-              }
-            ]
-          }
-        }
-      };
-      apiClient.get.mockResolvedValue(mockResponse);
+    it('should fetch watchlist successfully', async () => {
+      apiClient.get.mockResolvedValueOnce({ data: mockWatchlistData });
 
-      // Call the function
-      const result = await watchlistService.getWatchlist();
+      const result = await getWatchlist();
 
-      // Assertions
       expect(apiClient.get).toHaveBeenCalledWith('/users/watchlist');
-      expect(result).toEqual(mockResponse.data);
+      expect(result).toEqual(mockWatchlistData);
     });
 
-    it('handles errors correctly', async () => {
-      // Mock error
-      const mockError = new Error('API Error');
-      apiClient.get.mockRejectedValue(mockError);
+    it('should handle API errors', async () => {
+      const errorMessage = 'Network error';
+      apiClient.get.mockRejectedValueOnce({ 
+        response: { data: { message: errorMessage } }
+      });
 
-      // Call the function and expect it to throw
-      await expect(watchlistService.getWatchlist()).rejects.toThrow('API Error');
+      await expect(getWatchlist()).rejects.toThrow('Network error');
+      expect(apiClient.get).toHaveBeenCalledWith('/users/watchlist');
     });
   });
 
   describe('addToWatchlist', () => {
-    it('calls the correct endpoint with asset data', async () => {
-      // Mock response
-      const mockResponse = {
-        data: {
-          status: 'success',
-          data: {
-            watchlist: [
-              {
-                assetSymbol: 'BTC',
-                assetType: 'Cryptocurrency',
-                dateAdded: '2023-01-01T00:00:00.000Z'
-              }
-            ]
-          }
-        }
-      };
-      apiClient.post.mockResolvedValue(mockResponse);
+    const symbol = 'ETH';
 
-      // Call the function
-      const assetData = {
-        assetSymbol: 'BTC',
-        assetType: 'Cryptocurrency'
-      };
-      const result = await watchlistService.addToWatchlist(assetData);
+    it('should add asset to watchlist successfully', async () => {
+      const updatedWatchlist = [...mockWatchlistData, { 
+        symbol, 
+        type: 'crypto', 
+        dateAdded: expect.any(String) 
+      }];
+      
+      apiClient.post.mockResolvedValueOnce({ data: updatedWatchlist });
 
-      // Assertions
-      expect(apiClient.post).toHaveBeenCalledWith('/users/watchlist', assetData);
-      expect(result).toEqual(mockResponse.data);
+      const result = await addToWatchlist(symbol);
+
+      expect(apiClient.post).toHaveBeenCalledWith('/users/watchlist', { symbol });
+      expect(result).toEqual(updatedWatchlist);
     });
 
-    it('handles errors correctly', async () => {
-      // Mock error
-      const mockError = new Error('API Error');
-      apiClient.post.mockRejectedValue(mockError);
+    it('should handle API errors when adding asset', async () => {
+      apiClient.post.mockRejectedValueOnce({ 
+        response: { data: { message: 'Asset already in watchlist' } }
+      });
 
-      // Call the function and expect it to throw
-      await expect(watchlistService.addToWatchlist({})).rejects.toThrow('API Error');
+      await expect(addToWatchlist(symbol)).rejects.toThrow('Asset already in watchlist');
+      expect(apiClient.post).toHaveBeenCalledWith('/users/watchlist', { symbol });
     });
   });
 
   describe('removeFromWatchlist', () => {
-    it('calls the correct endpoint with asset symbol', async () => {
-      // Mock response
-      const mockResponse = {
-        data: {
-          status: 'success',
-          data: {
-            watchlist: []
-          }
-        }
-      };
-      apiClient.delete.mockResolvedValue(mockResponse);
+    const symbol = 'BTC';
 
-      // Call the function
-      const result = await watchlistService.removeFromWatchlist('BTC');
+    it('should remove asset from watchlist successfully', async () => {
+      const updatedWatchlist = mockWatchlistData.filter(asset => asset.symbol !== symbol);
+      apiClient.delete.mockResolvedValueOnce({ data: updatedWatchlist });
 
-      // Assertions
-      expect(apiClient.delete).toHaveBeenCalledWith('/users/watchlist/BTC');
-      expect(result).toEqual(mockResponse.data);
+      const result = await removeFromWatchlist(symbol);
+
+      expect(apiClient.delete).toHaveBeenCalledWith(`/users/watchlist/${symbol}`);
+      expect(result).toEqual(updatedWatchlist);
     });
 
-    it('handles errors correctly', async () => {
-      // Mock error
-      const mockError = new Error('API Error');
-      apiClient.delete.mockRejectedValue(mockError);
+    it('should handle API errors when removing asset', async () => {
+      apiClient.delete.mockRejectedValueOnce({ 
+        response: { data: { message: 'Asset not found in watchlist' } }
+      });
 
-      // Call the function and expect it to throw
-      await expect(watchlistService.removeFromWatchlist('BTC')).rejects.toThrow('API Error');
+      await expect(removeFromWatchlist(symbol)).rejects.toThrow('Asset not found in watchlist');
+      expect(apiClient.delete).toHaveBeenCalledWith(`/users/watchlist/${symbol}`);
     });
   });
 });

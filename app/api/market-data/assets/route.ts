@@ -1,63 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
-import marketDataService from '../../../../lib/services/marketDataService'; // Import the refactored marketDataService
-import { AssetCategory, MarketAsset } from '../../../../lib/types'; // Import types from lib
+import marketDataService from '../../../../lib/services/marketDataService';
+import { AssetCategory } from '../../../../lib/types';
 
 export async function GET(request: NextRequest) {
-  // Safely extract and parse query parameters
-  const { searchParams } = new URL(request.url);
-  const typeParam = searchParams.get('type');
-  const categoryParam = searchParams.get('category');
-  const limitParam = searchParams.get('limit');
-
-  // Normalize and validate parameters
-  const type = typeParam ? typeParam.toLowerCase() : null;
-  const category = categoryParam ? categoryParam.toLowerCase() : null;
-  const limit = limitParam ? parseInt(limitParam, 10) : 10;
-
-  console.log('Received asset request parameters:', { type, category, limit });
-
   try {
-    // Determine filter category with flexible mapping
-    // Using the same mapping logic as before for consistency with query parameters
-    const TYPE_CATEGORY_MAP: Record<string, AssetCategory> = {
-      'cryptocurrency': 'Cryptocurrency',
-      'stocks': 'Stocks',
-      'commodities': 'Commodities',
-      'indices': 'Indices'
-    };
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get('type');
+    const limit = parseInt(searchParams.get('limit') || '10', 10);
 
-    const filterCategory = category
-      ? category
-      : (type && TYPE_CATEGORY_MAP[type])
-        ? TYPE_CATEGORY_MAP[type]
-        : undefined; // Use undefined if no valid category/type
+    if (!type) {
+      return NextResponse.json(
+        { error: 'Asset type is required' },
+        { status: 400 }
+      );
+    }
 
-    // Use the refactored marketDataService to get assets
-    // marketDataService.listAvailableAssets expects category as AssetCategory type
-    const assets = await marketDataService.listAvailableAssets({
-      category: filterCategory as AssetCategory | undefined, // Cast to AssetCategory | undefined
-      pageSize: limit
-    });
+    // Validate asset type
+    if (!['Cryptocurrency', 'Stocks', 'PreciousMetal'].includes(type)) {
+      return NextResponse.json(
+        { error: 'Invalid asset type' },
+        { status: 400 }
+      );
+    }
 
-    console.log(`Fetched assets (${filterCategory || 'All'}):`, assets.length);
-
-    // Return structured response
-    return NextResponse.json(assets); // Return the array of assets
-
+    // Search for assets of the specified type
+    const assets = await marketDataService.searchAssets(type, limit);
+    
+    // Filter by type since searchAssets might return mixed types
+    const filteredAssets = assets.filter(asset => asset.type === type);
+    
+    return NextResponse.json(filteredAssets);
   } catch (error) {
-    // Comprehensive error handling
-    console.error('Error in asset retrieval:', error);
-
+    console.error('[API] Error fetching assets by type:', error);
     return NextResponse.json(
-      {
-        error: 'Failed to retrieve assets',
-        // Optionally include fallback data if desired, but the service should handle fallbacks
-        // fallbackData: []
-      },
+      { error: 'Failed to fetch assets' },
       { status: 500 }
     );
   }
 }
 
-// Allow dynamic rendering
-export const dynamic = 'auto';
+export const dynamic = 'force-dynamic';

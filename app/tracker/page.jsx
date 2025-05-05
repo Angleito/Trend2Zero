@@ -19,18 +19,6 @@ export default function TrackerPage() {
         type: selectedCategory ?? undefined, // Explicitly handle null case
         limit: 50
     });
-    useEffect(() => {
-        // Check for mock data warning
-        if (window.console && window.console.warn) {
-            const originalWarn = window.console.warn;
-            window.console.warn = function (message, ...args) {
-                if (message && (message.includes('mock data') || message.includes('No specific mock data'))) {
-                    setMockDataWarning(true);
-                }
-                originalWarn.apply(console, [message, ...args]);
-            };
-        }
-    }, []);
     return (<div className="min-h-screen flex flex-col" data-testid="tracker-page">
       <StickyHeader />
 
@@ -64,7 +52,7 @@ export default function TrackerPage() {
 
           {/* Loading State */}
           {marketData.loading && (<div className="text-center text-xl mb-8 flex flex-col items-center" data-testid="loading-spinner">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#FF9500] mb-4"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#FF9500] mb-4" aria-label="Loading indicator"></div>
               <p>Loading market data...</p>
             </div>)}
 

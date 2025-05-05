@@ -11,11 +11,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
         // Using the marketDataService singleton instance
         const data = await marketDataService.listAvailableAssets({
-            searchQuery: query as string,
-            category: type as string
+            page: 1,
+            pageSize: 20
         });
         res.status(200).json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        res.status(500).json({ error: message });
     }
 }

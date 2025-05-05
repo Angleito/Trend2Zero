@@ -1,5 +1,0 @@
-#!/usr/bin/env zsh
-
-# Temporarily skip browser diagnostics until we fix the MCP integration
-# node scripts/browser-diagnostics.js
-exit 0

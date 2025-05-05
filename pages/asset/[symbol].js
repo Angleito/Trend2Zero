@@ -4,12 +4,13 @@
  * This page displays detailed information about a specific asset.
  */
 
-import { useState } from 'react';
-import { useRouter } from 'next/router';
-import Head from 'next/head';
-import { useAssetPrice, useHistoricalData } from '../../lib/hooks/useMarketData';
-import { useWatchlist } from '../../lib/hooks/useWatchlist';
-import { useAuth } from '../../lib/hooks/useAuth';
+const React = require('react');
+const { useState } = require('react');
+const { useRouter } = require('next/router');
+const Head = require('next/head');
+const { useAssetPrice, useHistoricalData } = require('../../lib/hooks/useMarketData');
+const { useWatchlist } = require('../../lib/hooks/useWatchlist');
+const { useAuth } = require('../../lib/hooks/useAuth');
 
 // Time period options for historical data
 const timePeriods = [
@@ -63,22 +64,8 @@ const AssetDetailPage = () => {
   const { isAuthenticated } = useAuth();
   const { isInWatchlist, addToWatchlist, removeFromWatchlist } = useWatchlist();
   const [isAdding, setIsAdding] = useState(false);
-  
-  // Fetch asset price data
-  const { 
-    priceData, 
-    loading: loadingPrice, 
-    error: priceError,
-    refetch: refetchPrice
-  } = useAssetPrice(symbol, true, 60000); // Auto-refresh every minute
-  
-  // Fetch historical data
-  const { 
-    historicalData, 
-    loading: loadingHistory, 
-    error: historyError,
-    refetch: refetchHistory
-  } = useHistoricalData(symbol, { days: selectedPeriod === 'max' ? 1825 : parseInt(selectedPeriod) });
+  const { data: priceData, isLoading: isPriceLoading } = useAssetPrice(symbol);
+  const { data: historicalData, isLoading: isHistoricalLoading } = useHistoricalData(symbol);
   
   // Handle period change
   const handlePeriodChange = (period) => {
@@ -109,27 +96,10 @@ const AssetDetailPage = () => {
   };
   
   // Loading state
-  if (!symbol || loadingPrice) {
+  if (!symbol || isPriceLoading || isHistoricalLoading) {
     return (
       <div className="container mx-auto px-4 py-8 flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-  
-  // Error state
-  if (priceError) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          <p>Error loading asset data. Please try again later.</p>
-        </div>
-        <button
-          onClick={() => router.back()}
-          className="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition-colors duration-200"
-        >
-          Go Back
-        </button>
       </div>
     );
   }
@@ -152,7 +122,7 @@ const AssetDetailPage = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <Head>
-        <title>{asset.name} ({asset.symbol}) | Trend2Zero</title>
+        <title>{symbol ? `${symbol.toUpperCase()} - Asset Details` : 'Loading...'}</title>
         <meta name="description" content={`${asset.name} (${asset.symbol}) price, charts, and market data`} />
       </Head>
       
@@ -255,13 +225,9 @@ const AssetDetailPage = () => {
           </div>
         </div>
         
-        {loadingHistory ? (
+        {isHistoricalLoading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-          </div>
-        ) : historyError ? (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            <p>Error loading historical data. Please try again later.</p>
           </div>
         ) : historicalData?.data?.dataPoints?.length > 0 ? (
           <div className="h-64">
@@ -340,4 +306,4 @@ const AssetDetailPage = () => {
   );
 };
 
-export default AssetDetailPage;
+module.exports = AssetDetailPage;

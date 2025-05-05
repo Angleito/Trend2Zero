@@ -23,7 +23,7 @@ async function waitForServerStart(port: number, maxAttempts = 30): Promise<boole
         console.log(`[Setup] Server is ready on port ${port}`);
         return true;
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.log(`[Setup] Waiting for server... (attempt ${attempt + 1}/${maxAttempts})`);
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
@@ -60,7 +60,7 @@ async function globalSetup(config: FullConfig): Promise<void> {
   });
 
   // Store dev server instance globally for teardown
-  globalThis.__DEV_SERVER__ = devServer;
+  (globalThis as any).__DEV_SERVER__ = devServer;
 
   // Wait for server to be ready
   console.log('[Setup] Waiting for development server to be ready...');

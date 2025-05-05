@@ -84,6 +84,32 @@ export class MarketDataService {
     }
   }
 
+  async listAvailableAssets(options: { page?: number; pageSize?: number } = {}): Promise<{ data: MarketAsset[]; pagination: { page: number; pageSize: number; totalItems: number; totalPages: number } }> {
+    try {
+      const result = await this.secureService.listAvailableAssets(options);
+      return {
+        data: result,
+        pagination: {
+          page: options.page || 1,
+          pageSize: options.pageSize || 20,
+          totalItems: result.length,
+          totalPages: Math.ceil(result.length / (options.pageSize || 20))
+        }
+      };
+    } catch (error) {
+      this.logger.error('[MarketDataService] Error listing available assets:', error);
+      return { 
+        data: [], 
+        pagination: { 
+          page: options.page || 1, 
+          pageSize: options.pageSize || 20, 
+          totalItems: 0, 
+          totalPages: 0 
+        } 
+      };
+    }
+  }
+
   // The generateMarketSummary method is now in SecureMarketDataService
   // private generateMarketSummary(assets: MarketAsset[]): string {
   //   // ... implementation ...

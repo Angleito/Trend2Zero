@@ -4,7 +4,7 @@
  * This module provides a centralized client for making API requests to the backend.
  */
 
-const axios = require('axios');
+import axios from 'axios';
 
 const getBaseUrl = () => {
   const envUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -26,7 +26,7 @@ const getBaseUrl = () => {
   return `http://localhost:${defaultPort}/api`;
 };
 
-const apiClient = axios.create({
+export const apiClient = axios.create({
   baseURL: getBaseUrl(),
   headers: {
     'Content-Type': 'application/json'
@@ -63,7 +63,7 @@ if (typeof window !== 'undefined') {
  * Set authentication token
  * @param {string} token - JWT token
  */
-function setAuthToken(token) {
+export function setAuthToken(token) {
   if (typeof window !== 'undefined') {
     if (token) {
       localStorage.setItem('token', token);
@@ -77,7 +77,7 @@ function setAuthToken(token) {
  * Get authentication token
  * @returns {string|null} JWT token
  */
-function getAuthToken() {
+export function getAuthToken() {
   return typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 }
 
@@ -85,14 +85,8 @@ function getAuthToken() {
  * Check if user is authenticated
  * @returns {boolean} True if authenticated
  */
-function isAuthenticated() {
+export function isAuthenticated() {
   return !!getAuthToken();
 }
 
-module.exports = {
-  apiClient,
-  setAuthToken,
-  getAuthToken,
-  isAuthenticated,
-  axiosInstance: axios
-};
+export const axiosInstance = axios;

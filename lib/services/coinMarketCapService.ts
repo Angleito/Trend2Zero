@@ -69,7 +69,7 @@ class CoinMarketCapService {
             convert: 'USD'
           },
           headers: this.headers,
-          signal: controller.signal
+          signal: controller.signal as AbortSignal
         });
 
         clearTimeout(timeoutId);
@@ -88,10 +88,11 @@ class CoinMarketCapService {
         }
 
         const assetPrice: AssetPrice = {
-          id: coinId.toString(),
+          type: 'Cryptocurrency',
+          // id: coinId.toString(),
           symbol: this.getSymbolFromId(coinId),
           name: response.data.data[coinId].name,
-          type: 'cryptocurrency',
+
           price: priceData.price,
           change: priceData.percent_change_24h || 0,
           changePercent: priceData.percent_change_24h || 0,
@@ -102,7 +103,7 @@ class CoinMarketCapService {
 
         console.log(`[CoinMarketCap] Successfully fetched price for ${id}: $${assetPrice.price}`);
         return assetPrice;
-      } catch (error) {
+      } catch (error: unknown) {
         if (axios.isAxiosError(error)) {
           if (error.code === 'ECONNABORTED') {
             console.error(`[CoinMarketCap] Request timeout for asset: ${id}`);

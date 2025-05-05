@@ -7,6 +7,7 @@ const marketDataRoutes = require('./routes/marketDataRoutes');
 const authRoutes = require('./routes/authRoutes');
 const cryptoRoutes = require('./routes/cryptoRoutes');
 const stocksRoutes = require('./routes/stocksRoutes');
+const blogRoutes = require('./routes/blogRoutes');
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.use('/api/market-data', marketDataRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/crypto', cryptoRoutes);
 app.use('/api/stocks', stocksRoutes);
+app.use('/api/blog', blogRoutes);
 
 // 404 handler
 app.all('*', (req, res, next) => {

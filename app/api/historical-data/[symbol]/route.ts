@@ -1,39 +1,41 @@
 // app/api/historical-data/[symbol]/route.ts
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: Request, { params }: { params: { symbol: string } }) {
-  const { searchParams } = new URL(request.url);
-  const symbol = params.symbol;
-  const days = searchParams.get('days') || '30'; // Default to 30 days if not specified
+export const dynamic = 'force-dynamic';
 
-  if (!symbol) {
-    return NextResponse.json({ error: 'Symbol is required' }, { status: 400 });
-  }
-
-  const backendUrl = process.env.BACKEND_API_URL; // Ensure this environment variable is set
-
-  if (!backendUrl) {
-    console.error("BACKEND_API_URL environment variable is not set.");
-    return NextResponse.json({ error: 'Backend URL is not configured' }, { status: 500 });
-  }
-
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ symbol: string }> }
+) {
   try {
-    // Construct the backend URL, assuming the backend historical data route is /historical-data/:symbol
-    const backendApiUrl = `${backendUrl}/historical-data/${symbol}?days=${days}`;
+    const { symbol } = await params;
+    const days = request.nextUrl.searchParams.get('days') || '30';
 
-    const backendResponse = await fetch(backendApiUrl);
-
-    if (!backendResponse.ok) {
-      // Forward backend errors to the frontend
-      const errorBody = await backendResponse.json();
-      return NextResponse.json(errorBody, { status: backendResponse.status });
+    const backendApiUrl = process.env.BACKEND_API_URL;
+    if (!backendApiUrl) {
+      return new Response(JSON.stringify({ error: 'Backend API URL not configured' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    const data = await backendResponse.json();
-    return NextResponse.json(data);
+    const response = await fetch(`${backendApiUrl}/historical-data/${symbol}?days=${days}`);
+    if (!response.ok) {
+      return new Response(JSON.stringify({ error: 'Failed to fetch data from backend' }), {
+        status: response.status,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
-  } catch (error: any) {
-    console.error(`Error fetching historical data for ${symbol} from backend:`, error);
-    return NextResponse.json({ error: 'Failed to fetch historical data', details: error.message }, { status: 500 });
+    const data = await response.json();
+    return new Response(JSON.stringify(data), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    console.error('Error in historical data route:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }

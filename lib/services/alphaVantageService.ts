@@ -107,7 +107,7 @@ export class AlphaVantageService {
       if (response.data.Note || response.data['Error Message']) {
         console.warn('Alpha Vantage API Note/Error:', response.data.Note || response.data['Error Message']);
         // Depending on the error, you might want to throw or return an empty/default state
-        // For now, we'll proceed, but be aware of potential issues like rate limits
+        // we'll proceed, but be aware of potential issues like rate limits
       }
       return response.data;
     } catch (error) {
@@ -121,10 +121,10 @@ export class AlphaVantageService {
     // Use the MongoDB cache utility
     return getCachedData<AssetData | null>(cacheKey, async () => {
       try {
-        const stockResponse = await this.makeRequest({
+        const stockResponse: AlphaVantageStockResponse = await this.makeRequest({
           function: 'GLOBAL_QUOTE',
           symbol: symbol
-        }) as AlphaVantageStockResponse;
+        });
 
         const data = stockResponse['Global Quote'];
         if (!data || Object.keys(data).length === 0 || !data['01. symbol']) {
@@ -147,11 +147,13 @@ export class AlphaVantageService {
 
         return {
           symbol: data['01. symbol'],
-          price: usdPrice,
+          name: data['01. symbol'],
+          type: 'Stocks' as const,
+          price: parseFloat(data['05. price']),
           change: parseFloat(data['09. change']),
           changePercent: parseFloat(data['10. change percent'].replace('%', '')),
-          priceInUSD: usdPrice,
-          priceInBTC: btcRate ? usdPrice / btcRate.exchangeRate : undefined,
+          priceInBTC: btcRate ? parseFloat(data['05. price']) / btcRate.exchangeRate : 0,
+          priceInUSD: parseFloat(data['05. price']),
           lastUpdated: data['07. latest trading day']
         };
       } catch (error) {
@@ -180,17 +182,20 @@ export class AlphaVantageService {
 
         return Object.entries(timeSeries)
           .slice(0, days)
-          .map(([dateStr, data]) => ({
-            timestamp: dateStr,
-            value: parseFloat(data['4. close']),
-            date: new Date(dateStr),
-            price: parseFloat(data['4. close']),
-            open: parseFloat(data['1. open']),
-            high: parseFloat(data['2. high']),
-            low: parseFloat(data['3. low']),
-            close: parseFloat(data['4. close']),
-            volume: parseInt(data['5. volume'])
-          }))
+          .map(([date, data]) => {
+            const dataPoint: HistoricalDataPoint = {
+              timestamp: new Date(date).getTime(),
+              date: new Date(date),
+              value: parseFloat(data['4. close']),
+              price: parseFloat(data['4. close']),
+              open: parseFloat(data['1. open']),
+              high: parseFloat(data['2. high']),
+              low: parseFloat(data['3. low']),
+              close: parseFloat(data['4. close']),
+              volume: parseInt(data['5. volume'])
+            };
+            return dataPoint;
+          })
           .sort((a, b) => a.date.getTime() - b.date.getTime()); // Ensure chronological order
       } catch (error) {
         console.error(`Error fetching historical data for ${symbol}:`, error);
@@ -270,11 +275,13 @@ export class AlphaVantageService {
 
         return {
           symbol: symbol,
+          name: symbol,
+          type: 'Cryptocurrency' as const,
           price: usdPrice,
           // Alpha Vantage doesn't provide daily change easily here, set to 0 or calculate if needed
           change: 0, 
           changePercent: 0,
-          priceInBTC: btcRate ? usdPrice / btcRate.exchangeRate : (symbol === 'BTC' ? 1 : undefined),
+          priceInBTC: btcRate ? usdPrice / btcRate.exchangeRate : (symbol === 'BTC' ? 1 : 0),
           priceInUSD: usdPrice,
           lastUpdated: latestDate
         };

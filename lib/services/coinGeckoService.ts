@@ -71,11 +71,11 @@ export class CoinGeckoService {
           lastUpdated: new Date(data.last_updated_at * 1000).toISOString(),
           id,
           name: id.charAt(0).toUpperCase() + id.slice(1),
-          type: 'cryptocurrency',
+          type: 'Cryptocurrency',
           priceInBTC: 0,
           priceInUSD: data.usd
         };
-      } catch (error) {
+      } catch (error: unknown) {
         console.error(`[CoinGecko] Error fetching asset price for ${id}:`, error);
         throw error; // Re-throw error for consistency with original behavior
       }
@@ -114,7 +114,7 @@ export class CoinGeckoService {
         change: 0,
         lastUpdated: new Date().toISOString()
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`[CoinGeckoService] Error fetching price for ${symbol}:`, error);
       return null;
     }
@@ -127,7 +127,7 @@ export class CoinGeckoService {
    * @param days - Number of days of data to retrieve
    * @returns Array of historical data points
    */
-  async getHistoricalData(symbol: string, days = 30): Promise<HistoricalDataPoint[]> {
+  async getHistoricalDataWithCache(symbol: string, days = 30): Promise<HistoricalDataPoint[]> {
     const cacheKey = `coingecko_historical_data_${symbol}_${days}`;
     return getCachedData<HistoricalDataPoint[]>(cacheKey, async () => {
       try {
@@ -158,7 +158,7 @@ export class CoinGeckoService {
             volume: total_volumes[index][1]
           })
         );
-      } catch (error) {
+      } catch (error: unknown) {
         if (this.isRateLimitError(error)) {
           console.error(`[CoinGecko] Rate limit exceeded for historical data: ${symbol}`);
           return [];
@@ -209,7 +209,7 @@ export class CoinGeckoService {
             volume: total_volumes[index][1]
           })
         );
-      } catch (error) {
+      } catch (error: unknown) {
         if (this.isRateLimitError(error)) {
           console.error(`[CoinGecko] Rate limit exceeded for historical data range: ${symbol}`);
           return [];
@@ -257,7 +257,7 @@ export class CoinGeckoService {
           low: ohlcData[3],
           close: ohlcData[4]
         }));
-      } catch (error) {
+      } catch (error: unknown) {
         if (this.isRateLimitError(error)) {
           console.error(`[CoinGecko] Rate limit exceeded for OHLC data: ${symbol}`);
           return [];
@@ -335,13 +335,13 @@ export class CoinGeckoService {
         change: item.price_change_24h,
         lastUpdated: item.last_updated
       }));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[CoinGeckoService] Error fetching top assets:', error);
       return [];
     }
   }
 
-  async getHistoricalData(symbol: string, days: number = 7): Promise<any[]> {
+  async getHistoricalData(symbol: string, days: number = 7): Promise<HistoricalDataPoint[]> {
     try {
       const response = await fetch(
         `${this.baseUrl}/coins/${symbol.toLowerCase()}/market_chart?vs_currency=usd&days=${days}&interval=daily`
@@ -352,13 +352,13 @@ export class CoinGeckoService {
       }
 
       const data = await response.json();
-      return data.prices.map(([timestamp, price]: [number, number]) => ({
+      return data.prices.map(([timestamp, price]: [number, number]): HistoricalDataPoint => ({
         timestamp,
         date: new Date(timestamp),
         price,
         value: price
       }));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`[CoinGeckoService] Error fetching historical data for ${symbol}:`, error);
       return [];
     }
@@ -388,7 +388,7 @@ export class CoinGeckoService {
         lastUpdated: new Date().toISOString(), // Use current time as last updated
         id: item.id
       }));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`[CoinGeckoService] Error searching assets for query "${query}":`, error);
       return [];
     }

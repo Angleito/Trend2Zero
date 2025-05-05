@@ -4,10 +4,10 @@
  * This component displays information about an asset in a card format.
  */
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useWatchlist } from '../lib/hooks/useWatchlist';
-import { useAuth } from '../lib/hooks/useAuth';
+import { useWatchlist } from '@/lib/hooks/useWatchlist';
+import { useAuth } from '@/lib/hooks/useAuth';
 
 // Asset type icons
 const assetTypeIcons = {
@@ -57,7 +57,7 @@ const formatChange = (change) => {
  * @param {boolean} props.autoRefresh - Whether to auto-refresh price data
  * @returns {JSX.Element} - Component JSX
  */
-const AssetCard = ({ asset, showDetails = false, autoRefresh = false }) => {
+function AssetCard({ asset, showDetails = false, autoRefresh = false }) {
   const { isAuthenticated } = useAuth();
   const { isInWatchlist, addToWatchlist, removeFromWatchlist } = useWatchlist();
   const [isAdding, setIsAdding] = useState(false);
@@ -66,6 +66,8 @@ const AssetCard = ({ asset, showDetails = false, autoRefresh = false }) => {
   const [error, setError] = useState(null);
 
   const fetchAssetPrice = async (symbol) => {
+    if (!symbol) return;
+    
     setLoading(true);
     setError(null);
     try {
@@ -104,10 +106,12 @@ const AssetCard = ({ asset, showDetails = false, autoRefresh = false }) => {
   
   // Use either the fetched price data or the passed asset data
   const displayData = priceData?.data || asset;
-  const inWatchlist = isInWatchlist(asset.symbol);
+  const inWatchlist = isInWatchlist(asset?.symbol);
   
   // Handle watchlist toggle
   const handleWatchlistToggle = async () => {
+    if (!asset?.symbol) return;
+    
     try {
       setIsAdding(true);
       if (inWatchlist) {
@@ -123,11 +127,15 @@ const AssetCard = ({ asset, showDetails = false, autoRefresh = false }) => {
   };
   
   // Determine price change color
-  const changeColor = displayData.change24h > 0 
+  const changeColor = displayData?.change24h > 0 
     ? 'text-green-500' 
-    : displayData.change24h < 0 
+    : displayData?.change24h < 0 
       ? 'text-red-500' 
       : 'text-gray-500';
+  
+  if (!asset) {
+    return null;
+  }
   
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow duration-200">
@@ -135,13 +143,13 @@ const AssetCard = ({ asset, showDetails = false, autoRefresh = false }) => {
         <div>
           <Link href={`/asset/${asset.symbol}`}>
             <h3 className="text-lg font-semibold hover:text-blue-500 transition-colors duration-200">
-              {asset.name || displayData.name}
+              {asset.name || displayData?.name}
             </h3>
           </Link>
           <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
             <span className="mr-2">{asset.symbol}</span>
-            <span title={asset.type || displayData.type}>
-              {assetTypeIcons[asset.type || displayData.type] || '🔹'}
+            <span title={asset.type || displayData?.type}>
+              {assetTypeIcons[asset.type || displayData?.type] || '🔹'}
             </span>
           </div>
         </div>
@@ -169,24 +177,24 @@ const AssetCard = ({ asset, showDetails = false, autoRefresh = false }) => {
       <div className="flex justify-between items-end">
         <div>
           <div className="text-2xl font-bold">
-            ${loading ? '...' : formatPrice(displayData.priceInUSD)}
+            ${loading ? '...' : formatPrice(displayData?.priceInUSD)}
           </div>
           <div className={`text-sm ${changeColor}`}>
-            {loading ? '...' : formatChange(displayData.change24h)}
+            {loading ? '...' : formatChange(displayData?.change24h)}
           </div>
         </div>
         
         <div className="text-right">
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            {loading ? '...' : formatPrice(displayData.priceInBTC)} BTC
+            {loading ? '...' : formatPrice(displayData?.priceInBTC)} BTC
           </div>
           <div className="text-xs text-gray-400 dark:text-gray-500">
-            {displayData.lastUpdated ? new Date(displayData.lastUpdated).toLocaleTimeString() : ''}
+            {displayData?.lastUpdated ? new Date(displayData.lastUpdated).toLocaleTimeString() : ''}
           </div>
         </div>
       </div>
       
-      {showDetails && (
+      {showDetails && displayData && (
         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
           {displayData.marketCap && (
             <div className="flex justify-between text-sm mb-1">
@@ -226,6 +234,6 @@ const AssetCard = ({ asset, showDetails = false, autoRefresh = false }) => {
       )}
     </div>
   );
-};
+}
 
 export default AssetCard;

@@ -4,11 +4,10 @@
  * This module provides React hooks for authentication and user management.
  */
 
-const React = require('react');
-const { useState, useEffect, useCallback, useContext, createContext } = require('react');
-const { useRouter } = require('next/router');
-import * as authService from '../api/authService';
-import { isAuthenticated } from '../api/apiClient';
+import React, { useState, useEffect, useCallback, useContext, createContext } from 'react';
+import { useRouter } from 'next/router';
+import * as authService from '@/lib/api/authService';
+import { isAuthenticated } from '@/lib/api/apiClient';
 
 // Create auth context
 const AuthContext = createContext({
@@ -24,7 +23,7 @@ const AuthContext = createContext({
  * @param {Object} props - Component props
  * @returns {JSX.Element} - Provider component
  */
-function AuthProvider({ children }) {
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -181,7 +180,7 @@ function AuthProvider({ children }) {
  * Hook for using auth context
  * @returns {Object} - Auth context
  */
-function useAuth() {
+export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
@@ -195,7 +194,7 @@ function useAuth() {
  * @param {string} options.redirectTo - Redirect path for unauthenticated users
  * @returns {Object} - Auth state
  */
-function useProtectedRoute(options = { redirectTo: '/login' }) {
+export function useProtectedRoute(options = { redirectTo: '/login' }) {
   const { user, loading } = useAuth();
   const router = useRouter();
 
@@ -203,13 +202,7 @@ function useProtectedRoute(options = { redirectTo: '/login' }) {
     if (!loading && !user) {
       router.replace(options.redirectTo);
     }
-  }, [user, loading, router, options.redirectTo]);
+  }, [loading, user, router, options.redirectTo]);
 
   return { user, loading };
 }
-
-module.exports = {
-  useAuth,
-  AuthProvider,
-  AuthContext
-};

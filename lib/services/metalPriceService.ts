@@ -61,21 +61,22 @@ class MetalPriceService {
         const timestamp = response.data.timestamp;
 
         const assetPrice: AssetPrice = {
-          id: symbol,
+          // id: symbol,
           symbol: symbol,
           name: metalNames[symbol] || symbol, 
-          type: 'commodity',
+          type: 'Commodity',
           price: price,
           change: 0, 
           changePercent: 0, 
           priceInUSD: price,
+          priceInBTC: 0,
           lastUpdated: new Date(timestamp * 1000).toISOString(), 
         };
 
         console.log(`[MetalPriceAPI] Successfully fetched price for ${symbol}: $${assetPrice.price}`);
         return assetPrice;
 
-      } catch (error) {
+      } catch (error: unknown) {
         if (axios.isAxiosError(error)) {
           console.error(`[MetalPriceAPI] API request error for ${symbol}:`, {
             status: error.response?.status,
