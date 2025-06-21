@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import AssetDetailPage from '../../pages/asset/[symbol]';
+import AssetDetailPage from '../../app/asset/[symbol]/page';
 import { useAssetPrice, useHistoricalData } from '../../lib/hooks/useMarketData';
 import { useWatchlist } from '../../lib/hooks/useWatchlist';
 import { useAuth } from '../../lib/hooks/useAuth';

@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import MarketPage from '../../pages/market';
+import MarketPage from '../../app/tracker/page';
 import { usePopularAssets, useAssetsByType, useAssetSearch } from '../../lib/hooks/useMarketData';
 
 // Mock the hooks
