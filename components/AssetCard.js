@@ -34,7 +34,10 @@ const formatPrice = (price) => {
   } else if (price < 10000) {
     return price.toFixed(2);
   } else {
-    return price.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    return price.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
   }
 };
 
