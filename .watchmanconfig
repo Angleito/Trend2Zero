@@ -1,0 +1,17 @@
+{
+  "ignore_dirs": [
+    "node_modules",
+    ".git",
+    ".next",
+    "dist",
+    "build",
+    "coverage",
+    "test-results",
+    "playwright-report",
+    "OrbStack",
+    ".orbstack",
+    ".Trash",
+    "tmp",
+    "temp"
+  ]
+}
