@@ -11,7 +11,7 @@ const {
 } = require('./helpers/testDb');
 const { createTestServer } = require('./testUtils'); // Correct path
 
-const logger = require('../utils/logger');
+const logger = require('../utils/logger').default;
 const express = require('express');
 const cors = require('cors');
 const routes = require('../routes');

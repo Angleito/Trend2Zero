@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const historicalDataJob = require('./jobs/historicalDataJob');
 const historicalDataRoutes = require('./routes/historicalDataRoutes');
-const logger = require('./utils/logger');
+const logger = require('./utils/logger').default;
 require('dotenv').config();
 
 const app = express();

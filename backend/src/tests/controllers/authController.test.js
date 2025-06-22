@@ -2,7 +2,7 @@ const request = require('supertest');
 const { getApp } = require('../setup');
 const { setupTestDB } = require('../setupTestDB');
 const User = require('../../models/userModel');
-const logger = require('../../utils/logger');
+const logger = require('../../utils/logger').default;
 
 describe('Auth Controller', () => {
     let db;

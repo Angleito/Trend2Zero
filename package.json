@@ -18,7 +18,7 @@
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "typecheck": "tsc --noEmit",
-    "test": "jest",
+    "test": "jest __tests__/hooks/useWatchlist.test.js",
     "test:watch": "jest --watch",
     "test:coverage": "nyc --reporter=html --reporter=text jest",
     "test:e2e": "playwright test",

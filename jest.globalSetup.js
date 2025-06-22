@@ -43,6 +43,7 @@ async function killProcessOnPort(port) {
 export default async () => {
   let mongoServer;
   let devServer;
+  const startDevServer = process.env.START_DEV_SERVER === 'true';
 
   try {
     // Start MongoDB
@@ -62,31 +63,33 @@ export default async () => {
     global.__MONGO_URI__ = mongoUri;
     process.env.MONGO_URI = mongoUri;
 
-    // Kill any existing process on port 3000
-    await killProcessOnPort(3000);
+    if (startDevServer) {
+      // Kill any existing process on port 3000
+      await killProcessOnPort(3000);
 
-    // Start Next.js dev server
-    logger.info('Starting Next.js development server...');
-    devServer = spawn('npm', ['run', 'dev'], {
-      stdio: 'pipe',
-      env: { ...process.env, PORT: '3000' }
-    });
+      // Start Next.js dev server
+      logger.info('Starting Next.js development server...');
+      devServer = spawn('npm', ['run', 'dev'], {
+        stdio: 'pipe',
+        env: { ...process.env, PORT: '3000' }
+      });
 
-    // Log server output
-    devServer.stdout.on('data', (data) => {
-      logger.info(`[Dev Server] ${data.toString()}`);
-    });
-    devServer.stderr.on('data', (data) => {
-      logger.error(`[Dev Server Error] ${data.toString()}`);
-    });
+      // Log server output
+      devServer.stdout.on('data', (data) => {
+        logger.info(`[Dev Server] ${data.toString()}`);
+      });
+      devServer.stderr.on('data', (data) => {
+        logger.error(`[Dev Server Error] ${data.toString()}`);
+      });
 
-    // Store dev server instance globally for teardown
-    global.__DEV_SERVER__ = devServer;
+      // Store dev server instance globally for teardown
+      global.__DEV_SERVER__ = devServer;
 
-    // Wait for server to be ready with increased timeout
-    logger.info('Waiting for development server to be ready...');
-    await waitForServerStart(3000);
-    logger.info('Development server started successfully');
+      // Wait for server to be ready with increased timeout
+      logger.info('Waiting for development server to be ready...');
+      await waitForServerStart(3000);
+      logger.info('Development server started successfully');
+    }
 
   } catch (error) {
     logger.error('Error in global setup:', error);

@@ -1,8 +1,17 @@
 const catchAsync = require('../../utils/catchAsync');
 const AppError = require('../../utils/appError');
-const logger = require('../../utils/logger');
+const logger = require('../../utils/logger').default;
 
-jest.mock('../../utils/logger');
+jest.mock('../../utils/logger', () => ({
+  __esModule: true,
+  default: {
+    error: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    debug: jest.fn(),
+    stream: { write: jest.fn() },
+  }
+}));
 
 describe('catchAsync Utility', () => {
     let mockReq;

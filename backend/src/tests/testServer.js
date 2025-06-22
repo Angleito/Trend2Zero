@@ -5,7 +5,7 @@ const userRoutes = require('../routes/userRoutes');
 const marketDataRoutes = require('../routes/marketDataRoutes');
 const stocksRoutes = require('../routes/stocksRoutes');
 const cryptoRoutes = require('../routes/cryptoRoutes');
-const logger = require('../utils/logger');
+const logger = require('../utils/logger').default;
 
 let mongod;
 let app;
