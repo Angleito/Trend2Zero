@@ -1,5 +1,6 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useWatchlist } from '../../lib/hooks/useWatchlist';
+import { useWatchlistStore } from '../../lib/stores/watchlistStore';
 import * as watchlistService from '../../lib/api/watchlistService';
 import { useAuth } from '../../lib/hooks/useAuth';
 
@@ -33,6 +34,7 @@ describe('useWatchlist Hook', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    useWatchlistStore.getState().reset();
     useAuth.mockReturnValue({
       user: { _id: '123' },
       isAuthenticated: true

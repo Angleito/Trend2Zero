@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 import * as watchlistService from '../api/watchlistService';
 import { useAuth } from './useAuth';
+import { useWatchlistStore } from '../stores/watchlistStore';
 
 export interface WatchlistItem {
   assetSymbol: string;
@@ -25,9 +26,14 @@ export interface WatchlistHook {
 }
 
 export const useWatchlist = (): WatchlistHook => {
-  const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    watchlist,
+    loading,
+    error,
+    setWatchlist,
+    setLoading,
+    setError,
+  } = useWatchlistStore();
   const { user, isAuthenticated } = useAuth();
 
   const fetchWatchlist = useCallback(async () => {
