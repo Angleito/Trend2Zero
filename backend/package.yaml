@@ -1,0 +1,102 @@
+name:                trend2zero-fp-backend
+version:             0.1.0.0
+github:              "Angleito/Trend2Zero-FP"
+license:             MIT
+author:              "Trend2Zero Team"
+maintainer:          "trend2zero@example.com"
+copyright:           "2024 Trend2Zero Team"
+
+extra-source-files: []
+
+description:         Functional Programming backend for Trend2Zero market data platform
+
+dependencies:
+- base >= 4.7 && < 5
+- aeson
+- servant
+- servant-server
+- warp
+- wai
+- wai-cors
+- wai-extra
+- http-types
+- persistent
+- persistent-postgresql
+- persistent-template
+- monad-logger
+- transformers
+- mtl
+- stm
+- hedis
+- http-client
+- http-client-tls
+- text
+- time
+- bytestring
+- containers
+- unordered-containers
+- scientific
+- vector
+- fast-logger
+- async
+- websockets
+- network
+
+default-extensions:
+- OverloadedStrings
+- DeriveGeneric
+- DeriveAnyClass
+- RecordWildCards
+- DataKinds
+- TypeOperators
+- FlexibleInstances
+- MultiParamTypeClasses
+- ScopedTypeVariables
+- TemplateHaskell
+- QuasiQuotes
+- GADTs
+- GeneralizedNewtypeDeriving
+- StandaloneDeriving
+- TypeFamilies
+
+ghc-options:
+- -Wall
+- -Wcompat
+- -Widentities
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
+- -Wmissing-export-lists
+- -Wmissing-home-modules
+- -Wpartial-fields
+- -Wredundant-constraints
+
+library:
+  source-dirs: src
+
+executables:
+  trend2zero-fp-backend-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - trend2zero-fp-backend
+
+tests:
+  trend2zero-fp-backend-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - trend2zero-fp-backend
+    - hspec
+    - QuickCheck
+    - quickcheck-instances
+    - servant-client
+    - wai-extra
+    - http-client

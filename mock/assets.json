@@ -1,0 +1,50 @@
+[
+  {
+    "name": "Bitcoin",
+    "symbol": "BTC",
+    "assetType": "crypto",
+    "description": "Bitcoin is a decentralized digital currency.",
+    "currentPrice": 50000,
+    "priceChange": 1500,
+    "priceChangePercent": 3.1,
+    "marketCap": 950000000000,
+    "volume24h": 30000000000,
+    "lastUpdated": "2025-04-10T22:26:00Z"
+  },
+  {
+    "name": "Ethereum",
+    "symbol": "ETH", 
+    "assetType": "crypto",
+    "description": "Ethereum is a decentralized computing platform.",
+    "currentPrice": 3000,
+    "priceChange": 100,
+    "priceChangePercent": 3.45,
+    "marketCap": 350000000000,
+    "volume24h": 15000000000,
+    "lastUpdated": "2025-04-10T22:26:00Z"
+  },
+  {
+    "name": "Apple Inc.",
+    "symbol": "AAPL",
+    "assetType": "stock", 
+    "description": "Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide.",
+    "currentPrice": 175.25,
+    "priceChange": -2.30,
+    "priceChangePercent": -1.30,
+    "marketCap": 2800000000000,
+    "volume24h": 70000000,
+    "lastUpdated": "2025-04-10T22:26:00Z"
+  },
+  {
+    "name": "Gold",
+    "symbol": "XAU",
+    "assetType": "commodity",
+    "description": "Gold is a precious metal used as a store of value and in jewelry.",
+    "currentPrice": 1950.50,
+    "priceChange": 15.75,
+    "priceChangePercent": 0.81,
+    "marketCap": null,
+    "volume24h": null,
+    "lastUpdated": "2025-04-10T22:26:00Z"
+  }
+]

@@ -1,0 +1,79 @@
+name:                trend2zero-cli
+version:             1.0.1
+github:              "angleito/trend2zero-fp"
+license:             BSD3
+author:              "Angel"
+maintainer:          "angel@example.com"
+copyright:           "2025 Angel"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+synopsis:            Trend2Zero CLI tool for building, testing, and deploying
+category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/angleito/trend2zero-fp#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- optparse-applicative >= 0.17 && < 0.19
+- process >= 1.6 && < 1.7
+- text >= 1.2 && < 2.1
+- bytestring >= 0.10 && < 0.12
+- directory >= 1.3 && < 1.4
+- filepath >= 1.4 && < 1.5
+- time >= 1.9 && < 1.13
+- ansi-terminal >= 0.11 && < 1.1
+- async >= 2.2 && < 2.3
+
+ghc-options:
+- -Wall
+- -Wcompat
+- -Widentities
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
+- -Wmissing-export-lists
+- -Wmissing-home-modules
+- -Wpartial-fields
+- -Wredundant-constraints
+
+library:
+  source-dirs: src
+  exposed-modules:
+    - Commands.Build
+    - Commands.Cache
+    - Commands.Test
+    - Commands.Deploy
+    - Commands.Dev
+    - Commands.Performance
+    - Utils.Process
+    - Utils.Terminal
+
+executables:
+  trend2zero:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - trend2zero-cli
+
+tests:
+  trend2zero-cli-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - trend2zero-cli
+    - hspec >= 2.7 && < 2.12
+    - QuickCheck >= 2.14 && < 2.15

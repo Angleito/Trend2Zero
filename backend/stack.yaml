@@ -1,0 +1,13 @@
+# Stack configuration for Trend2Zero-FP backend
+resolver: lts-21.25
+
+packages:
+- .
+
+extra-deps: []
+
+flags: {}
+
+extra-package-dbs: []
+
+allow-newer: false

@@ -1,0 +1,16 @@
+# Stack configuration for Trend2Zero CLI
+
+resolver: lts-21.22
+
+packages:
+- .
+
+extra-deps: []
+
+flags: {}
+
+extra-package-dbs: []
+
+# Configure GHC options
+ghc-options:
+  "$everything": -O2 -Wall
