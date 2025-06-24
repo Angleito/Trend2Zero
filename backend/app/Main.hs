@@ -30,7 +30,7 @@ server = healthHandler :<|> marketHandlers :<|> watchlistHandlers
     healthHandler :: Handler HealthStatus
     healthHandler = do
       currentTime <- liftIO getCurrentTime
-      return $ HealthStatus "healthy" (show currentTime) "0.1.0"
+      return $ HealthStatus "healthy"
     
     marketHandlers = getAssets :<|> getAsset :<|> getOverview :<|> getHistorical
     watchlistHandlers = getWatchlist :<|> addToWatchlist :<|> removeFromWatchlist
@@ -52,7 +52,8 @@ getOverview :: Handler MarketOverview
 getOverview = do
   liftIO $ putStrLn "Getting market overview"
   -- TODO: Implement actual data fetching
-  return $ MarketOverview 0 0 0 [] []
+  currentTime <- liftIO getCurrentTime
+  return $ MarketOverview 0 0 0 0 0 0 0 0 [] [] currentTime
 
 getHistorical :: String -> Maybe String -> Handler [HistoricalDataPoint]
 getHistorical symbol period = do

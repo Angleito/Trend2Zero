@@ -19,8 +19,8 @@ module Services.MetalPrice
     ) where
 
 import Control.Concurrent.STM
-import Control.Exception (Exception, throwIO, catch, SomeException)
-import Control.Monad (forM, when)
+import Control.Exception (Exception, throwIO, catch, try, SomeException)
+import Control.Monad (forM, forM_, when)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Retry
 import Data.Aeson
@@ -30,19 +30,21 @@ import Data.Cache.LRU.IO as LRU
 import Data.Hashable (Hashable)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import qualified Data.Map as Map (fromList, singleton, empty)
 import Data.Maybe (fromMaybe, catMaybes)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import GHC.Generics
-import Network.HTTP.Simple
+import Network.HTTP.Simple (parseRequest, httpLBS, getResponseBody, getResponseStatus, Response)
+import Network.HTTP.Client (responseTimeout, responseTimeoutMicro)
 import Network.HTTP.Types.Status (statusCode)
 import System.Environment (lookupEnv)
 import System.Log.FastLogger
 
 -- Import shared types
-import qualified Services.MarketData as MD
+import qualified Services.MarketDataTypes as MD
+import Services.MarketDataTypes (DataSource(..))
 import qualified Services.ApiLogger as Logger
 
 -- | Supported metal symbols
@@ -149,7 +151,7 @@ createMetalPriceService maybeApiKey = do
     let config = defaultMetalPriceConfig apiKey
     
     -- Initialize cache
-    cache <- LRU.newAtomicLRU (Just $ mpcMaxCacheSize config)
+    cache <- LRU.newAtomicLRU (Just $ fromIntegral $ mpcMaxCacheSize config)
     
     -- Initialize logger
     timeCache <- newTimeCache simpleTimeFormat
@@ -251,12 +253,12 @@ getAllMetalPrices service = liftIO $ do
                 ]
             
             request <- parseRequest url
-            let requestWithTimeout = setRequestTimeout (mpcTimeout config) request
+            let requestWithTimeout = request { responseTimeout = responseTimeoutMicro (mpcTimeout config * 1000000) }
             
-            response <- httpLBS requestWithTimeout `catch` handleNetworkError
+            result <- try $ httpLBS requestWithTimeout
             
-            case response of
-                Left err -> do
+            case result of
+                Left (err :: SomeException) -> do
                     mpsLogger service $ \time -> toLogStr time <> " [MetalPriceAPI] Network error: " <> toLogStr (show err) <> "\n"
                     Logger.logApiError (mpsApiLogger service) "MetalPrice" 
                         (T.pack endpoint) "GET" (T.pack $ show err) 
@@ -308,9 +310,6 @@ getAllMetalPrices service = liftIO $ do
                                     ]
                             return []
   where
-    handleNetworkError :: SomeException -> IO (Either MetalPriceError (Response ByteString))
-    handleNetworkError e = return $ Left $ NetworkError $ T.pack $ show e
-    
     parseMetalFromResponse :: MetalPriceResponse -> UTCTime -> MetalSymbol -> Maybe MD.AssetPrice
     parseMetalFromResponse response now symbol =
         let symbolText = metalSymbolToText symbol
@@ -328,7 +327,7 @@ getAllMetalPrices service = liftIO $ do
                 , MD.apVolume24h = Nothing
                 , MD.apMarketCap = Nothing
                 , MD.apLastUpdated = posixSecondsToUTCTime $ fromIntegral $ mprTimestamp response
-                , MD.apSource = MD.Mixed  -- Custom source for metals
+                , MD.apSource = Mixed  -- Custom source for metals
                 }
             Nothing -> Nothing
 
@@ -352,15 +351,15 @@ fetchMetalPriceFromAPI service symbol = do
         ]
     
     request <- parseRequest url
-    let requestWithTimeout = setRequestTimeout (mpcTimeout config) request
+    let requestWithTimeout = request { responseTimeout = responseTimeoutMicro (mpcTimeout config * 1000000) }
     
-    response <- httpLBS requestWithTimeout `catch` handleNetworkError
+    result <- try $ httpLBS requestWithTimeout
     
-    case response of
-        Left err -> do
+    case result of
+        Left (err :: SomeException) -> do
             Logger.logApiError (mpsApiLogger service) "MetalPrice" 
                 (T.pack endpoint) "GET" (T.pack $ show err) Map.empty
-            return $ Left err
+            return $ Left $ NetworkError $ T.pack $ show err
         Right httpResponse -> do
             let status = statusCode $ getResponseStatus httpResponse
             
@@ -393,7 +392,7 @@ fetchMetalPriceFromAPI service symbol = do
                                                 , MD.apVolume24h = Nothing
                                                 , MD.apMarketCap = Nothing
                                                 , MD.apLastUpdated = posixSecondsToUTCTime $ fromIntegral $ mprTimestamp apiResponse
-                                                , MD.apSource = MD.Mixed
+                                                , MD.apSource = Mixed
                                                 }
                                         Nothing -> do
                                             Logger.logApiError (mpsApiLogger service) "MetalPrice" 
@@ -422,9 +421,6 @@ fetchMetalPriceFromAPI service symbol = do
                             ("HTTP error status: " <> T.pack (show status)) 
                             $ Map.singleton "status" (toJSON status)
                         return $ Left $ NetworkError $ "HTTP status: " <> T.pack (show status)
-  where
-    handleNetworkError :: SomeException -> IO (Either MetalPriceError a)
-    handleNetworkError e = return $ Left $ NetworkError $ T.pack $ show e
 
 -- | Check rate limit (simple implementation - can be enhanced)
 checkRateLimit :: MetalPriceService -> IO Bool

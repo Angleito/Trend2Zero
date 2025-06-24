@@ -6,28 +6,30 @@ module Server where
 import Servant
 import API
 import Handlers.Health
-import Handlers.Crypto
 import Handlers.MarketData
+import Handlers.Watchlist
+
+-- | API proxy
+api :: Proxy TrendZeroAPI
+api = Proxy
 
 -- | Main server implementation combining all handlers
-server :: Server API
-server = healthAPI :<|> cryptoAPI :<|> marketDataAPI
+server :: Server TrendZeroAPI
+server = healthAPI :<|> marketAPI :<|> watchlistAPI
   where
     -- Health API handler
     healthAPI = healthHandler
     
-    -- Crypto API handlers
-    cryptoAPI = bitcoinPriceHandler
+    -- Market API handlers
+    marketAPI = allAssetsHandler
+            :<|> assetBySymbolHandler
+            :<|> marketOverviewHandler
+            :<|> historicalDataHandler
     
-    -- Market Data API handlers
-    marketDataAPI = 
-         marketOverviewHandler
-    :<|> assetPriceHandler
-    :<|> searchAssetsHandler
-    :<|> assetDetailsHandler
-    :<|> popularAssetsHandler
-    :<|> allAssetsHandler
-    :<|> historicalDataHandler
+    -- Watchlist API handlers
+    watchlistAPI = getWatchlistHandler
+               :<|> addWatchlistHandler
+               :<|> removeWatchlistHandler
 
 -- | WAI Application
 app :: Application

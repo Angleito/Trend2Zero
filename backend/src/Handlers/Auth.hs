@@ -16,14 +16,16 @@ module Handlers.Auth
   , requireAuth
   ) where
 
-import Auth.JWT
+import Auth.JWT hiding (userId, userEmail)
+import qualified Auth.JWT as JWT
 import Control.Monad.Except
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Reader
+-- import Control.Monad.Reader  -- Not used currently
 import Crypto.BCrypt
 import Data.Aeson
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Lazy.Char8 as LBS
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -180,7 +182,7 @@ registerHandler AuthContext{..} RegisterRequest{..} = do
       
       result <- liftIO $ createUser authUserStore newUser
       case result of
-        Left err -> throwError err400 { errBody = BS.pack $ T.unpack err }
+        Left err -> throwError err400 { errBody = LBS.pack $ T.unpack err }
         Right user -> do
           -- Generate token
           tokenResult <- liftIO $ generateToken authTokenConfig uid regEmail
@@ -269,7 +271,7 @@ updatePasswordHandler ctx@AuthContext{..} authHeader UpdatePasswordRequest{..} =
               -- Update password
               result <- liftIO $ updateUserPassword authUserStore (userId userInfo) (TE.decodeUtf8 hash)
               case result of
-                Left err -> throwError err500 { errBody = BS.pack $ T.unpack err }
+                Left err -> throwError err500 { errBody = LBS.pack $ T.unpack err }
                 Right _ -> do
                   -- Generate new token
                   tokenResult <- liftIO $ generateToken authTokenConfig (userId userInfo) (userEmail userInfo)
@@ -286,7 +288,7 @@ updatePasswordHandler ctx@AuthContext{..} authHeader UpdatePasswordRequest{..} =
 requireAuth :: AuthContext -> Text -> Handler UserInfo
 requireAuth AuthContext{..} authHeader = do
   -- Extract token from header
-  let maybeToken = extractBearerToken authHeader
+  let maybeToken = JWT.extractBearerToken authHeader
   case maybeToken of
     Nothing -> throwError err401 { errBody = "Invalid authorization header" }
     Just token -> do
@@ -297,13 +299,13 @@ requireAuth AuthContext{..} authHeader = do
         Left _ -> throwError err401 { errBody = "Invalid token" }
         Right payload -> do
           -- Find user
-          maybeUser <- liftIO $ findUserByEmail authUserStore (userEmail payload)
+          maybeUser <- liftIO $ findUserByEmail authUserStore (JWT.userEmail payload)
           case maybeUser of
             Nothing -> throwError err401 { errBody = "User not found" }
             Just user -> do
               -- Check if password changed after token issued
               case storedUserPasswordChangedAt user of
-                Just changedAt | changedAt > issuedAt payload ->
+                Just changedAt | changedAt > JWT.issuedAt payload ->
                   throwError err401 { errBody = "Password changed, please login again" }
                 _ -> return UserInfo
                   { userId = storedUserId user
@@ -312,9 +314,4 @@ requireAuth AuthContext{..} authHeader = do
                   , userRole = storedUserRole user
                   }
 
--- | Extract bearer token from authorization header
-extractBearerToken :: Text -> Maybe Text
-extractBearerToken authHeader =
-  case T.words authHeader of
-    ["Bearer", token] -> Just token
-    _ -> Nothing
+-- extractBearerToken is now imported from Auth.JWT module

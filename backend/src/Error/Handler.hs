@@ -1,29 +1,33 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Error.Handler where
 
-import Control.Exception (Exception, SomeException, catch, throwIO, try)
-import Control.Monad.Except (ExceptT, MonadError, throwError)
+import Control.Concurrent (threadDelay)
+import Control.Exception (Exception, SomeException, catch, try)
+import Control.Monad.Except (ExceptT, MonadError, catchError)
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.Aeson (encode)
-import Data.ByteString.Lazy (ByteString)
+import Data.Aeson (encode, object, toJSON, (.=))
+import Data.Either (partitionEithers)
+import Data.Maybe (catMaybes)
 import Data.Text (Text)
 import qualified Data.Text as T
+import Data.Text.Encoding (decodeUtf8)
 import Network.HTTP.Types.Header (hContentType)
-import Network.HTTP.Types.Status
-import Network.Wai (Application, Response, responseLBS)
+import Network.Wai (Request, Response, ResponseReceived, responseLBS, rawPathInfo, requestMethod)
 import Servant
 import System.Log.FastLogger (LoggerSet, pushLogStrLn, toLogStr)
 
 import Error.AppError
-import qualified Config.Environment as Env
+import Config (Environment(..))
 
 -- | Custom exception type for throwing AppErrors
 newtype AppException = AppException AppError
@@ -70,9 +74,6 @@ appErrorToServerError AppError{..} =
 throwAppError :: MonadError ServerError m => AppError -> m a
 throwAppError = throwError . appErrorToServerError
 
--- | Catch and convert exceptions to AppError
-catchToAppError :: (MonadIO m, ToAppError e, Exception e) => m a -> m (Either AppError a)
-catchToAppError action = liftIO $ catch (Right <$> action) (return . Left . toAppError)
 
 -- | Run an action that might throw an AppException
 runWithAppError :: MonadIO m => IO a -> m (Either AppError a)
@@ -81,21 +82,21 @@ runWithAppError action = liftIO $ try action >>= \case
   Right result -> return $ Right result
 
 -- | Global error handling middleware for WAI
-errorHandlingMiddleware :: LoggerSet -> Env.Environment -> Application -> Application
-errorHandlingMiddleware logger env app req respond = app req respond `catch` handleException
+errorHandlingMiddleware :: LoggerSet -> Environment -> Application -> Application
+errorHandlingMiddleware logger env app req respondTo = app req respondTo `catch` handleException
   where
-    handleException :: SomeException -> IO Response
+    handleException :: SomeException -> IO ResponseReceived
     handleException e = do
       let appErr = toAppError e
       logError logger appErr req
-      respond $ errorToResponse env appErr
+      respondTo $ errorToResponse env appErr
 
 -- | Convert AppError to WAI Response
-errorToResponse :: Env.Environment -> AppError -> Response
+errorToResponse :: Environment -> AppError -> Response
 errorToResponse env err@AppError{..} = responseLBS
   (toEnum errorStatusCode)
   [(hContentType, "application/json")]
-  (encode $ if env == Env.Development then fullError else safeError)
+  (encode $ if env == Development then fullError else safeError)
   where
     fullError = object
       [ "status" .= errorStatus
@@ -134,17 +135,17 @@ logError logger err@AppError{..} req = do
 
 -- | Helper function to handle validation errors
 handleValidation :: Either [ValidationError] a -> HandlerT a
-handleValidation (Left errors) = throwAppError $ mkValidationError "Validation failed" errors
+handleValidation (Left errors) = throwError $ mkValidationError "Validation failed" errors
 handleValidation (Right value) = return value
 
 -- | Helper to handle Maybe values with custom error
 handleMaybe :: AppError -> Maybe a -> HandlerT a
-handleMaybe err Nothing = throwAppError err
+handleMaybe err Nothing = throwError err
 handleMaybe _ (Just value) = return value
 
 -- | Helper to handle Either values
 handleEither :: ToAppError e => Either e a -> HandlerT a
-handleEither (Left err) = throwAppError $ toAppError err
+handleEither (Left err) = throwError $ toAppError err
 handleEither (Right value) = return value
 
 -- | Run IO action with error handling
@@ -152,12 +153,12 @@ liftIOWithError :: IO a -> HandlerT a
 liftIOWithError action = do
   result <- liftIO $ try action
   case result of
-    Left (e :: SomeException) -> throwAppError $ toAppError e
+    Left (e :: SomeException) -> throwError $ toAppError e
     Right value -> return value
 
 -- | Transform validation results
 validateOr :: AppError -> Bool -> HandlerT ()
-validateOr err False = throwAppError err
+validateOr err False = throwError err
 validateOr _ True = return ()
 
 -- | Ensure a condition is met
@@ -170,23 +171,20 @@ ensureExists resourceType = handleMaybe (mkNotFound (resourceType <> " not found
 
 -- | Handle authentication
 requireAuth :: Maybe Text -> HandlerT Text
-requireAuth Nothing = throwAppError mkJWTError
+requireAuth Nothing = throwError mkJWTError
 requireAuth (Just token) = return token
 
 -- | Handle authorization
 requirePermission :: Bool -> Text -> HandlerT ()
-requirePermission False resource = throwAppError $ mkForbidden ("Access denied to " <> resource) Nothing
+requirePermission False resource = throwError $ mkForbidden ("Access denied to " <> resource) Nothing
 requirePermission True _ = return ()
 
 -- | Catch specific error types and transform them
 catchErrorType :: (AppError -> Bool) -> HandlerT a -> (AppError -> HandlerT a) -> HandlerT a
 catchErrorType predicate action handler = catchError action $ \err ->
-  if predicate (serverErrorToAppError err)
-  then handler (serverErrorToAppError err)
+  if predicate err
+  then handler err
   else throwError err
-  where
-    serverErrorToAppError :: ServerError -> AppError
-    serverErrorToAppError = toAppError
 
 -- | Retry an action with exponential backoff
 retryWithBackoff :: Int -> HandlerT a -> HandlerT a
@@ -209,10 +207,3 @@ combineValidations results = case partitionEithers results of
   ([], values) -> Right values
   (errors, _) -> Left $ mkValidationError "Multiple validation errors" errors
 
--- | Helper imports
-import Data.Bifunctor (first)
-import Data.Either (partitionEithers)
-import Data.Maybe (catMaybes)
-import Data.Text.Encoding (decodeUtf8)
-import Control.Concurrent (threadDelay)
-import Control.Monad.Except (catchError)

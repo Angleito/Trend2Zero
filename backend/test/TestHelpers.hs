@@ -145,17 +145,17 @@ instance Arbitrary WatchlistItem where
 
 instance Arbitrary HistoricalDataPoint where
   arbitrary = do
-    hdpTimestamp <- round . utcTimeToPOSIXSeconds <$> arbitrary @UTCTime
-    hdpDate <- arbitrary
+    hdTimestamp <- round . utcTimeToPOSIXSeconds <$> arbitrary @UTCTime
+    hdDate <- arbitrary
     basePrice <- choose (0.01, 100000.0)
-    hdpPrice <- basePrice <$ pure ()
-    hdpValue <- basePrice <$ pure ()
+    hdPrice <- basePrice <$ pure ()
+    hdValue <- basePrice <$ pure ()
     variation <- choose (0.95, 1.05)
-    hdpOpen <- pure $ basePrice * variation
-    hdpHigh <- pure $ basePrice * (variation + 0.05)
-    hdpLow <- pure $ basePrice * (variation - 0.05)
-    hdpClose <- pure $ basePrice * choose (0.98, 1.02)
-    hdpVolume <- choose (1000.0, 1000000000.0)
+    hdOpen <- pure $ basePrice * variation
+    hdHigh <- pure $ basePrice * (variation + 0.05)
+    hdLow <- pure $ basePrice * (variation - 0.05)
+    hdClose <- pure $ basePrice * choose (0.98, 1.02)
+    hdVolume <- choose (1000.0, 1000000000.0)
     return HistoricalDataPoint{..}
 
 instance Arbitrary UTCTime where
@@ -298,15 +298,15 @@ generateMockHistoricalData symbol days =
           variation = sin (fromIntegral dayOffset / 10.0) * 0.05 + 1.0
           price = basePrice * variation
       in HistoricalDataPoint
-         { hdpTimestamp = timestamp
-         , hdpDate = date
-         , hdpPrice = price
-         , hdpValue = price
-         , hdpOpen = price * 0.99
-         , hdpHigh = price * 1.02
-         , hdpLow = price * 0.98
-         , hdpClose = price * 1.01
-         , hdpVolume = 1000000.0 * variation
+         { hdTimestamp = timestamp
+         , hdDate = date
+         , hdPrice = price
+         , hdValue = price
+         , hdOpen = price * 0.99
+         , hdHigh = price * 1.02
+         , hdLow = price * 0.98
+         , hdClose = price * 1.01
+         , hdVolume = 1000000.0 * variation
          }
     
     baseTime = UTCTime (fromGregorian 2024 1 1) 0

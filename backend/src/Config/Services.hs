@@ -276,6 +276,6 @@ validateConfig config = liftIO $ do
 -- | Create retry policy from configuration
 createRetryPolicy :: RetryConfig -> RetryPolicyM IO
 createRetryPolicy config = 
-    exponentialBackoff (rcInitialDelayMicros config) 
-    <> limitRetries (rcMaxRetries config)
-    <> capDelay (rcMaxDelayMicros config)
+    capDelay (rcMaxDelayMicros config) $
+        exponentialBackoff (rcInitialDelayMicros config) 
+        <> limitRetries (rcMaxRetries config)

@@ -49,6 +49,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time
 import qualified Services.MarketData as MD
+import qualified Services.MarketDataTypes as MDT
 
 -- | Transform error types
 data TransformError
@@ -96,13 +97,13 @@ createPipeline name = TransformPipeline
     }
 
 -- | Add a transformation step
-addStep :: TransformStep a b -> TransformPipeline c a -> (b -> TransformPipeline c d) -> TransformPipeline c d
-addStep step pipeline cont = pipeline
-    { tpSteps = tpSteps pipeline ++ [StepWrapper step (tpSteps . cont)]
+addStep :: TransformStep a a -> TransformPipeline a a -> TransformPipeline a a  
+addStep step pipeline = pipeline
+    { tpSteps = tpSteps pipeline ++ [FinalStep step]
     }
 
 -- | Add validation step
-withValidation :: (a -> Either Text a) -> TransformPipeline c a -> TransformPipeline c a
+withValidation :: (a -> Either Text a) -> TransformPipeline a a -> TransformPipeline a a
 withValidation validate pipeline = 
     let validationStep = TransformStep
             { tsName = "validation"
@@ -111,10 +112,10 @@ withValidation validate pipeline =
                 Right val -> Right val
             , tsRetryPolicy = Nothing
             }
-    in addStep validationStep pipeline id
+    in addStep validationStep pipeline
 
 -- | Add normalization step
-withNormalization :: (a -> IO a) -> TransformPipeline c a -> TransformPipeline c a
+withNormalization :: (a -> IO a) -> TransformPipeline a a -> TransformPipeline a a
 withNormalization normalize pipeline =
     let normalizationStep = TransformStep
             { tsName = "normalization"
@@ -125,10 +126,10 @@ withNormalization normalize pipeline =
                     Right val -> Right val
             , tsRetryPolicy = Nothing
             }
-    in addStep normalizationStep pipeline id
+    in addStep normalizationStep pipeline
 
 -- | Add enrichment step with retry
-withEnrichment :: (a -> IO a) -> RetryPolicyM IO -> TransformPipeline c a -> TransformPipeline c a
+withEnrichment :: (a -> IO a) -> RetryPolicyM IO -> TransformPipeline a a -> TransformPipeline a a
 withEnrichment enrich retryPolicy pipeline =
     let enrichmentStep = TransformStep
             { tsName = "enrichment"
@@ -139,7 +140,7 @@ withEnrichment enrich retryPolicy pipeline =
                     Right val -> Right val
             , tsRetryPolicy = Just retryPolicy
             }
-    in addStep enrichmentStep pipeline id
+    in addStep enrichmentStep pipeline
 
 -- | Common transformations
 
@@ -223,21 +224,17 @@ deduplicateAssets :: [MD.AssetPrice] -> [MD.AssetPrice]
 deduplicateAssets = nubBy (\a b -> MD.apSymbol a == MD.apSymbol b)
 
 -- | Aggregate prices by time window
-aggregatePrices :: NominalDiffTime -> [MD.HistoricalDataPoint] -> [MD.HistoricalDataPoint]
+aggregatePrices :: NominalDiffTime -> [MDT.HistoricalDataPoint] -> [MDT.HistoricalDataPoint]
 aggregatePrices window points =
     let groups = groupBy (\a b -> 
-            diffUTCTime (MD.hdpDate a) (MD.hdpDate b) < window) points
+            diffUTCTime (MDT.hdDate a) (MDT.hdDate b) < window) points
     in map aggregateGroup groups
   where
-    aggregateGroup :: [MD.HistoricalDataPoint] -> MD.HistoricalDataPoint
+    aggregateGroup :: [MDT.HistoricalDataPoint] -> MDT.HistoricalDataPoint
     aggregateGroup [] = error "Empty group"
     aggregateGroup group@(first:_) = first
-        { MD.hdpPrice = average $ map MD.hdpPrice group
-        , MD.hdpOpen = MD.hdpOpen first
-        , MD.hdpClose = MD.hdpClose $ last group
-        , MD.hdpHigh = maximum $ map MD.hdpHigh group
-        , MD.hdpLow = minimum $ map MD.hdpLow group
-        , MD.hdpVolume = Just $ sum $ catMaybes $ map MD.hdpVolume group
+        { MDT.hdPrice = average $ map MDT.hdPrice group
+        , MDT.hdVolume = Just $ sum $ catMaybes $ map MDT.hdVolume group
         }
     
     average :: [Double] -> Double

@@ -9,7 +9,6 @@ module Services.AlphaVantage
     , AlphaVantageConfig(..)
     , AlphaVantageError(..)
     , AssetData(..)
-    , HistoricalDataPoint(..)
     , CurrencyExchangeRate(..)
     , createAlphaVantageService
     , getStockData
@@ -24,14 +23,20 @@ import Control.Exception (Exception, throwIO, catch)
 import Control.Monad (when)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson
+import Data.Aeson.Types (parseMaybe)
 import Data.ByteString.Char8 as BS8
+import qualified Data.Aeson.KeyMap as KM
+import Data.Aeson.Key (toText)
 import qualified Data.HashMap.Strict as HM
 import Data.List (sortOn)
+import Data.Ord (Down(..))
 import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.Time.Format
+import qualified Services.MarketDataTypes as MDT
 import GHC.Generics
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS
@@ -54,9 +59,9 @@ data AlphaVantageService = AlphaVantageService
 -- | AlphaVantage API Errors
 data AlphaVantageError
     = RateLimitError Text
-    , APIError Text
-    , ParseError Text
-    , NetworkError Text
+    | APIError Text
+    | ParseError Text
+    | NetworkError Text
     | NoDataError Text
     deriving (Show, Eq)
 
@@ -76,29 +81,10 @@ data AssetData = AssetData
     } deriving (Show, Eq, Generic)
 
 instance ToJSON AssetData where
-    toJSON = genericToJSON $ defaultOptions { fieldLabelModifier = drop 2 }
+    toJSON = genericToJSON $ defaultOptions { fieldLabelModifier = Prelude.drop 2 }
 
 instance FromJSON AssetData where
-    parseJSON = genericParseJSON $ defaultOptions { fieldLabelModifier = drop 2 }
-
--- | Historical Data Point (reuse from CoinGecko)
-data HistoricalDataPoint = HistoricalDataPoint
-    { hdpTimestamp :: Integer
-    , hdpDate :: UTCTime
-    , hdpPrice :: Double
-    , hdpValue :: Double
-    , hdpOpen :: Double
-    , hdpHigh :: Double
-    , hdpLow :: Double
-    , hdpClose :: Double
-    , hdpVolume :: Int
-    } deriving (Show, Eq, Generic)
-
-instance ToJSON HistoricalDataPoint where
-    toJSON = genericToJSON $ defaultOptions { fieldLabelModifier = drop 3 }
-
-instance FromJSON HistoricalDataPoint where
-    parseJSON = genericParseJSON $ defaultOptions { fieldLabelModifier = drop 3 }
+    parseJSON = genericParseJSON $ defaultOptions { fieldLabelModifier = Prelude.drop 2 }
 
 -- | Currency Exchange Rate
 data CurrencyExchangeRate = CurrencyExchangeRate
@@ -112,10 +98,10 @@ data CurrencyExchangeRate = CurrencyExchangeRate
     } deriving (Show, Eq, Generic)
 
 instance ToJSON CurrencyExchangeRate where
-    toJSON = genericToJSON $ defaultOptions { fieldLabelModifier = drop 3 }
+    toJSON = genericToJSON $ defaultOptions { fieldLabelModifier = Prelude.drop 3 }
 
 instance FromJSON CurrencyExchangeRate where
-    parseJSON = genericParseJSON $ defaultOptions { fieldLabelModifier = drop 3 }
+    parseJSON = genericParseJSON $ defaultOptions { fieldLabelModifier = Prelude.drop 3 }
 
 -- | AlphaVantage API Response Types
 data StockQuote = StockQuote
@@ -245,22 +231,29 @@ makeRequest service params = do
     response <- httpLbs request (httpManager service) `catch` handleNetworkError
     
     let body = responseBody response
-    -- Check for API errors in response
-    case eitherDecode body :: Either String Value of
-        Right (Object obj) 
-            | HM.member "Note" obj -> return $ Left $ RateLimitError "API call frequency limit reached"
-            | HM.member "Error Message" obj -> do
-                let errMsg = fromMaybe "Unknown error" $ parseMaybe (.: "Error Message") (Object obj)
-                return $ Left $ APIError errMsg
-        _ -> pure ()
     
     case statusCode (responseStatus response) of
-        200 -> case eitherDecode body of
-            Left err -> return $ Left (ParseError $ T.pack err)
-            Right val -> return $ Right val
+        200 -> do
+            -- Check for API errors in response
+            case eitherDecode body :: Either String Value of
+                Right (Object obj) 
+                    | KM.member "Note" obj -> return $ Left $ RateLimitError "API call frequency limit reached"
+                    | KM.member "Error Message" obj -> do
+                        let errMsg = fromMaybe "Unknown error" $ parseMaybe (.: "Error Message") obj
+                        return $ Left $ APIError errMsg
+                    | otherwise -> 
+                        -- No API errors, decode the actual response
+                        case eitherDecode body of
+                            Left err -> return $ Left (ParseError $ T.pack err)
+                            Right val -> return $ Right val
+                _ -> 
+                    -- Failed to decode as JSON or not an Object, try direct decode
+                    case eitherDecode body of
+                        Left err -> return $ Left (ParseError $ T.pack err)
+                        Right val -> return $ Right val
         code -> return $ Left (APIError $ T.pack $ "HTTP " ++ show code)
   where
-    handleNetworkError :: HttpException -> IO (Response a)
+    handleNetworkError :: HttpException -> IO a
     handleNetworkError e = throwIO $ NetworkError $ T.pack $ show e
 
 -- | Get stock data
@@ -274,7 +267,7 @@ getStockData service symbol = do
     case result of
         Left err -> return $ Left err
         Right (obj :: Value) -> case obj of
-            Object hm -> case HM.lookup "Global Quote" hm of
+            Object hm -> case KM.lookup "Global Quote" hm of
                 Just quoteData -> case fromJSON quoteData of
                     Success (quote :: StockQuote) -> do
                         -- Try to get BTC exchange rate
@@ -310,9 +303,9 @@ getCryptoCurrencyData service symbol = do
     case result of
         Left err -> return $ Left err
         Right (obj :: Value) -> case obj of
-            Object hm -> case HM.lookup "Time Series (Digital Currency Daily)" hm of
+            Object hm -> case KM.lookup "Time Series (Digital Currency Daily)" hm of
                 Just (Object timeSeries) -> 
-                    let sortedDates = sortOn (Down . fst) $ HM.toList timeSeries
+                    let sortedDates = sortOn (Down . fst) $ KM.toList timeSeries
                     in case listToMaybe sortedDates of
                         Just (latestDate, latestData) -> case fromJSON latestData of
                             Success (crypto :: CryptoDailyValue) -> do
@@ -335,7 +328,7 @@ getCryptoCurrencyData service symbol = do
                                     , adChangePercent = 0
                                     , adPriceInBTC = btcPrice
                                     , adPriceInUSD = usdPrice
-                                    , adLastUpdated = latestDate
+                                    , adLastUpdated = toText latestDate
                                     }
                             Error e -> return $ Left $ ParseError $ T.pack e
                         Nothing -> return $ Left $ NoDataError "No time series data found"
@@ -343,7 +336,7 @@ getCryptoCurrencyData service symbol = do
             _ -> return $ Left $ ParseError "Invalid response format"
 
 -- | Get historical data
-getHistoricalData :: AlphaVantageService -> Text -> Int -> IO [HistoricalDataPoint]
+getHistoricalData :: AlphaVantageService -> Text -> Int -> IO [MDT.HistoricalDataPoint]
 getHistoricalData service symbol days = do
     let params = [ ("function", "TIME_SERIES_DAILY")
                  , ("symbol", T.unpack symbol)
@@ -353,35 +346,31 @@ getHistoricalData service symbol days = do
     result <- makeRequest service params
     case result of
         Right (obj :: Value) -> case obj of
-            Object hm -> case HM.lookup "Time Series (Daily)" hm of
+            Object hm -> case KM.lookup "Time Series (Daily)" hm of
                 Just (Object timeSeries) -> do
-                    let dataPoints = take days $ parseTimeSeriesData timeSeries
+                    let dataPoints = Prelude.take days $ parseTimeSeriesData timeSeries
                     return dataPoints
                 _ -> return []
             _ -> return []
         Left _ -> return []
   where
     parseTimeSeriesData timeSeries =
-        let sortedData = sortOn (fst) $ HM.toList timeSeries
-        in [ HistoricalDataPoint
-                { hdpTimestamp = round $ utcTimeToPOSIXSeconds date
-                , hdpDate = date
-                , hdpPrice = close
-                , hdpValue = close
-                , hdpOpen = open
-                , hdpHigh = high
-                , hdpLow = low
-                , hdpClose = close
-                , hdpVolume = volume
+        let sortedData = sortOn (Down . fst) $ KM.toList timeSeries
+        in [ MDT.HistoricalDataPoint
+                { hdTimestamp = round $ utcTimeToPOSIXSeconds date
+                , hdDate = date
+                , hdPrice = close
+                , hdVolume = Just volume
+                , hdMarketCap = Nothing
                 }
            | (dateStr, valData) <- sortedData
-           , let date = parseTimeOrError True defaultTimeLocale "%Y-%m-%d" (T.unpack dateStr) :: UTCTime
+           , let date = parseTimeOrError True defaultTimeLocale "%Y-%m-%d" (T.unpack $ toText dateStr) :: UTCTime
            , Success (DailyValue openStr highStr lowStr closeStr volumeStr) <- [fromJSON valData]
-           , let open = read $ T.unpack openStr
-                 high = read $ T.unpack highStr
-                 low = read $ T.unpack lowStr
-                 close = read $ T.unpack closeStr
-                 volume = read $ T.unpack volumeStr
+           , let open = read $ T.unpack openStr :: Double
+                 high = read $ T.unpack highStr :: Double
+                 low = read $ T.unpack lowStr :: Double
+                 close = read $ T.unpack closeStr :: Double
+                 volume = read $ T.unpack volumeStr :: Double
            ]
 
 -- | Get currency exchange rate
@@ -396,7 +385,7 @@ getCurrencyExchangeRate service fromCurrency toCurrency = do
     case result of
         Left err -> return $ Left err
         Right (obj :: Value) -> case obj of
-            Object hm -> case HM.lookup "Realtime Currency Exchange Rate" hm of
+            Object hm -> case KM.lookup "Realtime Currency Exchange Rate" hm of
                 Just rateData -> case fromJSON rateData of
                     Success (erd :: ExchangeRateData) -> return $ Right $ CurrencyExchangeRate
                         { cerFromCurrencyCode = erd_fromCurrencyCode erd

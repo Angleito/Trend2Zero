@@ -171,10 +171,10 @@ spec = with (return app) $ do
         Just dataPoints -> do
           length dataPoints `shouldSatisfy` (> 0)
           -- Check data points are in chronological order
-          let timestamps = map hdpTimestamp dataPoints
+          let timestamps = map hdTimestamp dataPoints
           timestamps `shouldBe` reverse (sort timestamps)
           -- All prices should be positive
-          all (\dp -> hdpPrice dp > 0) dataPoints `shouldBe` True
+          all (\dp -> hdPrice dp > 0) dataPoints `shouldBe` True
         Nothing -> expectationFailure "Failed to decode historical data"
     
     it "GET /market-data/historical/BTC?period=7d returns week of data" $ do

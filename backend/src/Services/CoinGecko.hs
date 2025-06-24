@@ -8,9 +8,6 @@ module Services.CoinGecko
     ( CoinGeckoService(..)
     , CoinGeckoConfig(..)
     , CoinGeckoError(..)
-    , AssetPrice(..)
-    , HistoricalDataPoint(..)
-    , MarketAsset(..)
     , createCoinGeckoService
     , getAssetPrice
     , getCryptoPrice
@@ -27,17 +24,22 @@ import Control.Exception (Exception, throwIO, catch)
 import Control.Monad (when)
 import Control.Monad.IO.Class (liftIO)
 import Data.Aeson
-import Data.ByteString.Char8 as BS8
+import Data.Aeson.Types (parseMaybe)
+import qualified Data.Aeson.KeyMap as KM
+import qualified Data.Aeson.Key as K
+import qualified Data.ByteString.Char8 as BS8
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time
+import qualified Data.Vector as V
 import Data.Time.Clock.POSIX
 import GHC.Generics
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS
 import Network.HTTP.Types.Status
 import Network.HTTP.Types.Header
+import qualified Services.MarketDataTypes as MDT
 
 -- | CoinGecko API Configuration
 data CoinGeckoConfig = CoinGeckoConfig
@@ -64,8 +66,8 @@ data CoinGeckoError
 
 instance Exception CoinGeckoError
 
--- | Asset Price Response
-data AssetPrice = AssetPrice
+-- | CoinGecko Asset Price Response (internal)
+data CGAssetPrice = CGAssetPrice
     { apSymbol :: Text
     , apName :: Text
     , apType :: Text
@@ -79,14 +81,14 @@ data AssetPrice = AssetPrice
     , apPriceInUSD :: Double
     } deriving (Show, Eq, Generic)
 
-instance ToJSON AssetPrice where
-    toJSON = genericToJSON $ defaultOptions { fieldLabelModifier = drop 2 }
+instance ToJSON CGAssetPrice where
+    toJSON = genericToJSON $ defaultOptions { fieldLabelModifier = Prelude.drop 2 }
 
-instance FromJSON AssetPrice where
-    parseJSON = genericParseJSON $ defaultOptions { fieldLabelModifier = drop 2 }
+instance FromJSON CGAssetPrice where
+    parseJSON = genericParseJSON $ defaultOptions { fieldLabelModifier = Prelude.drop 2 }
 
--- | Historical Data Point
-data HistoricalDataPoint = HistoricalDataPoint
+-- | CoinGecko Historical Data Point (internal)
+data CGHistoricalDataPoint = CGHistoricalDataPoint
     { hdpTimestamp :: Integer
     , hdpDate :: UTCTime
     , hdpPrice :: Double
@@ -98,14 +100,14 @@ data HistoricalDataPoint = HistoricalDataPoint
     , hdpVolume :: Maybe Double
     } deriving (Show, Eq, Generic)
 
-instance ToJSON HistoricalDataPoint where
-    toJSON = genericToJSON $ defaultOptions { fieldLabelModifier = drop 3 }
+instance ToJSON CGHistoricalDataPoint where
+    toJSON = genericToJSON $ defaultOptions { fieldLabelModifier = Prelude.drop 3 }
 
-instance FromJSON HistoricalDataPoint where
-    parseJSON = genericParseJSON $ defaultOptions { fieldLabelModifier = drop 3 }
+instance FromJSON CGHistoricalDataPoint where
+    parseJSON = genericParseJSON $ defaultOptions { fieldLabelModifier = Prelude.drop 3 }
 
--- | Market Asset
-data MarketAsset = MarketAsset
+-- | CoinGecko Market Asset (internal)
+data CGMarketAsset = CGMarketAsset
     { maSymbol :: Text
     , maName :: Text
     , maType :: Text
@@ -117,11 +119,11 @@ data MarketAsset = MarketAsset
     , maLastUpdated :: Text
     } deriving (Show, Eq, Generic)
 
-instance ToJSON MarketAsset where
-    toJSON = genericToJSON $ defaultOptions { fieldLabelModifier = drop 2 }
+instance ToJSON CGMarketAsset where
+    toJSON = genericToJSON $ defaultOptions { fieldLabelModifier = Prelude.drop 2 }
 
-instance FromJSON MarketAsset where
-    parseJSON = genericParseJSON $ defaultOptions { fieldLabelModifier = drop 2 }
+instance FromJSON CGMarketAsset where
+    parseJSON = genericParseJSON $ defaultOptions { fieldLabelModifier = Prelude.drop 2 }
 
 -- | CoinGecko API Response Types
 data SimplePriceResponse = SimplePriceResponse
@@ -149,6 +151,8 @@ data MarketDataItem = MarketDataItem
     , price_change_percentage_24h :: Maybe Double
     , price_change_24h :: Maybe Double
     , market_cap :: Maybe Double
+    , total_volume :: Maybe Double
+    , market_cap_rank :: Maybe Int
     , last_updated :: Text
     } deriving (Show, Generic)
 
@@ -215,7 +219,7 @@ makeRequest service path params = do
     handleNetworkError e = throwIO $ NetworkError $ T.pack $ show e
 
 -- | Get asset price by ID
-getAssetPrice :: CoinGeckoService -> Text -> IO (Either CoinGeckoError AssetPrice)
+getAssetPrice :: CoinGeckoService -> Text -> IO (Either CoinGeckoError MDT.AssetPrice)
 getAssetPrice service assetId = do
     let params = [ ("ids", T.unpack assetId)
                  , ("vs_currencies", "usd")
@@ -229,32 +233,33 @@ getAssetPrice service assetId = do
     case result of
         Left err -> return $ Left err
         Right (obj :: Value) -> case obj of
-            Object hm -> case lookup (T.toLower assetId) hm of
+            Object hm -> case KM.lookup (K.fromText $ T.toLower assetId) hm of
                 Just priceData -> case fromJSON priceData of
                     Success (resp :: SimplePriceResponse) -> do
                         now <- getCurrentTime
                         let updatedTime = case last_updated_at resp of
                                 Just ts -> posixSecondsToUTCTime $ fromIntegral ts
                                 Nothing -> now
-                        return $ Right $ AssetPrice
-                            { apSymbol = getSymbolFromId service assetId
-                            , apName = T.toTitle assetId
-                            , apType = "Cryptocurrency"
-                            , apPrice = usd resp
-                            , apChange = fromMaybe 0 (usd_24h_change resp)
-                            , apChangePercent = fromMaybe 0 (usd_24h_change resp)
-                            , apVolume24h = usd_24h_vol resp
-                            , apMarketCap = usd_market_cap resp
-                            , apLastUpdated = updatedTime
-                            , apPriceInBTC = 0  -- Would need BTC price
-                            , apPriceInUSD = usd resp
+                        return $ Right $ MDT.AssetPrice
+                            { MDT.apSymbol = getSymbolFromId service assetId
+                            , MDT.apName = T.toTitle assetId
+                            , MDT.apType = "Cryptocurrency"
+                            , MDT.apPrice = usd resp
+                            , MDT.apPriceInUSD = usd resp
+                            , MDT.apPriceInBTC = 0  -- Would need BTC price
+                            , MDT.apChange = fromMaybe 0 (usd_24h_change resp)
+                            , MDT.apChangePercent = fromMaybe 0 (usd_24h_change resp)
+                            , MDT.apVolume24h = usd_24h_vol resp
+                            , MDT.apMarketCap = usd_market_cap resp
+                            , MDT.apLastUpdated = updatedTime
+                            , MDT.apSource = MDT.CoinGecko
                             }
                     Error e -> return $ Left $ ParseError $ T.pack e
                 Nothing -> return $ Left $ APIError "Asset not found"
             _ -> return $ Left $ ParseError "Invalid response format"
 
 -- | Get crypto price by symbol
-getCryptoPrice :: CoinGeckoService -> Text -> IO (Maybe AssetPrice)
+getCryptoPrice :: CoinGeckoService -> Text -> IO (Maybe MDT.AssetPrice)
 getCryptoPrice service symbol = do
     let assetId = getIdFromSymbol service symbol
     result <- getAssetPrice service assetId
@@ -265,7 +270,7 @@ getCryptoPrice service symbol = do
             return Nothing
 
 -- | Get historical data
-getHistoricalData :: CoinGeckoService -> Text -> Int -> IO [HistoricalDataPoint]
+getHistoricalData :: CoinGeckoService -> Text -> Int -> IO [MDT.HistoricalDataPoint]
 getHistoricalData service symbol days = do
     let assetId = getIdFromSymbol service symbol
         interval = if days <= 30 then "hourly" else "daily"
@@ -279,30 +284,26 @@ getHistoricalData service symbol days = do
         Right (resp :: MarketChartResponse) -> do
             let priceData = prices resp
                 volumeData = total_volumes resp
-                dataPoints = zipWith (processDataPoint volumeData) [0..] priceData
+                dataPoints = Prelude.zipWith (processDataPoint volumeData) [0..] priceData
             return dataPoints
         Left _ -> return []
   where
     processDataPoint volumeData idx [timestamp, price] =
         let time = posixSecondsToUTCTime $ realToFrac (timestamp / 1000)
-            volume = case drop idx volumeData of
+            volume = case Prelude.drop idx volumeData of
                 ([_, vol]:_) -> Just vol
                 _ -> Nothing
-        in HistoricalDataPoint
-            { hdpTimestamp = round timestamp
-            , hdpDate = time
-            , hdpPrice = price
-            , hdpValue = price
-            , hdpOpen = price
-            , hdpHigh = price
-            , hdpLow = price
-            , hdpClose = price
-            , hdpVolume = volume
+        in MDT.HistoricalDataPoint
+            { MDT.hdTimestamp = round timestamp
+            , MDT.hdDate = time
+            , MDT.hdPrice = price
+            , MDT.hdVolume = volume
+            , MDT.hdMarketCap = Nothing
             }
     processDataPoint _ _ _ = error "Invalid price data format"
 
 -- | Get historical data for date range
-getHistoricalDataRange :: CoinGeckoService -> Text -> UTCTime -> UTCTime -> IO [HistoricalDataPoint]
+getHistoricalDataRange :: CoinGeckoService -> Text -> UTCTime -> UTCTime -> IO [MDT.HistoricalDataPoint]
 getHistoricalDataRange service symbol fromTime toTime = do
     let assetId = getIdFromSymbol service symbol
         fromTimestamp = floor $ utcTimeToPOSIXSeconds fromTime
@@ -317,30 +318,26 @@ getHistoricalDataRange service symbol fromTime toTime = do
         Right (resp :: MarketChartResponse) -> do
             let priceData = prices resp
                 volumeData = total_volumes resp
-                dataPoints = zipWith (processDataPoint volumeData) [0..] priceData
+                dataPoints = Prelude.zipWith (processDataPoint volumeData) [0..] priceData
             return dataPoints
         Left _ -> return []
   where
     processDataPoint volumeData idx [timestamp, price] =
         let time = posixSecondsToUTCTime $ realToFrac (timestamp / 1000)
-            volume = case drop idx volumeData of
+            volume = case Prelude.drop idx volumeData of
                 ([_, vol]:_) -> Just vol
                 _ -> Nothing
-        in HistoricalDataPoint
-            { hdpTimestamp = round timestamp
-            , hdpDate = time
-            , hdpPrice = price
-            , hdpValue = price
-            , hdpOpen = price
-            , hdpHigh = price
-            , hdpLow = price
-            , hdpClose = price
-            , hdpVolume = volume
+        in MDT.HistoricalDataPoint
+            { MDT.hdTimestamp = round timestamp
+            , MDT.hdDate = time
+            , MDT.hdPrice = price
+            , MDT.hdVolume = volume
+            , MDT.hdMarketCap = Nothing
             }
     processDataPoint _ _ _ = error "Invalid price data format"
 
 -- | Get top assets by market cap
-getTopAssets :: CoinGeckoService -> Int -> IO [MarketAsset]
+getTopAssets :: CoinGeckoService -> Int -> IO [MDT.MarketAsset]
 getTopAssets service limit = do
     let params = [ ("vs_currency", "usd")
                  , ("order", "market_cap_desc")
@@ -355,51 +352,56 @@ getTopAssets service limit = do
             return $ fmap (convertToMarketAsset btcPrice) items
         Left _ -> return []
   where
-    getBTCPrice items = case filter (\item -> symbol item == "btc") items of
+    getBTCPrice items = case Prelude.filter (\item -> symbol item == "btc") items of
         (btc:_) -> return $ current_price btc
         _ -> return 0
     
-    convertToMarketAsset btcPrice item = MarketAsset
-        { maSymbol = T.toUpper $ symbol item
-        , maName = name item
-        , maType = "Cryptocurrency"
-        , maPrice = current_price item
-        , maChangePercent = fromMaybe 0 $ price_change_percentage_24h item
-        , maPriceInUSD = current_price item
-        , maPriceInBTC = if btcPrice > 0 then current_price item / btcPrice else 0
-        , maChange = fromMaybe 0 $ price_change_24h item
-        , maLastUpdated = last_updated item
+    convertToMarketAsset btcPrice item = MDT.MarketAsset
+        { MDT.maId = Services.CoinGecko.id item
+        , MDT.maSymbol = T.toUpper $ symbol item
+        , MDT.maName = name item
+        , MDT.maType = "Cryptocurrency"
+        , MDT.maPrice = current_price item
+        , MDT.maPriceInBTC = if btcPrice > 0 then current_price item / btcPrice else 0
+        , MDT.maChange24h = fromMaybe 0 $ price_change_24h item
+        , MDT.maVolume24h = fromMaybe 0 $ total_volume item
+        , MDT.maMarketCap = fromMaybe 0 $ market_cap item
+        , MDT.maRank = fromMaybe 0 $ market_cap_rank item
+        , MDT.maSource = MDT.CoinGecko
         }
 
 -- | Search assets
-searchAssets :: CoinGeckoService -> Text -> Int -> IO [MarketAsset]
+searchAssets :: CoinGeckoService -> Text -> Int -> IO [MDT.MarketAsset]
 searchAssets service query limit = do
     let params = [("query", T.unpack query)]
     
     result <- makeRequest service "/search" params
     case result of
         Right (obj :: Value) -> case obj of
-            Object hm -> case lookup "coins" hm of
+            Object hm -> case KM.lookup (K.fromText "coins") hm of
                 Just (Array coins) -> do
-                    let searchResults = take limit $ parseSearchResults coins
+                    let searchResults = Prelude.take limit $ parseSearchResults (V.toList coins)
                     return searchResults
                 _ -> return []
             _ -> return []
         Left _ -> return []
   where
     parseSearchResults coins = 
-        [ MarketAsset
-            { maSymbol = T.toUpper $ fromMaybe "" $ parseMaybe (.: "symbol") coin
-            , maName = fromMaybe "" $ parseMaybe (.: "name") coin
-            , maType = "Cryptocurrency"
-            , maPrice = 0
-            , maChangePercent = 0
-            , maPriceInUSD = 0
-            , maPriceInBTC = 0
-            , maChange = 0
-            , maLastUpdated = T.pack $ show getCurrentTime
+        [ MDT.MarketAsset
+            { MDT.maId = fromMaybe "" $ parseMaybe (.: "id") obj
+            , MDT.maSymbol = T.toUpper $ fromMaybe "" $ parseMaybe (.: "symbol") obj
+            , MDT.maName = fromMaybe "" $ parseMaybe (.: "name") obj
+            , MDT.maType = "Cryptocurrency"
+            , MDT.maPrice = 0
+            , MDT.maPriceInBTC = 0
+            , MDT.maChange24h = 0
+            , MDT.maVolume24h = 0
+            , MDT.maMarketCap = 0
+            , MDT.maRank = fromMaybe 0 $ parseMaybe (.: "market_cap_rank") obj
+            , MDT.maSource = MDT.CoinGecko
             }
-        | coin <- toList coins
+        | coin <- coins
+        , Object obj <- [coin]
         ]
 
 -- | Helper functions
@@ -414,7 +416,7 @@ getSymbolFromId service assetId =
     in fromMaybe (T.toUpper assetId) $ lookup assetId reverseMap
 
 -- | Fetch Bitcoin price - simplified function for the Crypto handler
-fetchBitcoinPrice :: IO (Either CoinGeckoError AssetPrice)
+fetchBitcoinPrice :: IO (Either CoinGeckoError MDT.AssetPrice)
 fetchBitcoinPrice = do
     service <- createCoinGeckoService Nothing
     getAssetPrice service "bitcoin"

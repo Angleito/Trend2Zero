@@ -14,10 +14,11 @@
 module Models.Asset where
 
 import Data.Text (Text)
-import Data.Time (UTCTime)
+import Data.Time (UTCTime, getCurrentTime)
 import Database.Persist
 import Database.Persist.Sql
 import Database.Persist.TH
+import Control.Monad.IO.Class (MonadIO, liftIO)
 
 -- Asset Type Enumeration
 data AssetType = Stock | Crypto | Commodity | Forex
@@ -77,16 +78,18 @@ updateAssetPrice assetId newPrice = do
     case maybeAsset of
         Nothing -> return ()
         Just asset -> do
+            currentTime <- liftIO getCurrentTime
             let oldPrice = assetCurrentPrice asset
                 change = newPrice - oldPrice
             update assetId
                 [ AssetCurrentPrice =. newPrice
                 , AssetChange24h =. Just change
-                , AssetLastUpdated =. assetUpdatedAt asset
+                , AssetLastUpdated =. currentTime
+                , AssetUpdatedAt =. currentTime
                 ]
 
 -- | Update asset statistics
-updateAssetStats :: MonadIO m => Key Asset -> [(EntityField Asset typ, typ)] -> SqlPersistT m ()
+updateAssetStats :: MonadIO m => Key Asset -> [Update Asset] -> SqlPersistT m ()
 updateAssetStats assetId updates = do
     currentTime <- liftIO getCurrentTime
     update assetId (updates ++ [AssetLastUpdated =. currentTime])
@@ -111,8 +114,3 @@ getTopLosers :: MonadIO m => Int -> SqlPersistT m [Entity Asset]
 getTopLosers limit = 
     selectList [] [Asc AssetChange24h, LimitTo limit]
 
--- Helper to get current time
-getCurrentTime :: IO UTCTime
-getCurrentTime = do
-    time <- getCurrentTime
-    return time

@@ -35,22 +35,4 @@ type WatchlistAPI =
   :<|> ReqBody '[JSON] WatchlistItem :> Post '[JSON] NoContent
   :<|> Capture "symbol" String :> Delete '[JSON] NoContent
 
--- Health Status Response
-data HealthStatus = HealthStatus 
-  { hsStatus :: String
-  , hsTimestamp :: String
-  , hsVersion :: String
-  } deriving (Show, Eq)
-
-instance ToJSON HealthStatus where
-  toJSON (HealthStatus s t v) = object 
-    [ "status" .= s
-    , "timestamp" .= t
-    , "version" .= v
-    ]
-
-instance FromJSON HealthStatus where
-  parseJSON = withObject "HealthStatus" $ \o ->
-    HealthStatus <$> o .: "status"
-                 <*> o .: "timestamp"
-                 <*> o .: "version"
+-- Health Status Response is imported from Types module

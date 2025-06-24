@@ -15,13 +15,13 @@ module Cache
   ) where
 
 import Control.Concurrent.STM
-import Control.Exception (SomeException, catch, try)
-import Control.Monad (void)
+import Control.Exception (SomeException, try)
+import Control.Monad
 import Data.Aeson (FromJSON, ToJSON, decode, encode)
 import Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Char8 as BS
-import Data.Time.Clock (UTCTime, getCurrentTime, addUTCTime, diffUTCTime)
+import Data.Time.Clock (UTCTime, getCurrentTime, addUTCTime)
 import Database.Redis (Connection, Redis, Reply(..))
 import qualified Database.Redis as Redis
 import GHC.Generics (Generic)

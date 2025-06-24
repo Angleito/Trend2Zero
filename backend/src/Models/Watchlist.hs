@@ -13,13 +13,15 @@
 
 module Models.Watchlist where
 
+import Control.Monad (forM, forM_)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time (UTCTime, getCurrentTime)
 import Database.Persist
 import Database.Persist.Sql
 import Database.Persist.TH
-import Models.User (UserId)
+import Models.User (User, UserId)
 import Models.Asset (AssetType(..))
 
 -- Alert Condition Enumeration

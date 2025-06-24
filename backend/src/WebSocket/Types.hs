@@ -2,15 +2,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE LambdaCase #-}
 
 module WebSocket.Types where
 
 import Data.Aeson
 import Data.Aeson.TH
+import Data.Aeson.Types (Parser)
 import Data.Text (Text)
 import Data.Time (UTCTime)
 import GHC.Generics
-import Types (AssetPrice, MarketAsset, AssetCategory)
+import Types (AssetPrice, AssetCategory)
 
 -- WebSocket Message Types
 data WSMessageType
@@ -19,7 +21,7 @@ data WSMessageType
   | PriceUpdate
   | Notification
   | Heartbeat
-  | Error
+  | WSError
   | ConnectionAck
   deriving (Show, Eq, Generic)
 
@@ -29,7 +31,7 @@ instance ToJSON WSMessageType where
   toJSON PriceUpdate = String "price_update"
   toJSON Notification = String "notification"
   toJSON Heartbeat = String "heartbeat"
-  toJSON Error = String "error"
+  toJSON WSError = String "error"
   toJSON ConnectionAck = String "connection_ack"
 
 instance FromJSON WSMessageType where
@@ -39,7 +41,7 @@ instance FromJSON WSMessageType where
     "price_update" -> pure PriceUpdate
     "notification" -> pure Notification
     "heartbeat" -> pure Heartbeat
-    "error" -> pure Error
+    "error" -> pure WSError
     "connection_ack" -> pure ConnectionAck
     _ -> fail "Invalid message type"
 
@@ -115,7 +117,7 @@ data WSMessage
   | WSHeartbeat
       { wsmTimestamp :: UTCTime
       }
-  | WSError
+  | WSErrorMsg
       { wsmErrorCode :: Int
       , wsmErrorMessage :: Text
       }
@@ -146,8 +148,8 @@ instance ToJSON WSMessage where
              ]
     WSHeartbeat ts ->
       object ["type" .= Heartbeat, "timestamp" .= ts]
-    WSError code message ->
-      object ["type" .= Error, "code" .= code, "message" .= message]
+    WSErrorMsg code message ->
+      object ["type" .= WSError, "code" .= code, "message" .= message]
     WSConnectionAck clientId ts ->
       object ["type" .= ConnectionAck, "clientId" .= clientId, "timestamp" .= ts]
 
@@ -169,7 +171,7 @@ instance FromJSON WSMessage where
         <*> v .:? "data"
         <*> v .: "timestamp"
       Heartbeat -> WSHeartbeat <$> v .: "timestamp"
-      Error -> WSError <$> v .: "code" <*> v .: "message"
+      WSError -> WSErrorMsg <$> v .: "code" <*> v .: "message"
       ConnectionAck -> WSConnectionAck <$> v .: "clientId" <*> v .: "timestamp"
 
 -- Client connection state
@@ -199,7 +201,7 @@ mkNotification nType title message mData timestamp =
   WSNotification nType title message mData timestamp
 
 mkError :: Int -> Text -> WSMessage
-mkError code message = WSError code message
+mkError code message = WSErrorMsg code message
 
 mkHeartbeat :: UTCTime -> WSMessage
 mkHeartbeat = WSHeartbeat

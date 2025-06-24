@@ -14,6 +14,7 @@ module Services.ApiLogger
     , flushLogger
     ) where
 
+import Control.Concurrent.Async (async)
 import Control.Concurrent.STM
 import Control.Monad (when, forever)
 import Control.Monad.IO.Class (MonadIO, liftIO)
@@ -225,8 +226,8 @@ logApiMetrics logger = liftIO $ do
                 [ ("total_calls", toJSON $ amTotalCalls metrics)
                 , ("successful_calls", toJSON $ amSuccessfulCalls metrics)
                 , ("failed_calls", toJSON $ amFailedCalls metrics)
-                , ("average_response_time_ms", toJSON $ round (avgResponseTime * 1000) :: Int)
-                , ("success_rate", toJSON $ round successRate :: Int)
+                , ("average_response_time_ms", toJSON $ (round (avgResponseTime * 1000) :: Int))
+                , ("success_rate", toJSON $ (round successRate :: Int))
                 , ("calls_by_service", toJSON $ amServiceCalls metrics)
                 , ("errors_by_service", toJSON $ amErrorsByService metrics)
                 ]
@@ -239,5 +240,3 @@ flushLogger :: MonadIO m => ApiLogger -> m ()
 flushLogger logger = liftIO $ do
     alLogger logger $ \_ -> ""  -- Force flush
 
--- | Import missing module
-import Control.Concurrent.Async (async)

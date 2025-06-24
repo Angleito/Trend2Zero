@@ -60,7 +60,7 @@ exampleUsage = do
     result <- getCachedData cache "crypto-prices" fetchCryptoPrices Nothing
     putStrLn $ "Thread " ++ show n ++ " completed"
     return result
-  ) [1..10]
+    ) [1..10]
   
   -- Wait for all to complete
   results <- mapM wait asyncActions

@@ -12,6 +12,8 @@ import qualified Data.Text as T
 import Data.Time (UTCTime)
 import GHC.Generics
 import Control.Applicative ((<|>))
+import Control.Monad (join)
+import Data.Maybe (fromMaybe)
 import Data.Vector (toList)
 
 -- Asset Categories
@@ -98,22 +100,22 @@ instance FromJSON ErrorResponse where
 
 -- Historical Data Point
 data HistoricalDataPoint = HistoricalDataPoint
-  { hdpTimestamp :: Integer
-  , hdpDate :: UTCTime
-  , hdpPrice :: Double
-  , hdpValue :: Double
-  , hdpOpen :: Double
-  , hdpHigh :: Double
-  , hdpLow :: Double
-  , hdpClose :: Double
-  , hdpVolume :: Double
+  { hdTimestamp :: Integer
+  , hdDate :: UTCTime
+  , hdPrice :: Double
+  , hdValue :: Double
+  , hdOpen :: Double
+  , hdHigh :: Double
+  , hdLow :: Double
+  , hdClose :: Double
+  , hdVolume :: Maybe Double
   } deriving (Show, Eq, Generic)
 
 instance ToJSON HistoricalDataPoint where
-  toJSON = genericToJSON defaultOptions { fieldLabelModifier = camelTo2 '_' . drop 3 }
+  toJSON = genericToJSON defaultOptions { fieldLabelModifier = camelTo2 '_' . drop 2 }
 
 instance FromJSON HistoricalDataPoint where
-  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = camelTo2 '_' . drop 3 }
+  parseJSON = genericParseJSON defaultOptions { fieldLabelModifier = camelTo2 '_' . drop 2 }
 
 -- Asset Data
 data AssetData = AssetData
@@ -139,7 +141,8 @@ instance FromJSON AssetData where
 
 -- Market Asset
 data MarketAsset = MarketAsset
-  { maSymbol :: Text
+  { maId :: Text
+  , maSymbol :: Text
   , maName :: Text
   , maPrice :: Double
   , maPriceInUSD :: Maybe Double
@@ -151,6 +154,9 @@ data MarketAsset = MarketAsset
   , maMarketCap :: Maybe Double
   , maCategory :: Maybe AssetCategory
   , maType :: Maybe Text
+  , maImage :: Maybe Text
+  , maRank :: Maybe Int
+  , maSource :: Maybe Text
   , maLastUpdated :: Text
   } deriving (Show, Eq, Generic)
 
@@ -178,9 +184,15 @@ instance FromJSON MarketData where
 data MarketOverview = MarketOverview
   { moTotalMarketCap :: Double
   , moTotalVolume :: Double
+  , moTotalVolume24h :: Double
+  , moBtcDominance :: Double
+  , moMarketCapChange24h :: Double
+  , moActiveCryptocurrencies :: Int
+  , moMarkets :: Int
   , moTotalAssets :: Int
   , moTopMovers :: [MarketAsset]
   , moRecentlyAdded :: [MarketAsset]
+  , moLastUpdated :: UTCTime
   } deriving (Show, Eq, Generic)
 
 instance ToJSON MarketOverview where
@@ -284,12 +296,12 @@ normalizeHistoricalDataPoint val = case val of
         high = maybe price id $ parseMaybe (.: "high") o
         low = maybe price id $ parseMaybe (.: "low") o
         close = maybe price id $ parseMaybe (.: "close") o
-        volume = maybe 0 id $ parseMaybe (.: "volume") o
+        volume = parseMaybe (.:? "volume") o >>= id
     Right $ HistoricalDataPoint timestamp date price value open high low close volume
   Array arr -> case toList arr of
     [Number ts, Number p] -> 
       let timestamp = round ts
           price = realToFrac p
-      in Right $ HistoricalDataPoint timestamp undefined price price price price price price 0
+      in Right $ HistoricalDataPoint timestamp undefined price price price price price price Nothing
     _ -> Left "Invalid array format for historical data point"
   _ -> Left "Invalid format for historical data point"

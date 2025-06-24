@@ -13,6 +13,7 @@
 
 module Models.User where
 
+import Control.Monad.IO.Class (MonadIO, liftIO)
 import Crypto.BCrypt (hashPasswordUsingPolicy, slowerBcryptHashingPolicy, validatePassword)
 import Data.ByteString (ByteString)
 import Data.Text (Text)
@@ -25,7 +26,7 @@ import Database.Persist.TH
 import Text.Regex.TDFA ((=~))
 
 -- User Role Enumeration
-data UserRole = UserRole | AdminRole
+data UserRole = RegularUser | AdminRole
   deriving stock (Show, Read, Eq, Ord)
 
 derivePersistField "UserRole"
@@ -37,7 +38,7 @@ User
     email Text
     password ByteString
     passwordChangedAt UTCTime Maybe
-    role UserRole default='UserRole'
+    role UserRole default='RegularUser'
     active Bool default=True
     createdAt UTCTime default=CURRENT_TIME
     updatedAt UTCTime default=CURRENT_TIME

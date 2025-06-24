@@ -152,7 +152,7 @@ spec = do
     it "generates valid historical data" $ do
       let history = generateMockHistoricalData "BTC" 7
       length history `shouldBe` 7
-      all (\h -> hdpPrice h > 0) history `shouldBe` True
+      all (\h -> hdPrice h > 0) history `shouldBe` True
     
     it "round-trips through JSON" $ property prop_historicalDataRoundTrip
     
@@ -163,16 +163,16 @@ spec = do
       let json = object ["timestamp" .= (1234567890 :: Integer), "price" .= (100.5 :: Double)]
       case normalizeHistoricalDataPoint json of
         Right hdp -> do
-          hdpTimestamp hdp `shouldBe` 1234567890
-          hdpPrice hdp `shouldBe` 100.5
+          hdTimestamp hdp `shouldBe` 1234567890
+          hdPrice hdp `shouldBe` 100.5
         Left err -> expectationFailure $ "Failed to normalize: " ++ T.unpack err
     
     it "handles array format" $ do
       let json = Array $ fromList [Number 1234567890, Number 100.5]
       case normalizeHistoricalDataPoint json of
         Right hdp -> do
-          hdpTimestamp hdp `shouldBe` 1234567890
-          hdpPrice hdp `shouldBe` 100.5
+          hdTimestamp hdp `shouldBe` 1234567890
+          hdPrice hdp `shouldBe` 100.5
         Left err -> expectationFailure $ "Failed to normalize: " ++ T.unpack err
     
     it "rejects invalid formats" $ do
@@ -248,8 +248,8 @@ prop_historicalDataRoundTrip hdp =
 
 prop_historicalDataPriceRelationships :: HistoricalDataPoint -> Bool
 prop_historicalDataPriceRelationships hdp =
-  hdpLow hdp <= hdpOpen hdp &&
-  hdpLow hdp <= hdpClose hdp &&
-  hdpHigh hdp >= hdpOpen hdp &&
-  hdpHigh hdp >= hdpClose hdp &&
-  hdpLow hdp <= hdpHigh hdp
+  hdLow hdp <= hdOpen hdp &&
+  hdLow hdp <= hdClose hdp &&
+  hdHigh hdp >= hdOpen hdp &&
+  hdHigh hdp >= hdClose hdp &&
+  hdLow hdp <= hdHigh hdp

@@ -106,10 +106,10 @@ coinGeckoServiceSpec = do
         Right dataPoints -> do
           length dataPoints `shouldSatisfy` (> 0)
           -- Check data is in chronological order
-          let timestamps = map hdpTimestamp dataPoints
+          let timestamps = map hdTimestamp dataPoints
           timestamps `shouldBe` sort timestamps
           -- All prices should be positive
-          all (\dp -> hdpPrice dp > 0) dataPoints `shouldBe` True
+          all (\dp -> hdPrice dp > 0) dataPoints `shouldBe` True
         Left err -> pendingWith $ "API call failed: " ++ show err
     
     it "returns empty data for future dates" $ do

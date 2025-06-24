@@ -15,6 +15,8 @@ dependencies:
 - aeson
 - servant
 - servant-server
+- servant-auth
+- servant-auth-server
 - warp
 - wai
 - wai-cors
@@ -23,6 +25,8 @@ dependencies:
 - persistent
 - persistent-postgresql
 - persistent-template
+- resourcet
+- resource-pool
 - monad-logger
 - transformers
 - mtl
@@ -30,6 +34,7 @@ dependencies:
 - hedis
 - http-client
 - http-client-tls
+- http-conduit
 - text
 - time
 - bytestring
@@ -41,6 +46,13 @@ dependencies:
 - async
 - websockets
 - network
+- jose
+- uuid
+- bcrypt
+- retry
+- regex-tdfa
+- lrucache
+- hashable
 
 default-extensions:
 - OverloadedStrings

@@ -4,9 +4,8 @@
 
 module Error.AppError where
 
-import Data.Aeson (FromJSON, ToJSON, object, withObject, (.:), (.:?), (.=))
+import Data.Aeson (FromJSON(..), ToJSON(..), object, withObject, (.:), (.:?), (.=), (.!=))
 import Data.Text (Text)
-import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Network.HTTP.Types.Status
 

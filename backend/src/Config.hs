@@ -12,14 +12,14 @@ data AppConfig = AppConfig
   { appPort :: Int
   , appDatabaseUrl :: Text
   , appRedisUrl :: Text
-  , appLogLevel :: LogLevel
+  , appLogLevel :: AppLogLevel
   , appEnv :: Environment
   , appCorsOrigins :: [Text]
   , appJwtSecret :: Text
   , appMaxRequestSize :: Int
   } deriving (Show, Eq)
 
-data LogLevel = Debug | Info | Warning | Error
+data AppLogLevel = Debug | Info | Warning | Error
   deriving (Show, Eq, Read)
 
 data Environment = Development | Staging | Production

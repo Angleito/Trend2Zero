@@ -13,7 +13,7 @@ module Database
 
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Logger (runStdoutLoggingT, LoggingT)
-import Control.Monad.Trans.Reader (ReaderT)
+import Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import Control.Monad.Trans.Resource (ResourceT, runResourceT)
 import Data.Pool (Pool)
 import Database.Persist.Postgresql
@@ -39,7 +39,7 @@ initializeDb pool = runDb pool migrateAll
 
 -- | Run a database action within a transaction
 withDb :: ConnectionString -> ReaderT SqlBackend (LoggingT (ResourceT IO)) a -> IO a
-withDb connStr action = runStdoutLoggingT $ withPostgresqlConn connStr $ \backend ->
+withDb connStr action = runResourceT $ runStdoutLoggingT $ withPostgresqlConn connStr $ \backend ->
     runReaderT action backend
 
 -- Example connection strings:
@@ -62,7 +62,7 @@ main = do
     
     -- Example: Create a new user
     userId <- runDb pool $ do
-        createUser "John Doe" "john@example.com" "password123" UserRole
+        createUser "John Doe" "john@example.com" "password123" RegularUser
     
     -- Example: Add an asset to watchlist
     runDb pool $ do

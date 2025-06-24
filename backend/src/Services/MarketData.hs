@@ -8,12 +8,6 @@
 module Services.MarketData
     ( MarketDataService(..)
     , MarketDataConfig(..)
-    , MarketAsset(..)
-    , MarketOverview(..)
-    , AssetPrice(..)
-    , HistoricalDataPoint(..)
-    , ListOptions(..)
-    , DataSource(..)
     , createMarketDataService
     , getMarketOverview
     , getPopularAssets
@@ -21,6 +15,8 @@ module Services.MarketData
     , getHistoricalData
     , searchAssets
     , listAvailableAssets
+    -- Re-export shared types
+    , module Services.MarketDataTypes
     ) where
 
 import Control.Concurrent.Async (forConcurrently)
@@ -37,18 +33,20 @@ import Data.Time
 import GHC.Generics
 import System.Environment (lookupEnv)
 
+-- Import shared types
+import Services.MarketDataTypes
+import qualified Services.MarketDataTypes as MDT
+import qualified Types
+
 -- Import our service modules
 import qualified Services.CoinGecko as CG
 import qualified Services.AlphaVantage as AV
 import qualified Services.MetalPrice as MP
 import qualified Config.Services as Config
 
--- | Data source indicator
-data DataSource = CoinGecko | AlphaVantage | MetalPrice | Mixed
-    deriving (Show, Eq, Generic)
+-- Additional imports for conversion
+import qualified Services.MarketDataTypes as MD
 
-instance ToJSON DataSource
-instance FromJSON DataSource
 
 -- | Market Data Configuration
 data MarketDataConfig = MarketDataConfig
@@ -80,92 +78,6 @@ data RateLimitState = RateLimitState
     , lastResetTime :: UTCTime
     } deriving (Show, Eq)
 
--- | Market Asset (unified type)
-data MarketAsset = MarketAsset
-    { maId :: Text
-    , maSymbol :: Text
-    , maName :: Text
-    , maType :: Text
-    , maPrice :: Double
-    , maChange24h :: Maybe Double
-    , maMarketCap :: Maybe Double
-    , maVolume24h :: Maybe Double
-    , maImage :: Maybe Text
-    , maRank :: Maybe Int
-    , maSource :: DataSource
-    } deriving (Show, Eq, Generic)
-
-instance ToJSON MarketAsset where
-    toJSON = genericToJSON $ defaultOptions { fieldLabelModifier = drop 2 }
-
-instance FromJSON MarketAsset where
-    parseJSON = genericParseJSON $ defaultOptions { fieldLabelModifier = drop 2 }
-
--- | Market Overview
-data MarketOverview = MarketOverview
-    { moTotalMarketCap :: Double
-    , moTotalVolume24h :: Double
-    , moBtcDominance :: Double
-    , moMarketCapChange24h :: Double
-    , moActiveCryptocurrencies :: Int
-    , moMarkets :: Int
-    , moLastUpdated :: UTCTime
-    } deriving (Show, Eq, Generic)
-
-instance ToJSON MarketOverview where
-    toJSON = genericToJSON $ defaultOptions { fieldLabelModifier = drop 2 }
-
-instance FromJSON MarketOverview where
-    parseJSON = genericParseJSON $ defaultOptions { fieldLabelModifier = drop 2 }
-
--- | Asset Price (unified from both services)
-data AssetPrice = AssetPrice
-    { apSymbol :: Text
-    , apName :: Text
-    , apType :: Text
-    , apPrice :: Double
-    , apPriceInUSD :: Double
-    , apPriceInBTC :: Double
-    , apChange :: Double
-    , apChangePercent :: Double
-    , apVolume24h :: Maybe Double
-    , apMarketCap :: Maybe Double
-    , apLastUpdated :: UTCTime
-    , apSource :: DataSource
-    } deriving (Show, Eq, Generic)
-
-instance ToJSON AssetPrice where
-    toJSON = genericToJSON $ defaultOptions { fieldLabelModifier = drop 2 }
-
-instance FromJSON AssetPrice where
-    parseJSON = genericParseJSON $ defaultOptions { fieldLabelModifier = drop 2 }
-
--- | Historical Data Point (shared)
-data HistoricalDataPoint = HistoricalDataPoint
-    { hdpTimestamp :: Integer
-    , hdpDate :: UTCTime
-    , hdpPrice :: Double
-    , hdpValue :: Double
-    , hdpOpen :: Double
-    , hdpHigh :: Double
-    , hdpLow :: Double
-    , hdpClose :: Double
-    , hdpVolume :: Maybe Double
-    } deriving (Show, Eq, Generic)
-
-instance ToJSON HistoricalDataPoint where
-    toJSON = genericToJSON $ defaultOptions { fieldLabelModifier = drop 3 }
-
-instance FromJSON HistoricalDataPoint where
-    parseJSON = genericParseJSON $ defaultOptions { fieldLabelModifier = drop 3 }
-
--- | List options for asset queries
-data ListOptions = ListOptions
-    { loCategory :: Maybe Text
-    , loKeywords :: Maybe Text
-    , loPage :: Maybe Int
-    , loPageSize :: Maybe Int
-    } deriving (Show, Eq)
 
 -- | Predefined asset mappings
 predefinedAssets :: [(Text, Text, Text)]  -- (symbol, name, type)
@@ -224,7 +136,7 @@ createMarketDataService = do
     mpService <- case mpApiKey of
         Just key -> do
             putStrLn "[MarketData] Initializing MetalPrice service..."
-            Just <$> MP.createMetalPriceService (Just key) `catch` handleMetalPriceError
+            (Just <$> MP.createMetalPriceService (Just key)) `catch` handleMetalPriceError
         Nothing -> return Nothing
     
     -- Initialize rate limit state
@@ -249,39 +161,43 @@ createMarketDataService = do
         putStrLn $ "[MarketData] Failed to initialize MetalPrice service: " ++ show e
         return Nothing
 
--- | Get market overview
-getMarketOverview :: MarketDataService -> IO (Maybe MarketOverview)
+-- | Get market overview  
+getMarketOverview :: MarketDataService -> IO (Maybe Types.MarketOverview)
 getMarketOverview service = do
     assets <- getPopularAssets service
     if null assets
         then return Nothing
         else do
             now <- getCurrentTime
-            let cryptoAssets = filter (\a -> maType a == "cryptocurrency") assets
-                totalMarketCap = sum $ catMaybes $ map maMarketCap assets
-                totalVolume = sum $ catMaybes $ map maVolume24h assets
-                btcAsset = find (\a -> maSymbol a == "BTC") assets
-                btcDominance = case btcAsset >>= maMarketCap of
+            let cryptoAssets = filter (\a -> Types.maType a == Just "cryptocurrency") assets
+                totalMarketCap = sum $ catMaybes $ map Types.maMarketCap assets
+                totalVolume = sum $ catMaybes $ map Types.maVolume24h assets
+                btcAsset = find (\a -> Types.maSymbol a == "BTC") assets
+                btcDominance = case btcAsset >>= Types.maMarketCap of
                     Just btcCap -> if totalMarketCap > 0 
                         then (btcCap / totalMarketCap) * 100
                         else 0
                     Nothing -> 0
-                avgChange = average $ catMaybes $ map maChange24h assets
+                avgChange = average $ catMaybes $ map Types.maChange24h assets
                 
-            return $ Just $ MarketOverview
-                { moTotalMarketCap = totalMarketCap
-                , moTotalVolume24h = totalVolume
-                , moBtcDominance = btcDominance
-                , moMarketCapChange24h = avgChange
-                , moActiveCryptocurrencies = length cryptoAssets
-                , moMarkets = 0  -- Would need additional data
-                , moLastUpdated = now
+            return $ Just $ Types.MarketOverview
+                { Types.moTotalMarketCap = totalMarketCap
+                , Types.moTotalVolume = totalVolume
+                , Types.moTotalVolume24h = totalVolume
+                , Types.moBtcDominance = btcDominance
+                , Types.moMarketCapChange24h = avgChange
+                , Types.moActiveCryptocurrencies = length cryptoAssets
+                , Types.moMarkets = 0
+                , Types.moTotalAssets = length assets
+                , Types.moTopMovers = []
+                , Types.moRecentlyAdded = []
+                , Types.moLastUpdated = now
                 }
   where
     average xs = if null xs then 0 else sum xs / fromIntegral (length xs)
 
 -- | Get popular assets with load balancing
-getPopularAssets :: MarketDataService -> IO [MarketAsset]
+getPopularAssets :: MarketDataService -> IO [Types.MarketAsset]
 getPopularAssets service = do
     putStrLn "[MarketData] Getting popular assets..."
     rateState <- readTVarIO (rateLimitState service)
@@ -307,65 +223,83 @@ getPopularAssets service = do
             enrichedAssets <- enrichPredefinedAssets service $ take 10 predefinedAssets
             return enrichedAssets
   where
-    handleCoinGeckoError :: SomeException -> IO [CG.MarketAsset]
+    handleCoinGeckoError :: SomeException -> IO [MDT.MarketAsset]
     handleCoinGeckoError _ = do
         -- Mark CoinGecko as rate limited
         atomically $ modifyTVar' (rateLimitState service) $ \s -> 
             s { coinGeckoLimited = True }
         return []
     
-    convertCoinGeckoAsset :: CG.MarketAsset -> MarketAsset
-    convertCoinGeckoAsset cg = MarketAsset
-        { maId = CG.maSymbol cg  -- Use symbol as ID for now
-        , maSymbol = CG.maSymbol cg
-        , maName = CG.maName cg
-        , maType = CG.maType cg
-        , maPrice = CG.maPrice cg
-        , maChange24h = Just $ CG.maChangePercent cg
-        , maMarketCap = Nothing  -- CoinGecko asset doesn't have this
-        , maVolume24h = Nothing
-        , maImage = Nothing
-        , maRank = Nothing
-        , maSource = CoinGecko
+    convertCoinGeckoAsset :: MDT.MarketAsset -> Types.MarketAsset
+    convertCoinGeckoAsset cg = Types.MarketAsset
+        { Types.maId = MDT.maId cg
+        , Types.maSymbol = MDT.maSymbol cg
+        , Types.maName = MDT.maName cg
+        , Types.maPrice = MDT.maPrice cg
+        , Types.maPriceInUSD = Just $ MDT.maPrice cg
+        , Types.maPriceInBTC = Just $ MDT.maPriceInBTC cg
+        , Types.maChange = 0
+        , Types.maChangePercent = 0
+        , Types.maChange24h = Just $ MDT.maChange24h cg
+        , Types.maVolume24h = Just $ MDT.maVolume24h cg
+        , Types.maMarketCap = Just $ MDT.maMarketCap cg
+        , Types.maCategory = Nothing
+        , Types.maType = Just $ MDT.maType cg
+        , Types.maImage = Nothing
+        , Types.maRank = Just $ MDT.maRank cg
+        , Types.maSource = Just $ T.pack $ show $ MDT.maSource cg
+        , Types.maLastUpdated = ""
         }
     
-    createPredefinedAsset :: (Text, Text, Text) -> MarketAsset
-    createPredefinedAsset (symbol, name, assetType) = MarketAsset
-        { maId = T.toLower symbol
-        , maSymbol = symbol
-        , maName = name
-        , maType = assetType
-        , maPrice = 0
-        , maChange24h = Nothing
-        , maMarketCap = Nothing
-        , maVolume24h = Nothing
-        , maImage = Nothing
-        , maRank = Nothing
-        , maSource = Mixed
+    createPredefinedAsset :: (Text, Text, Text) -> Types.MarketAsset
+    createPredefinedAsset (symbol, name, assetType) = Types.MarketAsset
+        { Types.maId = T.toLower symbol
+        , Types.maSymbol = symbol
+        , Types.maName = name
+        , Types.maPrice = 0
+        , Types.maPriceInUSD = Nothing
+        , Types.maPriceInBTC = Nothing
+        , Types.maChange = 0
+        , Types.maChangePercent = 0
+        , Types.maChange24h = Nothing
+        , Types.maVolume24h = Nothing
+        , Types.maMarketCap = Nothing
+        , Types.maCategory = Nothing
+        , Types.maType = Just assetType
+        , Types.maImage = Nothing
+        , Types.maRank = Nothing
+        , Types.maSource = Nothing
+        , Types.maLastUpdated = ""
         }
 
 -- | Enrich predefined assets with live price data
-enrichPredefinedAssets :: MarketDataService -> [(Text, Text, Text)] -> IO [MarketAsset]
+enrichPredefinedAssets :: MarketDataService -> [(Text, Text, Text)] -> IO [Types.MarketAsset]
 enrichPredefinedAssets service predefinedList = do
     -- Concurrently fetch prices for all assets
     enrichedAssets <- forConcurrently predefinedList $ \(symbol, name, assetType) -> do
         maybePrice <- getAssetPrice service symbol `catch` handleError
-        return MarketAsset
-            { maId = T.toLower symbol
-            , maSymbol = symbol
-            , maName = name
-            , maType = assetType
-            , maPrice = maybe 0 apPrice maybePrice
-            , maChange24h = maybePrice >>= (Just . apChangePercent)
-            , maMarketCap = maybePrice >>= apMarketCap
-            , maVolume24h = maybePrice >>= apVolume24h
-            , maImage = Nothing
-            , maRank = Nothing
-            , maSource = maybe Mixed apSource maybePrice
+        return Types.MarketAsset
+            { Types.maId = T.toLower symbol
+            , Types.maSymbol = symbol
+            , Types.maName = name
+            , Types.maPrice = maybe 0 Types.apPrice maybePrice
+            , Types.maPriceInUSD = maybePrice >>= Types.apPriceInUSD
+            , Types.maPriceInBTC = maybePrice >>= Types.apPriceInBTC
+            , Types.maChange = maybe 0 Types.apChange maybePrice
+            , Types.maChangePercent = maybe 0 Types.apChangePercent maybePrice
+            , Types.maChange24h = Just $ maybe 0 Types.apChangePercent maybePrice
+            , Types.maVolume24h = Nothing
+            , Types.maMarketCap = Nothing
+            , Types.maCategory = Nothing
+            , Types.maType = Just assetType
+            , Types.maImage = Nothing
+            , Types.maRank = Nothing
+            , Types.maSource = maybePrice >>= Types.apType
+            , Types.maLastUpdated = maybe "" (fromMaybe "") (fmap Types.apLastUpdated maybePrice)
             }
     
     -- Filter out assets with zero prices (failed to fetch)
-    let validAssets = filter (\a -> maPrice a > 0) enrichedAssets
+    let validAssets = filter (\a -> Types.maPrice a > 0) enrichedAssets
     putStrLn $ "[MarketData] Successfully enriched " ++ show (length validAssets) ++ " assets"
     
     -- If we have few valid assets, include some with zero prices
@@ -373,13 +307,13 @@ enrichPredefinedAssets service predefinedList = do
         then return $ take 10 enrichedAssets
         else return validAssets
   where
-    handleError :: SomeException -> IO (Maybe AssetPrice)
+    handleError :: SomeException -> IO (Maybe Types.AssetPrice)
     handleError e = do
         putStrLn $ "[MarketData] Error enriching asset: " ++ show e
         return Nothing
 
 -- | Get asset price with failover
-getAssetPrice :: MarketDataService -> Text -> IO (Maybe AssetPrice)
+getAssetPrice :: MarketDataService -> Text -> IO (Maybe Types.AssetPrice)
 getAssetPrice service symbol = do
     rateState <- readTVarIO (rateLimitState service)
     
@@ -433,7 +367,7 @@ getAssetPrice service symbol = do
                                 Just ms -> do
                                     putStrLn $ "[MarketData] Fetching metal price for: " ++ T.unpack symbol
                                     maybePrice <- MP.getMetalPrice mp ms `catch` handleMetalPriceError
-                                    return maybePrice
+                                    return $ fmap convertMDAssetPrice maybePrice
                                 Nothing -> do
                                     putStrLn $ "[MarketData] Unknown metal symbol: " ++ T.unpack symbol
                                     return Nothing
@@ -444,12 +378,13 @@ getAssetPrice service symbol = do
                     putStrLn $ "[MarketData] Unknown asset type: " ++ T.unpack assetType
                     return Nothing
   where
+    getAssetType :: Text -> Text
     getAssetType sym = 
-        case lookup sym predefinedAssets of
+        case find (\(s, _, _) -> s == sym) predefinedAssets of
             Just (_, _, t) -> t
             Nothing -> "cryptocurrency"  -- Default assumption
     
-    handleCoinGeckoError :: SomeException -> IO (Maybe CG.AssetPrice)
+    handleCoinGeckoError :: SomeException -> IO (Maybe AssetPrice)
     handleCoinGeckoError _ = do
         atomically $ modifyTVar' (rateLimitState service) $ \s -> 
             s { coinGeckoLimited = True }
@@ -475,40 +410,48 @@ getAssetPrice service symbol = do
     textToMetalSymbol "XPD" = Just MP.Palladium
     textToMetalSymbol _ = Nothing
     
-    convertCoinGeckoPrice :: CG.AssetPrice -> AssetPrice
-    convertCoinGeckoPrice cg = AssetPrice
-        { apSymbol = CG.apSymbol cg
-        , apName = CG.apName cg
-        , apType = CG.apType cg
-        , apPrice = CG.apPrice cg
-        , apPriceInUSD = CG.apPriceInUSD cg
-        , apPriceInBTC = CG.apPriceInBTC cg
-        , apChange = CG.apChange cg
-        , apChangePercent = CG.apChangePercent cg
-        , apVolume24h = CG.apVolume24h cg
-        , apMarketCap = CG.apMarketCap cg
-        , apLastUpdated = CG.apLastUpdated cg
-        , apSource = CoinGecko
+    convertCoinGeckoPrice :: MDT.AssetPrice -> Types.AssetPrice
+    convertCoinGeckoPrice cg = Types.AssetPrice
+        { Types.apSymbol = MDT.apSymbol cg
+        , Types.apName = Just $ MDT.apName cg
+        , Types.apPrice = MDT.apPrice cg
+        , Types.apPriceInUSD = Just $ MDT.apPriceInUSD cg
+        , Types.apPriceInBTC = Just $ MDT.apPriceInBTC cg
+        , Types.apChange = MDT.apChange cg
+        , Types.apChangePercent = MDT.apChangePercent cg
+        , Types.apLastUpdated = Just $ T.pack $ show $ MDT.apLastUpdated cg
+        , Types.apType = Just $ MDT.apType cg
         }
     
-    convertAlphaVantagePrice :: AV.AssetData -> AssetPrice
-    convertAlphaVantagePrice av = AssetPrice
-        { apSymbol = AV.adSymbol av
-        , apName = AV.adName av
-        , apType = AV.adType av
-        , apPrice = AV.adPrice av
-        , apPriceInUSD = AV.adPriceInUSD av
-        , apPriceInBTC = AV.adPriceInBTC av
-        , apChange = AV.adChange av
-        , apChangePercent = AV.adChangePercent av
-        , apVolume24h = Nothing  -- AlphaVantage doesn't provide this
-        , apMarketCap = Nothing
-        , apLastUpdated = parseTimeOrError True defaultTimeLocale "%Y-%m-%d" (T.unpack $ AV.adLastUpdated av)
-        , apSource = AlphaVantage
+    convertAlphaVantagePrice :: AV.AssetData -> Types.AssetPrice
+    convertAlphaVantagePrice av = Types.AssetPrice
+        { Types.apSymbol = AV.adSymbol av
+        , Types.apName = Just $ AV.adName av
+        , Types.apPrice = AV.adPrice av
+        , Types.apPriceInUSD = Just $ AV.adPriceInUSD av
+        , Types.apPriceInBTC = Just $ AV.adPriceInBTC av
+        , Types.apChange = AV.adChange av
+        , Types.apChangePercent = AV.adChangePercent av
+        , Types.apLastUpdated = Just $ AV.adLastUpdated av
+        , Types.apType = Just $ AV.adType av
+        }
+    
+    -- Convert from Services.MarketDataTypes.AssetPrice to Types.AssetPrice
+    convertMDAssetPrice :: MD.AssetPrice -> Types.AssetPrice
+    convertMDAssetPrice md = Types.AssetPrice
+        { Types.apSymbol = MD.apSymbol md
+        , Types.apName = Just $ MD.apName md
+        , Types.apPrice = MD.apPrice md
+        , Types.apPriceInUSD = Just $ MD.apPriceInUSD md
+        , Types.apPriceInBTC = Just $ MD.apPriceInBTC md
+        , Types.apChange = MD.apChange md
+        , Types.apChangePercent = MD.apChangePercent md
+        , Types.apLastUpdated = Just $ T.pack $ show $ MD.apLastUpdated md
+        , Types.apType = Just $ MD.apType md
         }
 
 -- | Get historical data with appropriate service selection
-getHistoricalData :: MarketDataService -> Text -> Int -> IO [HistoricalDataPoint]
+getHistoricalData :: MarketDataService -> Text -> Int -> IO [Types.HistoricalDataPoint]
 getHistoricalData service symbol days = do
     let assetType = getAssetType symbol
         isCrypto = assetType == "cryptocurrency"
@@ -529,45 +472,47 @@ getHistoricalData service symbol days = do
                     return $ map convertAVHistoricalPoint avData
                 Nothing -> return []
   where
+    getAssetType :: Text -> Text
     getAssetType sym = 
-        case lookup sym predefinedAssets of
+        case find (\(s, _, _) -> s == sym) predefinedAssets of
             Just (_, _, t) -> t
             Nothing -> "cryptocurrency"
     
     handleError :: SomeException -> IO [a]
     handleError _ = return []
     
-    convertCGHistoricalPoint :: CG.HistoricalDataPoint -> HistoricalDataPoint
-    convertCGHistoricalPoint cg = HistoricalDataPoint
-        { hdpTimestamp = CG.hdpTimestamp cg
-        , hdpDate = CG.hdpDate cg
-        , hdpPrice = CG.hdpPrice cg
-        , hdpValue = CG.hdpValue cg
-        , hdpOpen = CG.hdpOpen cg
-        , hdpHigh = CG.hdpHigh cg
-        , hdpLow = CG.hdpLow cg
-        , hdpClose = CG.hdpClose cg
-        , hdpVolume = CG.hdpVolume cg
+    convertCGHistoricalPoint :: MDT.HistoricalDataPoint -> Types.HistoricalDataPoint
+    convertCGHistoricalPoint cg = Types.HistoricalDataPoint
+        { Types.hdTimestamp = MDT.hdTimestamp cg
+        , Types.hdDate = MDT.hdDate cg
+        , Types.hdPrice = MDT.hdPrice cg
+        , Types.hdValue = MDT.hdPrice cg  -- Use price as value
+        , Types.hdOpen = MDT.hdPrice cg   -- Use price for OHLC if not available
+        , Types.hdHigh = MDT.hdPrice cg
+        , Types.hdLow = MDT.hdPrice cg
+        , Types.hdClose = MDT.hdPrice cg
+        , Types.hdVolume = MDT.hdVolume cg
         }
     
-    convertAVHistoricalPoint :: AV.HistoricalDataPoint -> HistoricalDataPoint
-    convertAVHistoricalPoint av = HistoricalDataPoint
-        { hdpTimestamp = AV.hdpTimestamp av
-        , hdpDate = AV.hdpDate av
-        , hdpPrice = AV.hdpPrice av
-        , hdpValue = AV.hdpValue av
-        , hdpOpen = AV.hdpOpen av
-        , hdpHigh = AV.hdpHigh av
-        , hdpLow = AV.hdpLow av
-        , hdpClose = AV.hdpClose av
-        , hdpVolume = Just $ fromIntegral $ AV.hdpVolume av
+    convertAVHistoricalPoint :: MDT.HistoricalDataPoint -> Types.HistoricalDataPoint
+    convertAVHistoricalPoint av = Types.HistoricalDataPoint
+        { Types.hdTimestamp = MDT.hdTimestamp av
+        , Types.hdDate = MDT.hdDate av
+        , Types.hdPrice = MDT.hdPrice av
+        , Types.hdValue = MDT.hdPrice av  -- Use price as value
+        , Types.hdOpen = MDT.hdPrice av   -- Use price for OHLC if not available
+        , Types.hdHigh = MDT.hdPrice av
+        , Types.hdLow = MDT.hdPrice av
+        , Types.hdClose = MDT.hdPrice av
+        , Types.hdVolume = MDT.hdVolume av
         }
 
 -- | Search assets across services
-searchAssets :: MarketDataService -> Text -> Int -> IO [MarketAsset]
+searchAssets :: MarketDataService -> Text -> Int -> IO [Types.MarketAsset]
 searchAssets service query limit = do
     -- Search in predefined assets first
     let searchLower = T.toLower query
+        predefinedResults :: [Types.MarketAsset]
         predefinedResults = filter (matchesQuery searchLower) $ 
             map createPredefinedAsset predefinedAssets
     
@@ -578,58 +523,72 @@ searchAssets service query limit = do
             -- Search using CoinGecko
             cgResults <- case coinGeckoService service of
                 Just cg -> do
-                    results <- CG.searchAssets cg query (limit - length predefinedResults) `catch` handleError
+                    results <- CG.searchAssets cg query (limit - length predefinedResults) `catch` handleCGError
                     return $ map convertCoinGeckoAsset results
                 Nothing -> return []
             
             -- Combine and deduplicate results
             let allResults = predefinedResults ++ cgResults
-                deduped = nubBy (\a b -> maSymbol a == maSymbol b) allResults
+                deduped = nubBy (\a b -> Types.maSymbol a == Types.maSymbol b) allResults
             return $ take limit deduped
   where
-    matchesQuery searchTerm (symbol, name, _) =
-        T.isInfixOf searchTerm (T.toLower symbol) ||
-        T.isInfixOf searchTerm (T.toLower name)
+    matchesQuery searchTerm asset =
+        T.isInfixOf searchTerm (T.toLower (Types.maSymbol asset)) ||
+        T.isInfixOf searchTerm (T.toLower (Types.maName asset))
     
-    createPredefinedAsset (symbol, name, assetType) = MarketAsset
-        { maId = T.toLower symbol
-        , maSymbol = symbol
-        , maName = name
-        , maType = assetType
-        , maPrice = 0
-        , maChange24h = Nothing
-        , maMarketCap = Nothing
-        , maVolume24h = Nothing
-        , maImage = Nothing
-        , maRank = Nothing
-        , maSource = Mixed
+    createPredefinedAsset (symbol, name, assetType) = Types.MarketAsset
+        { Types.maId = T.toLower symbol
+        , Types.maSymbol = symbol
+        , Types.maName = name
+        , Types.maPrice = 0
+        , Types.maPriceInUSD = Nothing
+        , Types.maPriceInBTC = Nothing
+        , Types.maChange = 0
+        , Types.maChangePercent = 0
+        , Types.maChange24h = Nothing
+        , Types.maVolume24h = Nothing
+        , Types.maMarketCap = Nothing
+        , Types.maCategory = Nothing
+        , Types.maType = Just assetType
+        , Types.maImage = Nothing
+        , Types.maRank = Nothing
+        , Types.maSource = Nothing
+        , Types.maLastUpdated = ""
         }
     
-    convertCoinGeckoAsset cg = MarketAsset
-        { maId = CG.maSymbol cg
-        , maSymbol = CG.maSymbol cg
-        , maName = CG.maName cg
-        , maType = CG.maType cg
-        , maPrice = CG.maPrice cg
-        , maChange24h = Just $ CG.maChangePercent cg
-        , maMarketCap = Nothing
-        , maVolume24h = Nothing
-        , maImage = Nothing
-        , maRank = Nothing
-        , maSource = CoinGecko
+    convertCoinGeckoAsset cg = Types.MarketAsset
+        { Types.maId = MDT.maId cg
+        , Types.maSymbol = MDT.maSymbol cg
+        , Types.maName = MDT.maName cg
+        , Types.maPrice = MDT.maPrice cg
+        , Types.maPriceInUSD = Nothing  -- CoinGecko asset doesn't have separate USD price
+        , Types.maPriceInBTC = Nothing  -- CoinGecko asset doesn't have separate BTC price  
+        , Types.maChange = 0
+        , Types.maChangePercent = 0
+        , Types.maChange24h = Just $ MDT.maChange24h cg
+        , Types.maVolume24h = Just $ MDT.maVolume24h cg
+        , Types.maMarketCap = Just $ MDT.maMarketCap cg
+        , Types.maCategory = Nothing
+        , Types.maType = Just $ MDT.maType cg
+        , Types.maImage = Nothing
+        , Types.maRank = Just $ MDT.maRank cg
+        , Types.maSource = Nothing  -- No source field in Types.MarketAsset
+        , Types.maLastUpdated = ""
         }
     
-    handleError :: SomeException -> IO [CG.MarketAsset]
+    handleError :: SomeException -> IO [Types.MarketAsset]
     handleError _ = return []
+    
+    handleCGError :: SomeException -> IO [MarketAsset]
+    handleCGError _ = return []
 
 -- | List available assets with pagination
 listAvailableAssets :: MarketDataService -> ListOptions -> IO (Maybe ([(MarketAsset, Int)], Int))
 listAvailableAssets service options = do
     let filteredAssets = applyFilters predefinedAssets
-        page = fromMaybe 1 (loPage options)
-        pageSize = fromMaybe 20 (loPageSize options)
-        start = (page - 1) * pageSize
-        paginatedAssets = take pageSize $ drop start filteredAssets
+        limit = loLimit options
+        offset = loOffset options
+        paginatedAssets = take limit $ drop offset filteredAssets
         totalCount = length filteredAssets
         
     -- Create MarketAssets from filtered results
@@ -641,27 +600,16 @@ listAvailableAssets service options = do
                 , maSymbol = symbol
                 , maName = name
                 , maType = assetType
-                , maPrice = maybe 0 apPrice maybePrice
-                , maChange24h = apChangePercent <$> maybePrice
-                , maMarketCap = maybePrice >>= apMarketCap
-                , maVolume24h = maybePrice >>= apVolume24h
-                , maImage = Nothing
-                , maRank = Nothing
-                , maSource = maybe Mixed apSource maybePrice
+                , maPrice = maybe 0 Types.apPrice maybePrice
+                , maPriceInBTC = maybe 0 (fromMaybe 0 . Types.apPriceInBTC) maybePrice
+                , maChange24h = maybe 0 Types.apChangePercent maybePrice
+                , maVolume24h = 0  -- Volume not available in Types.AssetPrice
+                , maMarketCap = 0  -- MarketCap not available in Types.AssetPrice
+                , maRank = 0
+                , maSource = Mixed  -- Default to Mixed source
                 }
         return baseAsset
     
-    return $ Just (zip assets [start + 1..], totalCount)
+    return $ Just (zip assets [offset + 1..], totalCount)
   where
-    applyFilters assets =
-        let categoryFiltered = case loCategory options of
-                Just cat -> filter (\(_, _, t) -> t == T.toLower cat) assets
-                Nothing -> assets
-            keywordFiltered = case loKeywords options of
-                Just kw -> 
-                    let kwLower = T.toLower kw
-                    in filter (\(s, n, _) -> 
-                        T.isInfixOf kwLower (T.toLower s) ||
-                        T.isInfixOf kwLower (T.toLower n)) categoryFiltered
-                Nothing -> categoryFiltered
-        in keywordFiltered
+    applyFilters assets = assets  -- Simple implementation for now

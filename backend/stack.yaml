@@ -1,10 +1,14 @@
 # Stack configuration for Trend2Zero-FP backend
-resolver: lts-21.25
+resolver: lts-21.22
 
 packages:
 - .
 
-extra-deps: []
+extra-deps:
+- servant-0.20.3.0@sha256:3c32c2eed78050b5d80bdb99698cd39ab8dde3b8204deab21a060f56513a4c4f,5569
+- servant-auth-0.4.2.0@sha256:a4fb4757fdbe046a0f69858e9fe403bd0e84b73754eae7446cccea9423cfeadb,2273
+- servant-server-0.20.3.0@sha256:10a429eea8e103484d86efbd9d0fee3e32c27901042a0f99398dc3dbeb0b50fc,6475
+- servant-auth-server-0.4.9.0@sha256:81bf73638d2a47c629bbadf9f212319a901073682e51b1ca6bf27dec27de7b6a,5547
 
 flags: {}
 

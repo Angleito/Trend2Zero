@@ -27,8 +27,8 @@ main :: IO ()
 main = do
     -- Get port from environment or use default
     portStr <- lookupEnv "PORT"
-    let port = maybe 8080 readMaybe portStr :: Maybe Int
-        actualPort = maybe 8080 id port
+    let port = maybe 8080 (\s -> maybe 8080 id (readMaybe s)) portStr
+        actualPort = port
     
     putStrLn $ "Starting Trend2Zero API server on port " ++ show actualPort
     putStrLn "Available endpoints:"

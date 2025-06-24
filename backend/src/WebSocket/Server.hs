@@ -17,7 +17,7 @@ import Control.Concurrent.Async (async, race_, cancel)
 import Control.Concurrent.STM
 import Control.Exception (catch, finally, SomeException, throwIO)
 import Control.Monad (forever, forM_, when, void, filterM)
-import Data.Aeson (encode, decode, eitherDecode)
+import Data.Aeson (encode, decode, eitherDecode, Value)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -30,7 +30,7 @@ import Network.WebSockets
 import System.Timeout (timeout)
 
 import WebSocket.Types
-import Types (AssetPrice, AssetCategory)
+import Types (AssetPrice, AssetCategory, apSymbol)
 
 -- Configuration
 data WebSocketConfig = WebSocketConfig
@@ -252,11 +252,6 @@ matchesAsset asset = \case
 broadcastPriceUpdate :: ServerState -> AssetPrice -> IO ()
 broadcastPriceUpdate ServerState{..} asset = 
   atomically $ writeTChan ssBroadcastChannel (BroadcastPrice asset)
-
--- Broadcast multiple price updates
-broadcastPriceUpdates :: ServerState -> [AssetPrice] -> IO ()
-broadcastPriceUpdates ServerState{..} assets = 
-  atomically $ writeTChan ssBroadcastChannel (BroadcastPrices assets)
 
 -- Broadcast a notification
 broadcastNotification :: ServerState -> NotificationType -> Text -> Text -> Maybe Value -> IO ()

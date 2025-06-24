@@ -1,46 +1,56 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Handlers.Crypto where
+module Handlers.Crypto 
+    ( bitcoinPriceHandler
+    , convertAssetPrice
+    , fallbackBitcoinPrice
+    ) where
 
 import Control.Monad.IO.Class (liftIO)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time.Clock (getCurrentTime)
+import Data.Time.Format (formatTime, defaultTimeLocale)
 import Servant
-import Types
+import qualified Services.MarketDataTypes as MDT
 import qualified Services.CoinGecko as CG
+import qualified Types
 
 -- | Fallback Bitcoin price data for when external services are unavailable
-fallbackBitcoinPrice :: AssetPrice
-fallbackBitcoinPrice = AssetPrice
-  { apSymbol = "BTC"
-  , apName = Just "Bitcoin"
-  , apType = Just "Cryptocurrency"
-  , apPrice = 67890.12
-  , apChange = 1234.56
-  , apChangePercent = 1.85
-  , apPriceInBTC = Just 1
-  , apPriceInUSD = Just 67890.12
-  , apLastUpdated = Just "2025-04-15T00:00:00Z"
+fallbackBitcoinPrice :: MDT.AssetPrice
+fallbackBitcoinPrice = MDT.AssetPrice
+  { MDT.apSymbol = "BTC"
+  , MDT.apName = "Bitcoin"
+  , MDT.apType = "Cryptocurrency"
+  , MDT.apPrice = 67890.12
+  , MDT.apPriceInUSD = 67890.12
+  , MDT.apPriceInBTC = 1
+  , MDT.apChange = 1234.56
+  , MDT.apChangePercent = 1.85
+  , MDT.apVolume24h = Nothing
+  , MDT.apMarketCap = Nothing
+  , MDT.apLastUpdated = read "2025-04-15 00:00:00 UTC"
+  , MDT.apSource = MDT.CoinGecko
   }
 
--- | Convert CoinGecko AssetPrice to our AssetPrice type
-convertAssetPrice :: CG.AssetPrice -> AssetPrice
-convertAssetPrice cgPrice = AssetPrice
-  { apSymbol = CG.apSymbol cgPrice
-  , apName = Just $ CG.apName cgPrice
-  , apType = Just $ CG.apType cgPrice
-  , apPrice = CG.apPrice cgPrice
-  , apChange = CG.apChange cgPrice
-  , apChangePercent = CG.apChangePercent cgPrice
-  , apPriceInBTC = Just $ CG.apPriceInBTC cgPrice
-  , apPriceInUSD = Just $ CG.apPriceInUSD cgPrice
-  , apLastUpdated = Just $ T.pack $ show $ CG.apLastUpdated cgPrice
-  }
+-- | Convert from Services.MarketDataTypes.AssetPrice to Types.AssetPrice
+-- This handles the different field structures between the two AssetPrice types
+convertAssetPrice :: MDT.AssetPrice -> Types.AssetPrice
+convertAssetPrice mdtAsset = Types.AssetPrice
+    { Types.apSymbol = MDT.apSymbol mdtAsset
+    , Types.apName = Just (MDT.apName mdtAsset)
+    , Types.apPrice = MDT.apPrice mdtAsset
+    , Types.apPriceInUSD = Just (MDT.apPriceInUSD mdtAsset)
+    , Types.apPriceInBTC = Just (MDT.apPriceInBTC mdtAsset)
+    , Types.apChange = MDT.apChange mdtAsset
+    , Types.apChangePercent = MDT.apChangePercent mdtAsset
+    , Types.apLastUpdated = Just $ T.pack $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S UTC" (MDT.apLastUpdated mdtAsset)
+    , Types.apType = Just (MDT.apType mdtAsset)
+    }
 
 -- | Handler for getting Bitcoin price
-bitcoinPriceHandler :: Handler AssetPrice
+bitcoinPriceHandler :: Handler MDT.AssetPrice
 bitcoinPriceHandler = do
   liftIO $ putStrLn "[API] /crypto/bitcoin-price called"
   
@@ -48,8 +58,7 @@ bitcoinPriceHandler = do
   result <- liftIO $ CG.fetchBitcoinPrice
   
   case result of
-    Right cgPrice -> do
-      let price = convertAssetPrice cgPrice
+    Right price -> do
       liftIO $ putStrLn $ "[API] Bitcoin price fetched: " ++ show price
       return price
     Left err -> do

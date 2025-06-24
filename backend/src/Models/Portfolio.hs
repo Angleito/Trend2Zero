@@ -13,13 +13,16 @@
 
 module Models.Portfolio where
 
+import Control.Monad (forM_)
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Data.List (sortBy)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time (UTCTime, getCurrentTime)
 import Database.Persist
 import Database.Persist.Sql
 import Database.Persist.TH
-import Models.User (UserId)
+import Models.User (User, UserId)
 
 -- Portfolio Asset Type (simplified from Asset model)
 data PortfolioAssetType = PortfolioStock | PortfolioCrypto
@@ -65,8 +68,7 @@ updatePosition portfolioId quantity price isStock = do
         Nothing -> return ()
         Just portfolio -> do
             currentTime <- liftIO getCurrentTime
-            let field = if isStock then portfolioShares else portfolioAmount
-                currentQuantity = field portfolio
+            let currentQuantity = if isStock then portfolioShares portfolio else portfolioAmount portfolio
                 currentAvgPrice = portfolioAveragePrice portfolio
                 oldTotal = currentQuantity * currentAvgPrice
                 newQuantity = currentQuantity + quantity
@@ -157,5 +159,3 @@ getPortfolioTags portfolioId = do
     tags <- selectList [PortfolioTagPortfolioId ==. portfolioId] []
     return $ map (portfolioTagTag . entityVal) tags
 
--- Helper imports needed for sorting
-import Data.List (sortBy)
